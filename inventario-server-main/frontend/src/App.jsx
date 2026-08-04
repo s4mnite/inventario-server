@@ -4670,10 +4670,10 @@ export default function App() {
 
           {/* ── BOLETAS ── */}
           {activeNav === "Recibos" && (
-            <div className="receipts-screen">
-              <div className="grid-2-mobile receipts-kpis" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-                <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
-                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(59,91,219,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div>
+              <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+                <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover">
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(59,91,219,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Receipt size={20} color="#d71920" />
                   </div>
                   <div>
@@ -4681,8 +4681,8 @@ export default function App() {
                     <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Total Boletas</p>
                   </div>
                 </div>
-                <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
-                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover">
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <DollarSign size={20} color="#10b981" />
                   </div>
                   <div>
@@ -4692,8 +4692,8 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={card} className="receipts-panel">
-                <div className="receipts-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Todos los Recibos</h3>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     {boletas.length > 0 && (<>
@@ -4799,20 +4799,23 @@ export default function App() {
                 ) : (
                   <div>
                     {boletas.map(b => (
-                      <div key={b.numero} className="receipt-card" style={{ background: bgCard2, border: `1px solid ${borderColor}` }} onClick={() => setBoletaModal(b)}>
-                        <div className="receipt-card-icon" style={{ background: D ? "rgba(215,25,32,0.15)" : "#fff3bf" }}>
-                          <Receipt size={20} color="#d71920" />
+                      <div key={b.numero} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: bgCard2, borderRadius: 12, marginBottom: 10, border: `1px solid ${borderColor}`, cursor: "pointer" }} onClick={() => setBoletaModal(b)}>
+                        <div style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(215,25,32,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Receipt size={18} color="#d71920" />
                         </div>
-                        <div className="receipt-card-main">
-                          <div className="receipt-card-topline">
-                            <p style={{ color: textPrimary }} className="mono receipt-number">#{String(b.numero).padStart(6, "0")}</p>
-                            <p className="mono receipt-amount">{fmt(b.total)}</p>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                            <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: textPrimary }} className="mono">#{String(b.numero).padStart(6, "0")}</p>
+                            <span className="badge" style={{ background: "#f3f4f6", color: textSecondary }}>
+                              {"🧾 " + b.metodoPago}
+                            </span>
                           </div>
-                          <p className="receipt-meta" style={{ color: textMuted }}>{b.fecha}</p>
-                          <p className="receipt-seller" style={{ color: textSecondary }}>{b.vendedor || "Admin"}</p>
-                          <div className="receipt-card-bottom">
-                            <span className="receipt-payment">{String(b.metodoPago || "Efectivo").toLowerCase().includes("transfer") ? "🏦" : String(b.metodoPago || "").toLowerCase().includes("tarj") || String(b.metodoPago || "").toLowerCase().includes("débit") || String(b.metodoPago || "").toLowerCase().includes("debit") ? "💳" : "💵"} {b.metodoPago || "Efectivo"}</span>
-                            <span className="receipt-paid">✓ Pagado</span>
+                          <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{b.fecha} · {b.vendedor}</p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(b.total)}</p>
+                          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4, alignItems: "center" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "#ecfdf5", color: "#059669" }}>✓ Pagado</span>
                             <button onClick={async e => {
                               e.stopPropagation();
                               if (!window.confirm(`¿Eliminar la venta #${String(b.numero).padStart(6,"0")}? El stock de los productos vendidos se devolverá automáticamente al inventario.`)) return;

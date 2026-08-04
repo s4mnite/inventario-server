@@ -632,26 +632,12 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       );
       const vigente = ordenado[ordenado.length - 1];
       ordenado.slice(0, -1).forEach(viejo => {
-        // BUG FIX: antes, si un lote viejo ya estaba "cerrado" (por una
-        // transferencia explícita), se saltaba por completo con este return
-        // — y sus estadísticas de consumo (ventas, merma, rotos, trizados,
-        // ajustes) que había acumulado ANTES de cerrarse se perdían para
-        // siempre, porque solo se traspasaba stock y costo. Ahora las
-        // estadísticas de consumo siempre se suman al lote vigente, esté
-        // cerrado o no; solo el traspaso de stock se salta si ya se hizo.
-        vigente.vendidos += viejo.vendidos;
-        vigente.ingreso += viejo.ingreso;
-        vigente.costoVendido += viejo.costoVendido;
-        vigente.ganancia += viejo.ganancia;
-        vigente.merma += viejo.merma;
-        vigente.rotos += viejo.rotos;
-        vigente.trizados += viejo.trizados;
-        vigente.ajustes += viejo.ajustes;
-        // Se dejan en 0 en el lote viejo para que su propia tarjeta (que
-        // sigue mostrándose, marcada como "cerrado") no duplique visualmente
-        // los mismos números que ahora también aparecen en el lote vigente.
-        viejo.vendidos = 0; viejo.ingreso = 0; viejo.costoVendido = 0; viejo.ganancia = 0;
-        viejo.merma = 0; viejo.rotos = 0; viejo.trizados = 0; viejo.ajustes = 0;
+        // Cada lote conserva SUS propios movimientos y resultados. No se
+        // trasladan ventas, ingresos, merma, rotos ni trizados al lote más
+        // nuevo, porque eso mezclaba fechas distintas y hacía que la tarjeta
+        // activa mostrara cifras históricas como si fueran actuales.
+        // Solo se traspasa el stock físico restante (y su costo) cuando un
+        // lote antiguo todavía figura abierto por datos heredados.
         if (viejo.estado === "cerrado") return;
         if (viejo.stockRestante > 0) {
           vigente.costoTotal += viejo.stockRestante * viejo.costoUnitario;
@@ -664,6 +650,22 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         viejo.estado = "cerrado";
         viejo.transferidoA = vigente.id;
       });
+    });
+
+    // El inventario de MongoDB es la fuente canónica del stock actual.
+    // Ajustamos únicamente el lote vigente de cada categoría para que
+    // "Huevos disponibles" coincida siempre con la pestaña Inventario, sin
+    // alterar las estadísticas históricas de cada lote.
+    inventory.forEach(q => {
+      const group = lots.filter(l => l.calidadId === q.id).sort((a, b) =>
+        String(a.fechaIngreso).localeCompare(String(b.fechaIngreso)) || Number(a.id) - Number(b.id)
+      );
+      const vigente = group[group.length - 1];
+      if (!vigente) return;
+      const stockActual = Math.max(0, Number(q.stockHuevos || 0));
+      vigente.stockRestante = stockActual;
+      if (stockActual <= 0 && vigente.estado !== "cerrado") vigente.estado = "agotado";
+      if (stockActual > 0 && vigente.estado === "agotado") vigente.estado = "activo";
     });
 
     return lots.sort((a, b) => {
@@ -1125,13 +1127,12 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
               ...(Number(lot.transferidoDesde || 0) > 0 ? [["Traspaso anterior",`${eggBreakdown(lot.transferidoDesde).cajas}c · ${eggBreakdown(lot.transferidoDesde).bandejas}b · ${eggBreakdown(lot.transferidoDesde).unidades}u`]] : []),
               ["Huevos disponibles",`${remaining.cajas}c · ${remaining.bandejas}b · ${remaining.unidades}u`],
               ["Huevos vendidos",Number(lot.vendidos).toLocaleString("es-CL")],
-              ["Merma",Number(lot.merma).toLocaleString("es-CL")],
-              ["Rotos",Number(lot.rotos).toLocaleString("es-CL")],
+              ["Pérdidas (Merma + Rotos)",(Number(lot.merma || 0)+Number(lot.rotos || 0)).toLocaleString("es-CL")],
               ["Trizados",Number(lot.trizados).toLocaleString("es-CL")],
               ["Costo del lote",fmt(lot.costoTotal)],
               ["Ingresos",fmt(lot.ingreso)],
               ["Ganancia",fmt(lot.ganancia)],
-            ].map(([label,value])=><div key={label} style={{background:bgCard2,borderRadius:12,padding:"11px 10px"}}><p style={{margin:0,color:textMuted,fontSize:10}}>{label}</p><p style={{margin:"5px 0 0",color:label==="Ganancia"?(lot.ganancia>=0?(D?"#4fae93":"#2f6f5e"):(D?"#d97757":"#b3452f")):(label==="Rotos"||label==="Trizados"||label==="Merma")?(D?"#d97757":"#b3452f"):textPrimary,fontWeight:800,fontSize:14}}>{value}</p></div>)}
+            ].map(([label,value])=><div key={label} style={{background:bgCard2,borderRadius:12,padding:"11px 10px"}}><p style={{margin:0,color:textMuted,fontSize:10}}>{label}</p><p style={{margin:"5px 0 0",color:label==="Ganancia"?(lot.ganancia>=0?(D?"#4fae93":"#2f6f5e"):(D?"#d97757":"#b3452f")):(label==="Pérdidas (Merma + Rotos)"||label==="Trizados")?(D?"#d97757":"#b3452f"):textPrimary,fontWeight:800,fontSize:14}}>{value}</p></div>)}
           </div>
         </div>;
       })}
