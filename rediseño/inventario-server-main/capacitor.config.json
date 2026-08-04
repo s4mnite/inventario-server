@@ -1,0 +1,12 @@
+{
+  "appId": "cl.reydelhuevo.inventario",
+  "appName": "Rey del Huevo",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#FFD21F"
+  }
+}

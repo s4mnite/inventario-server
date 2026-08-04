@@ -1,0 +1,15 @@
+[
+  {
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "correo": "mandarin.soporte@gmail.com",
+    "clave": "admin1234",
+    "rol": "gerente",
+    "createdAt": "18-05-2026",
+    "createdAtISO": "2026-05-19T02:07:37.812Z",
+    "lastAccess": "20-05-2026, 2:24:45 p. m.",
+    "blocked": false,
+    "subscription": "enterprise",
+    "emailVerified": true
+  }
+]

@@ -1,0 +1,11 @@
+ACTUALIZACIÓN MÓVIL + CONEXIÓN APK
+
+Incluye:
+- Venta de huevos más compacta solo en móvil.
+- Notificaciones adaptadas al ancho del teléfono.
+- Formulario Agregar Producto más compacto.
+- Mantiene la vista de escritorio agregada anteriormente.
+- APK con archivos locales, base relativa y conexión al backend de Render.
+- Workflow GitHub Actions con Java 21.
+
+No modifica MongoDB ni elimina datos.
