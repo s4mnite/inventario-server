@@ -887,14 +887,28 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       merma:a.merma+c.merma, rotos:a.rotos+c.rotos, trizados:a.trizados+c.trizados, totalPerdido:a.totalPerdido+c.totalPerdido, valorPerdido:a.valorPerdido+c.valorPerdido,
       stockFinal:a.stockFinal+c.stockFinal
     }),{stockInicial:0,entradas:0,valorEntradas:0,traspasos:0,vendidos:0,ingreso:0,costo:0,ganancia:0,merma:0,rotos:0,trizados:0,totalPerdido:0,valorPerdido:0,stockFinal:0});
-    return { categories, totals };
+    // Desglose de ventas de huevos por método de pago (no altera ningún cálculo existente).
+    const normalizePago = m => String(m?.metodoPago || "efectivo").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const soldMovements = reportMovements.filter(m => m.tipo === "venta");
+    const sumBy = pred => soldMovements.filter(pred).reduce((acc, m) => acc + Number(m.ingreso || 0), 0);
+    const paymentBreakdown = {
+      efectivo: sumBy(m => normalizePago(m) === "efectivo"),
+      debito: sumBy(m => ["tarjeta", "debito", "tarjeta debito"].includes(normalizePago(m))),
+      transferencia: sumBy(m => normalizePago(m) === "transferencia"),
+    };
+    paymentBreakdown.total = paymentBreakdown.efectivo + paymentBreakdown.debito + paymentBreakdown.transferencia;
+    return { categories, totals, paymentBreakdown };
   }, [inventory, reportMovements, movements, reportRange.start, reportRange.end]);
 
   const exportEggReport = () => {
     const rows = [
       ["Categoría","Stock inicial","Entradas reales","Valor entradas","Traspasos","Vendidos","Ingreso ventas","Costo vendido","Ganancia","Merma","Rotos","Trizados","Total perdido","Valor perdido","Stock final"],
       ...eggReport.categories.map(c=>[c.nombre,c.stockInicial,c.entradas,c.valorEntradas,c.traspasos,c.vendidos,c.ingreso,c.costo,c.ganancia,c.merma,c.rotos,c.trizados,c.totalPerdido,c.valorPerdido,c.stockFinal]),
-      ["TOTAL",eggReport.totals.stockInicial,eggReport.totals.entradas,eggReport.totals.valorEntradas,eggReport.totals.traspasos,eggReport.totals.vendidos,eggReport.totals.ingreso,eggReport.totals.costo,eggReport.totals.ganancia,eggReport.totals.merma,eggReport.totals.rotos,eggReport.totals.trizados,eggReport.totals.totalPerdido,eggReport.totals.valorPerdido,eggReport.totals.stockFinal]
+      ["TOTAL",eggReport.totals.stockInicial,eggReport.totals.entradas,eggReport.totals.valorEntradas,eggReport.totals.traspasos,eggReport.totals.vendidos,eggReport.totals.ingreso,eggReport.totals.costo,eggReport.totals.ganancia,eggReport.totals.merma,eggReport.totals.rotos,eggReport.totals.trizados,eggReport.totals.totalPerdido,eggReport.totals.valorPerdido,eggReport.totals.stockFinal],
+      [],
+      ["Ventas de huevos por método de pago"],
+      ["Efectivo","Débito","Transferencia","Total"],
+      [eggReport.paymentBreakdown.efectivo,eggReport.paymentBreakdown.debito,eggReport.paymentBreakdown.transferencia,eggReport.paymentBreakdown.total]
     ];
     const csv = "\ufeff" + rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
     const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
@@ -1195,6 +1209,17 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
           ["Ganancia estimada",fmt(eggReport.totals.ganancia),eggReport.totals.ingreso>0?`${((eggReport.totals.ganancia/eggReport.totals.ingreso)*100).toFixed(1)}% margen`:"Sin ventas","📈"],
           ["Total perdido",`${eggReport.totals.totalPerdido.toLocaleString("es-CL")} huevos`,fmt(eggReport.totals.valorPerdido),"⚠️"]
         ].map(([label,value,sub,icon])=><div key={label} style={{...card,borderRadius:17,padding:15}}><div style={{fontSize:22}}>{icon}</div><p style={{margin:"8px 0 4px",fontSize:12,color:textMuted}}>{label}</p><strong style={{display:"block",fontSize:20,color:label==="Total perdido"?(D?"#d97757":"#c7362f"):textPrimary}}>{value}</strong><span style={{fontSize:11,color:textSecondary}}>{sub}</span></div>)}
+      </div>
+      <div className="egg-report-payment-methods" style={{...card,borderRadius:18,padding:16}}>
+        <h3 style={{margin:"0 0 14px",fontSize:16,color:textPrimary}}>Ventas de huevos por método de pago</h3>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:12}}>
+          {[
+            ["Efectivo",eggReport.paymentBreakdown.efectivo,"💵"],
+            ["Débito",eggReport.paymentBreakdown.debito,"💳"],
+            ["Transferencia",eggReport.paymentBreakdown.transferencia,"🏦"],
+            ["Total",eggReport.paymentBreakdown.total,"Σ"]
+          ].map(([label,value,icon])=><div key={label} style={{padding:14,borderRadius:14,background:bgCard2,textAlign:"center"}}><div style={{fontSize:18}}>{icon}</div><strong style={{display:"block",fontSize:18,marginTop:6,color:label==="Total"?(D?"#4fae93":"#2f6f5e"):textPrimary}}>{fmt(value)}</strong><span style={{fontSize:11,color:textMuted}}>{label}</span></div>)}
+        </div>
       </div>
       <div className="egg-report-kpis egg-report-inventory-kpis" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:12}}>
         {[

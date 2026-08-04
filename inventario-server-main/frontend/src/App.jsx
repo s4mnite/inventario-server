@@ -3132,9 +3132,34 @@ export default function App() {
   const exportarExcel = () => {
     const wb = XLSX.utils.book_new();
     const mesStr = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
-    const ws1 = XLSX.utils.aoa_to_sheet([["RESUMEN MENSUAL"],[],["Total", totalMes],["Ventas", ventasMes.length],["Ticket Prom.", ticketPromedio]]);
+    // Desglose por método de pago del mes (no altera los cálculos existentes de totalMes/ventasMes).
+    const pagosMes = ventasMes.reduce((acc, v) => {
+      const metodo = normalizarMetodoPago(v);
+      acc[metodo] = (acc[metodo] || 0) + Number(v.total || 0);
+      return acc;
+    }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 });
+    const efectivoMes = pagosMes.Efectivo;
+    const debitoMes = pagosMes["Débito"] + pagosMes["Crédito"];
+    const transferenciaMes = pagosMes.Transferencia;
+    const totalMetodosMes = efectivoMes + debitoMes + transferenciaMes;
+    const ws1 = XLSX.utils.aoa_to_sheet([
+      ["RESUMEN MENSUAL"],[],
+      ["Total", totalMes],["Ventas", ventasMes.length],["Ticket Prom.", ticketPromedio],
+      [],
+      ["Ventas por método de pago"],
+      ["Efectivo","Débito","Transferencia","Total"],
+      [efectivoMes, debitoMes, transferenciaMes, totalMetodosMes]
+    ]);
     XLSX.utils.book_append_sheet(wb, ws1, "Resumen");
-    const ws2 = XLSX.utils.aoa_to_sheet([["#","Fecha","Vendedor","Productos","Pago","Total ($)"],...ventasMes.map((v,i)=>[i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,v.total])]);
+    const ws2 = XLSX.utils.aoa_to_sheet([
+      ["#","Fecha","Vendedor","Productos","Pago","Total ($)","Efectivo","Débito","Transferencia","Total"],
+      ...ventasMes.map((v,i)=>{
+        const metodo = normalizarMetodoPago(v);
+        const total = Number(v.total || 0);
+        return [i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,total,
+          metodo==="Efectivo"?total:0, (metodo==="Débito"||metodo==="Crédito")?total:0, metodo==="Transferencia"?total:0, total];
+      })
+    ]);
     XLSX.utils.book_append_sheet(wb, ws2, "Ventas");
     const ws3 = XLSX.utils.aoa_to_sheet([["N°","Fecha","Método","Total"],...boletas.map((b,i)=>[b.numero,b.fecha,b.metodoPago,b.total])]);
     XLSX.utils.book_append_sheet(wb, ws3, "Recibos");
@@ -3939,6 +3964,25 @@ export default function App() {
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Ventas por método de pago (Efectivo / Débito / Transferencia / Total) */}
+                    <div className="reportes-payment-methods" style={{ ...card, marginBottom: 16 }}>
+                      <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>Ventas por método de pago</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 12 }}>
+                        {[
+                          { label: "Efectivo", val: resumenPagosPeriodo.Efectivo, icon: "💵" },
+                          { label: "Débito", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"], icon: "💳" },
+                          { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, icon: "🏦" },
+                          { label: "Total", val: totalPeriodo, icon: "Σ" },
+                        ].map(({ label, val, icon }) => (
+                          <div key={label} style={{ padding: 14, borderRadius: 14, background: bgCard2, textAlign: "center" }}>
+                            <div style={{ fontSize: 18 }}>{icon}</div>
+                            <strong style={{ display: "block", fontSize: 18, marginTop: 6, color: label === "Total" ? "#10b981" : textPrimary }} className="mono">{fmt(val)}</strong>
+                            <span style={{ fontSize: 11, color: textMuted }}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Gráfico ventas por día */}
@@ -5696,13 +5740,16 @@ export default function App() {
       {modal && (
         <div className="product-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
-          <div className="fade-in mobile-bottom-sheet product-modal-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "92dvh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-            {/* Handle bar */}
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>{modal === "add" ? "Agregar Producto" : "Editar Producto"}</h3>
-              <button onClick={() => setModal(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+          <div className="fade-in mobile-bottom-sheet product-modal-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 0, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="product-modal-header" style={{ flexShrink: 0, padding: "24px 24px 0" }}>
+              {/* Handle bar */}
+              <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>{modal === "add" ? "Agregar Producto" : "Editar Producto"}</h3>
+                <button onClick={() => setModal(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              </div>
             </div>
+            <div className="product-modal-body" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px", paddingBottom: 120 }}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Nombre</label>
               <input type="text" value={form.nombre || ""} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={inp} />
@@ -5899,7 +5946,8 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            </div>
+            <div className="product-modal-footer" style={{ display: "flex", gap: 10, padding: "14px 24px", position: "sticky", bottom: 0, background: bgCard, borderTop: `1px solid ${borderColor}`, zIndex: 20 }}>
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
               <button onClick={handleSaveProd} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>{modal === "add" ? "Agregar" : "Guardar"}</button>
             </div>

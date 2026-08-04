@@ -38,7 +38,7 @@ process.on("uncaughtException", (e) => console.error("❌ uncaughtException:", e
 process.on("unhandledRejection", (e) => console.error("❌ unhandledRejection:", e));
 
 const app = express();
-app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave"] }));
+app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
 // ─── MongoDB ──────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ const codigos = {};
 // ─── Middleware auth ──────────────────────────────────────────────────────────
 const authAdmin = (req, res, next) => {
   const adminUser = req.headers["x-admin-user"];
-  const adminClave = req.headers["x-admin-clave"];
+  const adminClave = req.headers["x-admin-clave","Cache-Control","Pragma"];
   const user = usuarios.find(u => u.usuario === adminUser && u.clave === adminClave && (u.rol === "gerente" || u.rol === "programador"));
   if (!user) return res.status(401).json({ error: "No autorizado" });
   req.adminUser = user;
@@ -693,37 +693,12 @@ app.delete("/api/ventas/:id", async (req, res) => {
       }
     }
 
-    // Si la venta incluía huevos, también se revierte el inventario central de
-    // huevos y se elimina su movimiento vinculado. Esto evita que PC, web y
-    // Android queden mostrando datos distintos después de borrar una venta.
-    const eggItems = items.filter(item => item?.tipoItem === "huevo");
-    let huevosRevertidos = 0;
-    if (eggItems.length) {
-      const eggKey = String(venta.empresa || user.empresa || usuario || "");
-      const eggDoc = await db.collection("huevos").findOne({ key: eggKey });
-      if (eggDoc) {
-        const inventario = limpiarInventarioHuevos(eggDoc.inventory || inventarioHuevosInicial).map(q => {
-          const devolver = eggItems
-            .filter(item => String(item.calidadId) === String(q.id))
-            .reduce((sum, item) => sum + Number(item.huevos || 0), 0);
-          huevosRevertidos += devolver;
-          return devolver ? { ...q, stockHuevos: Number(q.stockHuevos || 0) + devolver } : q;
-        });
-        const movimientos = (Array.isArray(eggDoc.movements) ? eggDoc.movements : [])
-          .filter(m => String(m.ventaId || "") !== String(req.params.id));
-        await db.collection("huevos").updateOne(
-          { _id: eggDoc._id },
-          { $set: { inventory: inventario, movements: movimientos, actualizadoEn: new Date() } }
-        );
-      }
-    }
-
     await db.collection("ventas").deleteOne({ _id: new ObjectId(req.params.id) });
     // Borra también el recibo asociado, para que no quede huérfano.
     await db.collection("boletas").deleteOne({ ventaId: req.params.id });
 
-    console.log(`🗑️  Venta ${req.params.id} eliminada por "${usuario}" — stock devuelto en ${stockRevertidos}/${items.length} ítems; huevos devueltos: ${huevosRevertidos}`);
-    res.json({ ok: true, itemsRevertidos: items.length, stockRevertidos, huevosRevertidos });
+    console.log(`🗑️  Venta ${req.params.id} eliminada por "${usuario}" — stock devuelto en ${stockRevertidos}/${items.length} ítems`);
+    res.json({ ok: true, itemsRevertidos: items.length, stockRevertidos });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
