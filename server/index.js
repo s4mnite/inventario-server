@@ -1018,6 +1018,89 @@ app.post("/api/gastos", authGastos, async (req, res) => {
   }
 });
 
+app.put("/api/gastos/:id", authGastos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    let oid;
+    try { oid = new ObjectId(req.params.id); }
+    catch { return res.status(400).json({ error: "ID de gasto inválido" }); }
+
+    const gastoActual = await db.collection("gastos").findOne({ _id: oid, empresa: req.gastoEmpresa });
+    if (!gastoActual) return res.status(404).json({ error: "Gasto no encontrado" });
+
+    const datos = normalizarGasto(req.body);
+    if (!datos.comercio) return res.status(400).json({ error: "Falta comercio o descripción" });
+    if (datos.total <= 0) return res.status(400).json({ error: "El total debe ser mayor que cero" });
+
+    // 1) Revertir del inventario la compra original de este gasto (antes de aplicar la edición).
+    //    Se recalcula el stock y el costo promedio como si esa compra nunca se hubiera hecho.
+    for (const anterior of (gastoActual.itemsInventario || [])) {
+      const productoId = String(anterior.productoId || "");
+      const cantidadVieja = Math.max(0, Number(anterior.cantidad || 0));
+      const costoViejo = Math.max(0, Number(anterior.costoUnitario || 0));
+      if (!productoId || cantidadVieja <= 0) continue;
+      let poid;
+      try { poid = new ObjectId(productoId); } catch { continue; }
+
+      const producto = await db.collection("productos").findOne({ _id: poid });
+      if (!producto) continue; // el producto pudo haber sido eliminado; no hay nada que revertir
+      const stockActual = Math.max(0, Number(producto.stock || 0));
+      const costoActualProd = Math.max(0, Number(producto.costo || 0));
+      const stockRevertido = Math.max(0, stockActual - cantidadVieja);
+      const valorTotalActual = stockActual * costoActualProd;
+      const valorRevertido = Math.max(0, valorTotalActual - (cantidadVieja * costoViejo));
+      const costoRevertido = stockRevertido > 0 ? valorRevertido / stockRevertido : 0;
+      await db.collection("productos").updateOne(
+        { _id: poid },
+        { $set: { stock: stockRevertido, costo: costoRevertido, actualizadoEn: new Date() } }
+      );
+    }
+
+    // 2) Aplicar las nuevas cantidades editadas (mismo cálculo de promedio ponderado que al crear).
+    const itemsLimpios = [];
+    for (const raw of datos.itemsInventario) {
+      const productoId = String(raw.productoId || "");
+      const cantidad = Math.max(0, Number(raw.cantidad || 0));
+      const costoUnitario = Math.max(0, Number(raw.costoUnitario || 0));
+      if (!productoId || cantidad <= 0) continue;
+      let poid;
+      try { poid = new ObjectId(productoId); } catch { continue; }
+
+      const producto = await db.collection("productos").findOne({ _id: poid });
+      if (!producto) continue;
+      const stockAnterior = Math.max(0, Number(producto.stock || 0));
+      const costoAnterior = Math.max(0, Number(producto.costo || 0));
+      const stockNuevo = stockAnterior + cantidad;
+      const costoNuevo = stockNuevo > 0
+        ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+        : costoUnitario;
+      await db.collection("productos").updateOne(
+        { _id: poid },
+        { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
+      );
+      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario });
+    }
+
+    // 3) Actualizar el mismo registro de gasto (mismo _id, no se crea uno nuevo).
+    await db.collection("gastos").updateOne(
+      { _id: oid },
+      { $set: { ...datos, itemsInventario: itemsLimpios, actualizadoEn: new Date() } }
+    );
+
+    const gastoActualizado = await db.collection("gastos").findOne({ _id: oid });
+    const productos = await db.collection("productos")
+      .find(req.gastoUser.empresa ? { empresa: req.gastoUser.empresa } : {})
+      .toArray();
+    res.json({
+      gasto: { ...gastoActualizado, id: gastoActualizado._id.toString() },
+      productos: productos.map(x => ({ ...x, id: x._id.toString() })),
+    });
+  } catch (e) {
+    console.error("❌ PUT /api/gastos/:id:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.delete("/api/gastos/:id", authGastos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });

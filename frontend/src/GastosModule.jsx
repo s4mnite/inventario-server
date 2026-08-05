@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash2, Search, Receipt, TrendingDown,
+  Plus, Trash2, Pencil, Search, Receipt, TrendingDown,
   ShoppingBag, Fuel, Lightbulb, Home, Sparkles, MoreHorizontal,
   CheckCircle, AlertCircle, X, Package, ChevronDown,
 } from "lucide-react";
@@ -66,6 +66,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null); // null = gasto nuevo; string = editando ese id
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -173,6 +174,38 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     setForm(prev => (prev.comercio === comercioAutoInventario ? prev : { ...prev, comercio: comercioAutoInventario }));
   }, [comercioAutoInventario, form.itemsInventario.length]);
 
+  // Carga un gasto existente en el formulario para editarlo (mismo modal de "Registrar gasto").
+  const abrirEditar = (g) => {
+    const itemsInventario = (g.itemsInventario || []).map(it => {
+      const producto = products.find(p => String(p.id || p._id) === String(it.productoId));
+      return {
+        productoId: String(it.productoId || ""),
+        nombre: it.nombre || producto?.nombre || "",
+        costoActual: Math.max(0, Number(producto?.costo ?? it.costoUnitario ?? 0)),
+        modo: "unitario",
+        cantidad: Math.max(1, Number(it.cantidad || 1)),
+        costoUnitario: Math.max(0, Number(it.costoUnitario || 0)),
+        unidadesPorManga: Math.max(0, Number(producto?.mangaCantidad || 0)),
+        precioManga: Math.max(0, Number(producto?.mangaPrecio || 0)),
+        cantidadMangas: 1,
+      };
+    });
+    setForm({
+      comercio: g.comercio || "",
+      fecha: String(g.fecha || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
+      total: String(g.total ?? ""),
+      iva: String(g.iva ?? ""),
+      categoria: g.categoria || "otros",
+      metodoPago: g.metodoPago || "Efectivo",
+      numeroDocumento: g.numeroDocumento || "",
+      notas: g.notas || "",
+      itemsInventario,
+    });
+    setEditingId(g.id || g._id);
+    setError("");
+    setModal(true);
+  };
+
   const guardar = async () => {
     setError("");
     if (form.itemsInventario.length === 0 && !form.comercio.trim()) return setError("Ingresa el comercio o descripción del gasto.");
@@ -187,11 +220,13 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
           .map(x => ({ productoId: x.productoId, cantidad: unidadesItem(x), costoUnitario: costoUnitarioItem(x) }))
           .filter(x => x.productoId && x.cantidad > 0),
       };
-      const res = await fetch(`${API}/api/gastos`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders }, body: JSON.stringify(payload) });
-      const data = await leerJsonSeguro(res, "No se pudo guardar el gasto.");
-      setGastos(prev => [data.gasto, ...prev]);
+      const res = editingId
+        ? await fetch(`${API}/api/gastos/${editingId}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders }, body: JSON.stringify(payload) })
+        : await fetch(`${API}/api/gastos`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders }, body: JSON.stringify(payload) });
+      const data = await leerJsonSeguro(res, editingId ? "No se pudo guardar la edición." : "No se pudo guardar el gasto.");
+      setGastos(prev => editingId ? prev.map(g => (g.id || g._id) === editingId ? data.gasto : g) : [data.gasto, ...prev]);
       if (data.productos && setProducts) setProducts(data.productos);
-      setModal(false); setForm(emptyForm());
+      setModal(false); setForm(emptyForm()); setEditingId(null);
     } catch (e) { setError(e.message); }
   };
 
@@ -207,7 +242,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:18, flexWrap:"wrap" }}>
       <div><h2 style={{ margin:0, fontSize:24 }}>Gastos</h2><p style={{ margin:"4px 0 0", color:muted, fontSize:13 }}>Compras y egresos del local</p></div>
       <div style={{ display:"flex", gap:8 }}>
-        <button onClick={() => { setForm(emptyForm()); setModal(true); }} style={{ border:0, background:"#d71920", color:"#fff", borderRadius:12, padding:"10px 16px", fontWeight:800, display:"flex", gap:7, alignItems:"center" }}><Plus size={17}/> Nuevo gasto</button>
+        <button onClick={() => { setForm(emptyForm()); setEditingId(null); setModal(true); }} style={{ border:0, background:"#d71920", color:"#fff", borderRadius:12, padding:"10px 16px", fontWeight:800, display:"flex", gap:7, alignItems:"center" }}><Plus size={17}/> Nuevo gasto</button>
       </div>
     </div>
 
@@ -227,6 +262,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
           <div style={{ width:42,height:42,borderRadius:12,background:"#fff3bf",display:"flex",alignItems:"center",justifyContent:"center",color:"#d97706" }}><Icon size={19}/></div>
           <div style={{ flex:1,minWidth:0 }}><p style={{ margin:0,fontWeight:850,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{g.comercio}</p><p style={{ margin:"3px 0 0",color:muted,fontSize:11 }}>{g.fecha} · {cat.label}{g.numeroDocumento?` · N° ${g.numeroDocumento}`:""}</p></div>
           <div style={{ textAlign:"right" }}><p style={{ margin:0,fontWeight:900,color:"#d71920" }}>-{fmt(g.total)}</p>{g.imagenUrl&&<a href={`${API}${g.imagenUrl}`} target="_blank" rel="noreferrer" style={{ color:muted,fontSize:10 }}>Ver boleta</a>}</div>
+          <button onClick={()=>abrirEditar(g)} style={{ border:0,background:"transparent",color:"#2563eb",padding:7 }}><Pencil size={16}/></button>
           <button onClick={()=>eliminar(g.id||g._id)} style={{ border:0,background:"transparent",color:"#dc2626",padding:7 }}><Trash2 size={16}/></button>
         </div>;
       })}
@@ -234,7 +270,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
     {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:12000,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
       <div style={{ width:"100%",maxWidth:700,maxHeight:"92dvh",display:"flex",flexDirection:"column",background:card,borderRadius:"22px 22px 0 0",color:text,overflow:"hidden" }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>Registrar gasto</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>Ingresa los datos del gasto</p></div><button onClick={()=>setModal(false)} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:10,flexShrink:0 }}><X size={18}/></button></div>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>{editingId?"Editar gasto":"Registrar gasto"}</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>{editingId?"Modifica los datos del gasto":"Ingresa los datos del gasto"}</p></div><button onClick={()=>{setModal(false);setEditingId(null);}} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:10,flexShrink:0 }}><X size={18}/></button></div>
 
         <div style={{ flex:"1 1 auto",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px",paddingBottom:24 }}>
           {error&&<div style={{ background:"#fff1f2",color:"#be123c",padding:10,borderRadius:10,fontSize:12,marginBottom:12 }}>{error}</div>}
@@ -322,7 +358,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         </div>
 
         <div style={{ padding:"14px 18px",paddingBottom:"calc(14px + env(safe-area-inset-bottom))",borderTop:`1px solid ${border}`,background:card,flexShrink:0 }}>
-          <button onClick={guardar} style={{ width:"100%",padding:14,border:0,borderRadius:14,background:"#d71920",color:"#fff",fontWeight:900,fontSize:15 }}>Guardar gasto</button>
+          <button onClick={guardar} style={{ width:"100%",padding:14,border:0,borderRadius:14,background:"#d71920",color:"#fff",fontWeight:900,fontSize:15 }}>{editingId?"Guardar cambios":"Guardar gasto"}</button>
         </div>
       </div>
     </div>}
