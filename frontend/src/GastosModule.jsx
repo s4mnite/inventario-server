@@ -162,13 +162,25 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     setForm(prev => (Number(prev.total) === totalCalculado ? prev : { ...prev, total: String(totalCalculado) }));
   }, [totalCalculado, form.itemsInventario.length]);
 
+  // Con productos de inventario cargados, el comercio/descripción se arma solo
+  // con los nombres de los productos: no hace falta escribirlo a mano.
+  const comercioAutoInventario = useMemo(
+    () => form.itemsInventario.map(it => it.nombre).filter(Boolean).join(", "),
+    [form.itemsInventario]
+  );
+  useEffect(() => {
+    if (form.itemsInventario.length === 0 || !comercioAutoInventario) return;
+    setForm(prev => (prev.comercio === comercioAutoInventario ? prev : { ...prev, comercio: comercioAutoInventario }));
+  }, [comercioAutoInventario, form.itemsInventario.length]);
+
   const guardar = async () => {
     setError("");
-    if (!form.comercio.trim()) return setError("Ingresa el comercio o descripción del gasto.");
+    if (form.itemsInventario.length === 0 && !form.comercio.trim()) return setError("Ingresa el comercio o descripción del gasto.");
     if (Number(form.total) <= 0) return setError("Ingresa un total válido.");
     try {
       const payload = {
         ...form,
+        comercio: form.comercio.trim() || "Compra de inventario",
         total: Number(form.total),
         iva: Number(form.iva || 0),
         itemsInventario: form.itemsInventario
@@ -220,14 +232,14 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
       })}
     </div>
 
-    {modal && <div style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
-      <div style={{ width:"100%",maxWidth:700,maxHeight:"94vh",display:"flex",flexDirection:"column",background:card,borderRadius:"22px 22px 0 0",color:text,overflow:"hidden" }}>
+    {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:300,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
+      <div style={{ width:"100%",maxWidth:700,maxHeight:"92dvh",display:"flex",flexDirection:"column",background:card,borderRadius:"22px 22px 0 0",color:text,overflow:"hidden" }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>Registrar gasto</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>Ingresa los datos del gasto</p></div><button onClick={()=>setModal(false)} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:10,flexShrink:0 }}><X size={18}/></button></div>
 
-        <div style={{ flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px",paddingBottom:24 }}>
+        <div style={{ flex:"1 1 auto",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px",paddingBottom:24 }}>
           {error&&<div style={{ background:"#fff1f2",color:"#be123c",padding:10,borderRadius:10,fontSize:12,marginBottom:12 }}>{error}</div>}
           <div style={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10 }}>
-            <label style={{ gridColumn:"1/-1",fontSize:12,fontWeight:750 }}>Comercio / descripción<input value={form.comercio} onChange={e=>setForm({...form,comercio:e.target.value})} style={inputStyle(card,text,border)} /></label>
+            {form.itemsInventario.length===0 && <label style={{ gridColumn:"1/-1",fontSize:12,fontWeight:750 }}>Comercio / descripción<input value={form.comercio} onChange={e=>setForm({...form,comercio:e.target.value})} style={inputStyle(card,text,border)} /></label>}
             <label style={{ fontSize:12,fontWeight:750 }}>Fecha<input type="date" value={form.fecha} onChange={e=>setForm({...form,fecha:e.target.value})} style={inputStyle(card,text,border)} /></label>
             <label style={{ fontSize:12,fontWeight:750 }}>N° boleta/factura<input value={form.numeroDocumento} onChange={e=>setForm({...form,numeroDocumento:e.target.value})} style={inputStyle(card,text,border)} /></label>
             <label style={{ fontSize:12,fontWeight:750 }}>Total{form.itemsInventario.length>0&&<span style={{fontWeight:600,color:muted}}> (automático)</span>}<input type="number" value={form.total} readOnly={form.itemsInventario.length>0} onChange={e=>setForm({...form,total:e.target.value})} style={{...inputStyle(card,text,border),...(form.itemsInventario.length>0?{opacity:.65,cursor:"not-allowed"}:{})}} /></label>
