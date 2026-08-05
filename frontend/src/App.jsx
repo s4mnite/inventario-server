@@ -531,6 +531,8 @@ const css = `
     .dashboard-stat-value { font-size: 20px !important; }
     .grid-2-mobile { grid-template-columns: 1fr !important; }
     .grid-3-mobile { grid-template-columns: 1fr !important; }
+    .reportes-payment-methods > div { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 8px !important; }
+    .reportes-payment-methods strong { font-size: 15px !important; white-space: nowrap !important; }
   }
   @media (max-width: 480px) {
     .grid-3-mobile-sm { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
