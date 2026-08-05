@@ -518,7 +518,9 @@ app.post("/api/ventas", async (req, res) => {
 
     const eggItems = Array.isArray(venta.eggItems) ? venta.eggItems.filter(item => item && item.tipoItem === "huevo") : [];
     const empresaConfirmada = obtenerEmpresa(cajaAbierta.empresa || empresaVenta);
-    const eggKey = empresaConfirmada;
+    // Huevos usa una clave estable por usuario para que web, APK y otros PC
+    // consulten exactamente el mismo documento de MongoDB.
+    const eggKey = normalizarClaveHuevos(req.headers["x-usuario"] || venta.usuario || "admin");
     let eggDoc = null;
     let eggInventoryActual = null;
     if (eggItems.length) {
@@ -691,7 +693,7 @@ app.delete("/api/ventas/:id", async (req, res) => {
     const eggItems = items.filter(item => item?.tipoItem === "huevo");
     let huevosRevertidos = 0;
     if (eggItems.length) {
-      const eggKey = String(venta.empresa || user.empresa || usuario || "");
+      const eggKey = normalizarClaveHuevos(usuario || venta.usuario || "admin");
       const eggDoc = await db.collection("huevos").findOne({ key: eggKey });
       if (eggDoc) {
         const inventario = limpiarInventarioHuevos(eggDoc.inventory || inventarioHuevosInicial).map(q => {
@@ -1007,13 +1009,19 @@ app.delete("/api/gastos/:id", authGastos, async (req, res) => {
 });
 
 // ─── HUEVOS (MongoDB, sincronizados entre dispositivos) ───────────────────────
+// La clave estable de Huevos es el usuario. No usamos `empresa` como key porque
+// algunas sesiones antiguas la traen vacía y otras "Rey del Huevo", lo que
+// terminaba creando/leyendo documentos distintos según el dispositivo.
+const normalizarClaveHuevos = (valor) => String(valor || "").trim().toLowerCase();
+
 const authHuevos = (req, res, next) => {
   const usuario = req.headers["x-usuario"];
   const clave = req.headers["x-clave"];
   const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
   if (!user) return res.status(401).json({ error: "Credenciales inválidas para huevos" });
   req.eggUser = user;
-  req.eggKey = (user.empresa && String(user.empresa).trim()) || user.usuario;
+  req.eggKey = normalizarClaveHuevos(user.usuario);
+  req.eggEmpresa = String(user.empresa || "").trim();
   next();
 };
 
@@ -1042,7 +1050,31 @@ const limpiarInventarioHuevos = (inventory) => {
 app.get("/api/huevos", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
-    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
+    let doc = await db.collection("huevos").findOne({ key: req.eggKey });
+
+    // Compatibilidad: si una versión anterior guardó el documento con la
+    // empresa como key, lo recuperamos y lo migramos a la clave estable.
+    if (!doc && req.eggEmpresa) {
+      const anterior = await db.collection("huevos").findOne({ key: req.eggEmpresa });
+      if (anterior) {
+        await db.collection("huevos").updateOne(
+          { _id: anterior._id },
+          { $set: { key: req.eggKey, usuario: req.eggUser.usuario, empresa: req.eggEmpresa, actualizadoEn: new Date() } }
+        );
+        doc = { ...anterior, key: req.eggKey, usuario: req.eggUser.usuario, empresa: req.eggEmpresa };
+      }
+    }
+
+    // Corrige solo los metadatos del documento existente; inventario y
+    // movimientos no se alteran.
+    if (doc && (!doc.usuario || String(doc.empresa || "") !== req.eggEmpresa)) {
+      await db.collection("huevos").updateOne(
+        { _id: doc._id },
+        { $set: { usuario: req.eggUser.usuario, empresa: req.eggEmpresa } }
+      );
+    }
+
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
     res.json({
       inventory: doc?.inventory || inventarioHuevosInicial,
       movements: doc?.movements || [],
