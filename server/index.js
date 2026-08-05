@@ -306,6 +306,16 @@ const cajaAbiertaPorEmpresaQuery = empresa => ({
 const DEFAULT_EMPRESA = String(process.env.DEFAULT_EMPRESA || "Rey del Huevo").trim();
 const obtenerEmpresa = value => String(value || DEFAULT_EMPRESA).trim();
 
+// La identidad del módulo Huevos debe ser idéntica en inventario, ventas y
+// eliminación de ventas. Para usuarios sin empresa (como admin), la clave
+// estable es el nombre de usuario; esto coincide con /api/huevos.
+const obtenerUsuarioPeticion = req => {
+  const usuario = String(req.headers["x-usuario"] || "").trim();
+  const clave = String(req.headers["x-clave"] || "");
+  return usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked) || null;
+};
+const obtenerClaveHuevos = user => String((user?.empresa && String(user.empresa).trim()) || user?.usuario || "").trim();
+
 // ─── CAJA Y CLIENTES DE FACTURACIÓN ─────────────────────────────────────────
 app.get("/api/caja/actual", async (req, res) => {
   try {
@@ -516,9 +526,13 @@ app.post("/api/ventas", async (req, res) => {
       }
     }
 
-    const eggItems = Array.isArray(venta.eggItems) ? venta.eggItems.filter(item => item && item.tipoItem === "huevo") : [];
+    const eggItems = Array.isArray(venta.eggItems)
+      ? venta.eggItems.filter(item => item && item.tipoItem === "huevo")
+      : (Array.isArray(venta.items) ? venta.items.filter(item => item && item.tipoItem === "huevo") : []);
     const empresaConfirmada = obtenerEmpresa(cajaAbierta.empresa || empresaVenta);
-    const eggKey = empresaConfirmada;
+    const usuarioVenta = obtenerUsuarioPeticion(req);
+    if (!usuarioVenta) return res.status(401).json({ error: "Credenciales inválidas" });
+    const eggKey = obtenerClaveHuevos(usuarioVenta);
     let eggDoc = null;
     let eggInventoryActual = null;
     if (eggItems.length) {
@@ -615,7 +629,7 @@ app.post("/api/ventas", async (req, res) => {
       const movements = [...eggMovements, ...previousMovements].slice(0, 5000);
       await db.collection("huevos").updateOne(
         { key: eggKey },
-        { $set: { inventory: eggInventory, movements, usuario: req.headers["x-usuario"] || venta.usuario || "", empresa: empresaConfirmada, actualizadoEn: new Date() }, $setOnInsert: { creadoEn: new Date() } },
+        { $set: { inventory: eggInventory, movements, usuario: usuarioVenta.usuario, empresa: usuarioVenta.empresa || empresaConfirmada, actualizadoEn: new Date() }, $setOnInsert: { creadoEn: new Date() } },
         { upsert: true }
       );
     }
@@ -652,16 +666,16 @@ app.delete("/api/ventas/:id", async (req, res) => {
 
     // Requiere sesión válida (cualquier usuario logueado, no solo admin) —
     // igual que el resto de las acciones de venta.
-    const usuario = req.headers["x-usuario"];
-    const clave = req.headers["x-clave"];
-    const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+    const user = obtenerUsuarioPeticion(req);
     if (!user) return res.status(401).json({ error: "Credenciales inválidas" });
+    const usuario = user.usuario;
 
     const venta = await db.collection("ventas").findOne({ _id: new ObjectId(req.params.id) });
     if (!venta) return res.status(404).json({ error: "Venta no encontrada" });
 
     // Devolver el stock de cada producto de la venta al inventario.
-    const items = Array.isArray(venta.items) ? venta.items : [];
+    const todosLosItems = Array.isArray(venta.items) ? venta.items : [];
+    const items = todosLosItems.filter(item => item?.tipoItem !== "huevo");
     let stockRevertidos = 0;
     for (const item of items) {
       if (!item.productoId) {
@@ -688,11 +702,20 @@ app.delete("/api/ventas/:id", async (req, res) => {
     // Si la venta incluía huevos, también se revierte el inventario central de
     // huevos y se elimina su movimiento vinculado. Esto evita que PC, web y
     // Android queden mostrando datos distintos después de borrar una venta.
-    const eggItems = items.filter(item => item?.tipoItem === "huevo");
+    const eggItems = Array.isArray(venta.eggItems) && venta.eggItems.length
+      ? venta.eggItems.filter(item => item?.tipoItem === "huevo")
+      : todosLosItems.filter(item => item?.tipoItem === "huevo");
     let huevosRevertidos = 0;
     if (eggItems.length) {
-      const eggKey = String(venta.empresa || user.empresa || usuario || "");
-      const eggDoc = await db.collection("huevos").findOne({ key: eggKey });
+      const eggKey = obtenerClaveHuevos(user);
+      // Preferimos el documento del usuario. Para ventas antiguas con una clave
+      // distinta, buscamos el movimiento vinculado por ventaId sin tocar otros documentos.
+      const eggDoc = await db.collection("huevos").findOne({
+        $or: [
+          { key: eggKey },
+          { "movements.ventaId": String(req.params.id) },
+        ],
+      });
       if (eggDoc) {
         const inventario = limpiarInventarioHuevos(eggDoc.inventory || inventarioHuevosInicial).map(q => {
           const devolver = eggItems
@@ -1008,12 +1031,10 @@ app.delete("/api/gastos/:id", authGastos, async (req, res) => {
 
 // ─── HUEVOS (MongoDB, sincronizados entre dispositivos) ───────────────────────
 const authHuevos = (req, res, next) => {
-  const usuario = req.headers["x-usuario"];
-  const clave = req.headers["x-clave"];
-  const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+  const user = obtenerUsuarioPeticion(req);
   if (!user) return res.status(401).json({ error: "Credenciales inválidas para huevos" });
   req.eggUser = user;
-  req.eggKey = (user.empresa && String(user.empresa).trim()) || user.usuario;
+  req.eggKey = obtenerClaveHuevos(user);
   next();
 };
 
