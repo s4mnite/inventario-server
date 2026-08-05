@@ -232,7 +232,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
       })}
     </div>
 
-    {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:300,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
+    {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:12000,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
       <div style={{ width:"100%",maxWidth:700,maxHeight:"92dvh",display:"flex",flexDirection:"column",background:card,borderRadius:"22px 22px 0 0",color:text,overflow:"hidden" }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>Registrar gasto</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>Ingresa los datos del gasto</p></div><button onClick={()=>setModal(false)} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:10,flexShrink:0 }}><X size={18}/></button></div>
 
