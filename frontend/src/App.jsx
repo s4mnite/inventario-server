@@ -4332,8 +4332,15 @@ export default function App() {
                           procesarCodigoVenta(e.currentTarget.value);
                         }
                       }}
+                      type="search"
                       autoComplete="off"
-                      inputMode="none"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      inputMode="search"
+                      enterKeyHint="search"
+                      onPointerDown={(e) => {
+                        if (document.activeElement !== e.currentTarget) e.currentTarget.focus();
+                      }}
                       placeholder="Buscar o escanear código..."
                     />
                     <button
