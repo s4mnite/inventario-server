@@ -589,6 +589,10 @@ app.post("/api/ventas", async (req, res) => {
     let eggInventory = null;
     if (eggItems.length) {
       const now = new Date();
+      const chileDateParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(now).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+      const chileDate = `${chileDateParts.year}-${chileDateParts.month}-${chileDateParts.day}`;
       eggInventory = eggInventoryActual.map(q => {
         const soldUnits = eggItems.filter(item => String(item.calidadId) === String(q.id)).reduce((sum, item) => sum + Number(item.huevos || 0), 0);
         return soldUnits ? { ...q, stockHuevos: Math.max(0, Number(q.stockHuevos || 0) - soldUnits) } : q;
@@ -598,7 +602,7 @@ app.post("/api/ventas", async (req, res) => {
         const costo = (Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0);
         return {
           id: Number(`${Date.now()}${index}`),
-          fechaIngreso: now.toISOString().slice(0, 10),
+          fechaIngreso: chileDate,
           fecha: now.toISOString(),
           tipo: "venta",
           calidadId: item.calidadId,

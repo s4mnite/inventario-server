@@ -807,6 +807,19 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   };
 
   const movementDay = movement => {
+    // Las ventas creadas por el backend pueden guardarse después de medianoche
+    // en UTC aunque todavía sea el día anterior en Chile. Para reportes usamos
+    // la fecha real de la venta en America/Santiago, incluso para movimientos
+    // ya existentes que quedaron con fechaIngreso UTC adelantada.
+    if (movement?.tipo === "venta" && movement?.fecha) {
+      const saleDate = new Date(movement.fecha);
+      if (!Number.isNaN(saleDate.getTime())) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(saleDate).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+        if (parts.year && parts.month && parts.day) return `${parts.year}-${parts.month}-${parts.day}`;
+      }
+    }
     const raw = movement?.fechaIngreso || movement?.fechaMovimiento || movement?.fecha;
     if (!raw) return "";
     const text = String(raw).trim();
