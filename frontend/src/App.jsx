@@ -1624,6 +1624,7 @@ export default function App() {
   // Ventas & Carrito
   const [ventas, setVentas] = useState(getSales);
   const [boletas, setBoletas] = useState(getBoletas);
+  const [gastosReporte, setGastosReporte] = useState([]); // usados solo por el bloque Ingresos/Egresos/Balance de Reportes
   const [carrito, setCarrito] = useState([]);
   const [busquedaVenta, setBusquedaVenta] = useState("");
   const [showBusquedaDropdown, setShowBusquedaDropdown] = useState(false);
@@ -2008,6 +2009,43 @@ export default function App() {
   useEffect(() => {
     if (["Ventas", "Recibos", "Reportes", "Dashboard"].includes(activeNav)) sincronizarVentasYBoletas();
   }, [activeNav, sincronizarVentasYBoletas]);
+
+  // Trae los gastos/compras registrados en el módulo Gastos, solo para calcular
+  // Egresos y Balance en Reportes. No modifica ni depende de la lógica de GastosModule.
+  const sincronizarGastosReporte = useCallback(async () => {
+    if (!currentUser) return false;
+    const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
+    try {
+      const res = await fetch(API + "/api/gastos", { headers, cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "No se pudieron sincronizar los gastos.");
+      setGastosReporte(Array.isArray(data) ? data : []);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, [API, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    sincronizarGastosReporte();
+    const timer = window.setInterval(() => sincronizarGastosReporte(), 8000);
+    const refrescar = () => sincronizarGastosReporte();
+    const visible = () => { if (document.visibilityState === "visible") refrescar(); };
+    window.addEventListener("focus", refrescar);
+    window.addEventListener("online", refrescar);
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refrescar);
+      window.removeEventListener("online", refrescar);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [currentUser, sincronizarGastosReporte]);
+
+  useEffect(() => {
+    if (["Gastos", "Reportes", "Dashboard"].includes(activeNav)) sincronizarGastosReporte();
+  }, [activeNav, sincronizarGastosReporte]);
 
   const sincronizarProductosYCategorias = useCallback(async () => {
     if (!currentUser) return false;
@@ -3362,6 +3400,21 @@ export default function App() {
   })();
   const ingresosPeriodo   = ventasPeriodo.reduce((s, v) => s + v.total, 0);
   const gananciaPeriodo   = ingresosPeriodo - costosPeriodo;
+
+  // ── Ingresos / Egresos / Balance del período (bloque financiero de Reportes) ──
+  // Egresos = todos los gastos registrados en el módulo Gastos (incluye compras de
+  // inventario, ya que se guardan como gasto: se cuentan una sola vez, no se duplican).
+  const gastosPeriodo = gastosReporte.filter(g => {
+    const fecha = g?.fecha || g?.createdAt || g?.creadoEn;
+    if (!fecha) return reportePeriodo === "todo";
+    const d = new Date(fecha);
+    if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+    if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
+    if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+    return true;
+  });
+  const egresosPeriodo = gastosPeriodo.reduce((s, g) => s + Number(g.total || 0), 0);
+  const balancePeriodo = ingresosPeriodo - egresosPeriodo;
   const margenPct         = costosPeriodo > 0 ? Math.round((gananciaPeriodo / costosPeriodo) * 100) : 0;
   const topGananciaProd   = Object.values(repProdMap).map(p => {
     const costo = (products.find(pr => pr.nombre === p.nombre)?.costo || 0) * p.cantidad;
@@ -4081,6 +4134,21 @@ export default function App() {
                       style={{ padding: "10px 20px", borderRadius: 12, border: `2px solid ${reporteTab === t.id ? "#d71920" : borderColor2}`, background: reporteTab === t.id ? (D ? "rgba(59,91,219,0.15)" : "#fff3bf") : bgCard2, color: reporteTab === t.id ? "#d71920" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
                       {t.label}
                     </button>
+                  ))}
+                </div>
+
+                {/* Ingresos / Egresos / Balance del período */}
+                <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 20 }}>
+                  {[
+                    { label: "Ingresos", val: ingresosPeriodo, color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", icon: TrendingUp, prefix: "" },
+                    { label: "Egresos", val: egresosPeriodo, color: "#e03131", bg: D ? "rgba(224,49,49,0.15)" : "#fff1f2", icon: TrendingDown, prefix: "-" },
+                    { label: "Balance", val: balancePeriodo, color: balancePeriodo >= 0 ? "#10b981" : "#e03131", bg: balancePeriodo >= 0 ? (D ? "rgba(16,185,129,0.15)" : "#ecfdf5") : (D ? "rgba(224,49,49,0.15)" : "#fff1f2"), icon: DollarSign, prefix: "" },
+                  ].map(({ label, val, color, bg, icon: Icon, prefix }) => (
+                    <div key={label} style={card} className="card-hover">
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
+                      <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color }} className="mono">{prefix}{fmt(Math.abs(val))}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
+                    </div>
                   ))}
                 </div>
 
