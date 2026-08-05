@@ -38,7 +38,7 @@ process.on("uncaughtException", (e) => console.error("❌ uncaughtException:", e
 process.on("unhandledRejection", (e) => console.error("❌ unhandledRejection:", e));
 
 const app = express();
-app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave"] }));
+app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
 // ─── MongoDB ──────────────────────────────────────────────────────────────────

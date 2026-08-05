@@ -182,7 +182,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       if (!silent) setLoadingEggs(true);
       try {
         const res = await fetch(`${API}/api/huevos?_=${Date.now()}`, {
-          headers: { ...eggHeaders, "Cache-Control": "no-cache" },
+          headers: eggHeaders,
           cache: "no-store",
         });
         const contentType = res.headers.get("content-type") || "";
