@@ -976,24 +976,32 @@ app.post("/api/gastos", authGastos, async (req, res) => {
       const productoId = String(raw.productoId || "");
       const cantidad = Math.max(0, Number(raw.cantidad || 0));
       const costoUnitario = Math.max(0, Number(raw.costoUnitario || 0));
+      // Si viene explícitamente en false, el ítem se registra en el gasto
+      // (nombre, cantidad, costo) pero no toca el stock ni el costo promedio
+      // del producto. Por defecto (undefined/true) sí actualiza el stock,
+      // igual que el comportamiento original.
+      const actualizarStock = raw.actualizarStock !== false;
       if (!productoId || cantidad <= 0) continue;
       let oid;
       try { oid = new ObjectId(productoId); } catch { continue; }
 
       const producto = await db.collection("productos").findOne({ _id: oid });
       if (!producto) continue;
-      // Promedio ponderado: conserva el costo del stock anterior y suma la compra.
-      const stockAnterior = Math.max(0, Number(producto.stock || 0));
-      const costoAnterior = Math.max(0, Number(producto.costo || 0));
-      const stockNuevo = stockAnterior + cantidad;
-      const costoNuevo = stockNuevo > 0
-        ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
-        : costoUnitario;
-      await db.collection("productos").updateOne(
-        { _id: oid },
-        { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
-      );
-      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario });
+
+      if (actualizarStock) {
+        // Promedio ponderado: conserva el costo del stock anterior y suma la compra.
+        const stockAnterior = Math.max(0, Number(producto.stock || 0));
+        const costoAnterior = Math.max(0, Number(producto.costo || 0));
+        const stockNuevo = stockAnterior + cantidad;
+        const costoNuevo = stockNuevo > 0
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          : costoUnitario;
+        await db.collection("productos").updateOne(
+          { _id: oid },
+          { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
+        );
+      }
+      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario, actualizarStock });
     }
 
     const doc = {
@@ -1038,6 +1046,9 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
       const productoId = String(anterior.productoId || "");
       const cantidadVieja = Math.max(0, Number(anterior.cantidad || 0));
       const costoViejo = Math.max(0, Number(anterior.costoUnitario || 0));
+      // Si ese ítem no había actualizado stock al crearse, tampoco hay nada
+      // que revertir ahora.
+      if (anterior.actualizarStock === false) continue;
       if (!productoId || cantidadVieja <= 0) continue;
       let poid;
       try { poid = new ObjectId(productoId); } catch { continue; }
@@ -1062,23 +1073,27 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
       const productoId = String(raw.productoId || "");
       const cantidad = Math.max(0, Number(raw.cantidad || 0));
       const costoUnitario = Math.max(0, Number(raw.costoUnitario || 0));
+      const actualizarStock = raw.actualizarStock !== false;
       if (!productoId || cantidad <= 0) continue;
       let poid;
       try { poid = new ObjectId(productoId); } catch { continue; }
 
       const producto = await db.collection("productos").findOne({ _id: poid });
       if (!producto) continue;
-      const stockAnterior = Math.max(0, Number(producto.stock || 0));
-      const costoAnterior = Math.max(0, Number(producto.costo || 0));
-      const stockNuevo = stockAnterior + cantidad;
-      const costoNuevo = stockNuevo > 0
-        ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
-        : costoUnitario;
-      await db.collection("productos").updateOne(
-        { _id: poid },
-        { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
-      );
-      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario });
+
+      if (actualizarStock) {
+        const stockAnterior = Math.max(0, Number(producto.stock || 0));
+        const costoAnterior = Math.max(0, Number(producto.costo || 0));
+        const stockNuevo = stockAnterior + cantidad;
+        const costoNuevo = stockNuevo > 0
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          : costoUnitario;
+        await db.collection("productos").updateOne(
+          { _id: poid },
+          { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
+        );
+      }
+      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario, actualizarStock });
     }
 
     // 3) Actualizar el mismo registro de gasto (mismo _id, no se crea uno nuevo).

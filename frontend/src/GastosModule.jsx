@@ -49,6 +49,11 @@ const emptyItemInventario = () => ({
   // huevos sueltos), y el costo se ingresa como lo que se paga por caja —
   // igual que la lógica del módulo Huevos — nunca como precio de venta.
   calidadId: "", cajasHuevos: 1, bandejasHuevos: 0, costoCajaCompra: 0,
+  // Solo aplica a tipo "producto": si está en false, este ítem se registra
+  // en el gasto (monto, nombre, cantidad) pero NO suma stock ni recalcula
+  // el costo promedio del producto. Los huevos siempre suman stock (no
+  // tienen este interruptor).
+  actualizarStock: true,
 });
 
 // Unidades totales que suma este ítem al stock, sin importar el modo elegido.
@@ -200,6 +205,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         modo: tieneManga ? x.modo : "unitario",
         cantidad: x.cantidad || 1,
         cantidadMangas: x.cantidadMangas || 1,
+        actualizarStock: x.actualizarStock ?? true,
       };
     }),
   }));
@@ -280,6 +286,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         // compra, nunca con el precio de venta del bulto (producto.mangaPrecio).
         precioManga: unidadesPorManga > 0 ? costoUnitario * unidadesPorManga : 0,
         cantidadMangas: 1,
+        actualizarStock: it.actualizarStock !== false,
       };
     });
     setForm({
@@ -379,7 +386,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         total: Number(form.total),
         iva: Number(form.iva || 0),
         itemsInventario: productoItems
-          .map(x => ({ productoId: x.productoId, cantidad: unidadesItem(x), costoUnitario: costoUnitarioItem(x) }))
+          .map(x => ({ productoId: x.productoId, cantidad: unidadesItem(x), costoUnitario: costoUnitarioItem(x), actualizarStock: x.actualizarStock !== false }))
           .filter(x => x.productoId && x.cantidad > 0),
       };
       const res = editingId
@@ -508,6 +515,31 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                 {it.productoId && it.tipo!=="huevo" && <>
                   <p style={{ margin:"0 0 8px",fontSize:11,color:muted }}>Costo actual: <strong style={{color:text}}>{fmt(it.costoActual)}</strong> por unidad</p>
 
+                  <button
+                    type="button"
+                    onClick={()=>cambiarItem(i,"actualizarStock",!(it.actualizarStock!==false))}
+                    style={{
+                      display:"flex",alignItems:"center",gap:8,width:"100%",
+                      border:`1.5px solid ${it.actualizarStock!==false?"#15803d":border}`,
+                      background:it.actualizarStock!==false?(darkMode?"rgba(21,128,61,0.15)":"#f0fdf4"):card,
+                      borderRadius:9,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
+                    }}
+                  >
+                    <span style={{
+                      width:32,height:18,borderRadius:999,flexShrink:0,position:"relative",
+                      background:it.actualizarStock!==false?"#15803d":(darkMode?"#3f3f46":"#d4d4d8"),
+                      transition:"background .15s",
+                    }}>
+                      <span style={{
+                        position:"absolute",top:2,left:it.actualizarStock!==false?16:2,
+                        width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left .15s",
+                      }}/>
+                    </span>
+                    <span style={{ fontSize:12,fontWeight:750,color:text }}>
+                      {it.actualizarStock!==false ? "Agregar al stock" : "No agregar al stock (solo gasto)"}
+                    </span>
+                  </button>
+
                   <div style={{ display:"flex",gap:7,marginBottom:8 }}>
                     <button type="button" onClick={()=>cambiarModoItem(i,"unitario")} style={{ flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${it.modo==="unitario"?"#d71920":border}`,background:it.modo==="unitario"?(darkMode?"rgba(215,25,32,0.15)":"#fff3bf"):card,color:it.modo==="unitario"?"#d71920":muted,fontSize:12,fontWeight:750,cursor:"pointer" }}>○ Unitario</button>
                     <button type="button" disabled={!tieneManga} onClick={()=>cambiarModoItem(i,"manga")} title={tieneManga?"":"Este producto no tiene manga/bulto configurado"} style={{ flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${it.modo==="manga"?"#f59e0b":border}`,background:it.modo==="manga"?(darkMode?"rgba(245,158,11,0.2)":"#fffbeb"):card,color:it.modo==="manga"?"#d97706":muted,fontSize:12,fontWeight:750,cursor:tieneManga?"pointer":"not-allowed",opacity:tieneManga?1:.5 }}>○ Manga / Bulto</button>
@@ -528,7 +560,9 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                   {it.modo==="manga" && Number(producto?.mangaPrecio||0)>0 && <p style={{margin:"6px 0 0",fontSize:10,color:muted}}>Referencia: precio de venta al público de esta manga {fmt(producto.mangaPrecio)} — no uses este valor como precio de compra.</p>}
 
                   <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
-                    {unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades}</strong> unidades al stock · costo unitario {fmt(costoCalc)}</> : "Ingresa cantidad para calcular"}
+                    {it.actualizarStock===false
+                      ? <>No se sumará stock · costo unitario {fmt(costoCalc)}</>
+                      : (unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades}</strong> unidades al stock · costo unitario {fmt(costoCalc)}</> : "Ingresa cantidad para calcular")}
                     {" · "}Subtotal: <strong style={{color:text}}>{fmt(subtotalItem(it))}</strong>
                   </p>
                 </>}
