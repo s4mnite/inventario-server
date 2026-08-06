@@ -16,6 +16,7 @@ import {
 
 import EggModule from "./HuevosModule";
 import GastosModule from "./GastosModule";
+import ReyDelHuevoInicio from "./ReyDelHuevoInicio";
 import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement } from "./lib/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -531,8 +532,6 @@ const css = `
     .dashboard-stat-value { font-size: 20px !important; }
     .grid-2-mobile { grid-template-columns: 1fr !important; }
     .grid-3-mobile { grid-template-columns: 1fr !important; }
-    .reportes-payment-methods > div { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 8px !important; }
-    .reportes-payment-methods strong { font-size: 15px !important; white-space: nowrap !important; }
   }
   @media (max-width: 480px) {
     .grid-3-mobile-sm { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
@@ -3108,6 +3107,24 @@ export default function App() {
   const saludoHora = hoyDate.getHours() < 12 ? "Buenos días" : hoyDate.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
   const fechaInicio = hoyDate.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
   const valorInventarioReal = products.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.precio || 0), 0);
+  const bandejasVendidasHoy = Math.floor(huevosVendidosHoy / 30);
+  const egresosHoyInicio = gastosReporte
+    .filter(g => String(g.fecha || "").slice(0, 10) === hoyClave)
+    .reduce((sum, g) => sum + Number(g.total || 0), 0);
+  const actividadInicio = [
+    ...ventasHoy.map(v => ({
+      id: v.id || v._id || v.timestamp, tipo: "venta", positivo: true,
+      titulo: (v.items || []).some(i => i.tipoItem === "huevo") ? "Venta de huevos" : "Venta de inventario",
+      detalle: (v.items || []).slice(0, 2).map(i => i.nombre || i.calidad).filter(Boolean).join(", ") || (v.pago || "Venta"),
+      hora: new Date(v.timestamp || v.creadoEn || v.fecha || Date.now()).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
+      monto: Number(v.total || 0), fechaOrden: new Date(v.timestamp || v.creadoEn || v.fecha || 0).getTime(),
+    })),
+    ...gastosReporte.filter(g => String(g.fecha || "").slice(0, 10) === hoyClave).map(g => ({
+      id: g.id || g._id, tipo: "gasto", positivo: false, titulo: "Gasto registrado",
+      detalle: g.comercio || g.categoria || "Gasto", hora: g.creadoEn ? new Date(g.creadoEn).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "Hoy",
+      monto: Number(g.total || 0), fechaOrden: new Date(g.creadoEn || g.fecha || 0).getTime(),
+    })),
+  ].sort((a,b) => b.fechaOrden - a.fechaOrden);
 
   // Mes anterior
   const mesAnteriorNum = mesActual === 0 ? 11 : mesActual - 1;
@@ -3766,99 +3783,29 @@ export default function App() {
                 </section>
               </div>
 
-              <div className="rey-mobile-home rey-home3">
-              <div className="rey-home3-shell">
-                <header className="rey-home3-header">
-                  <div className="rey-home3-header-top">
-                    <button className="rey-home3-menu-btn" aria-label="Menú">
-                      <Menu size={20} />
-                    </button>
-                    <div className="rey-home3-brand">
-                      <span className="rey-home3-brand-icon">🐔</span>
-                      <span className="rey-home3-brand-text">Rey<br/>del Huevo</span>
-                    </div>
-                    <button className="rey-home3-bell-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notificaciones">
-                      <Bell size={18} />
-                      {notificaciones.length > 0 && <i />}
-                    </button>
-                  </div>
-                  <p className="rey-home3-greeting">{saludoHora}, {currentUser.nombre.split(" ")[0]}!</p>
-                  <p className="rey-home3-date">{fechaInicio}</p>
-                </header>
-
-                <div className="rey-home3-body">
-                  <section className="rey-home3-summary-card">
-                    <h3>Resumen de hoy</h3>
-                    <div className="rey-home3-summary-row">
-                      <div>
-                        <span>Ventas</span>
-                        <strong className="mono">{fmt(ventasHuevosHoyTotal)}</strong>
-                      </div>
-                      <span className={`rey-home3-badge ${porcentajeVentas >= 0 ? "up" : "down"}`}>
-                        {porcentajeVentas >= 0 ? "▲" : "▼"} {Math.abs(porcentajeVentas).toLocaleString("es-CL", { maximumFractionDigits: 1 })}% vs ayer
-                      </span>
-                    </div>
-                    <div className="rey-home3-mini-stats">
-                      <div className="rey-home3-mini-stat">
-                        <span className="rey-home3-mini-icon yellow">🥚</span>
-                        <div><strong>{huevosVendidosHoy.toLocaleString("es-CL")}</strong><small>Huevos vendidos</small></div>
-                      </div>
-                      <div className="rey-home3-mini-stat">
-                        <span className="rey-home3-mini-icon blue"><Package size={15}/></span>
-                        <div><strong>{products.length.toLocaleString("es-CL")}</strong><small>Productos</small></div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="rey-home3-profit-card">
-                    <div>
-                      <span>Ganancias estimadas</span>
-                      <strong className="mono">{fmt(gananciasHoy)}</strong>
-                    </div>
-                    <span className={`rey-home3-badge2 ${porcentajeGanancias >= 0 ? "up" : "down"}`}>
-                      {porcentajeGanancias >= 0 ? "▲" : "▼"} {Math.abs(porcentajeGanancias).toLocaleString("es-CL", { maximumFractionDigits: 1 })}%
-                    </span>
-                  </section>
-
-                  <div className="rey-home3-heading"><h2>Accesos rápidos</h2></div>
-                  <div className="rey-home3-quick-grid">
-                    <button className="rey-home3-quick-btn" onClick={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}>
-                      <span className="rey-home3-quick-icon red"><ShoppingCart size={18}/></span>
-                      <small>Nueva venta</small>
-                    </button>
-                    <button className="rey-home3-quick-btn" onClick={() => { setEggSaleMode(false); setActiveNav("Huevos"); }}>
-                      <span className="rey-home3-quick-icon yellow">🥚</span>
-                      <small>Huevos</small>
-                    </button>
-                    <button className="rey-home3-quick-btn" onClick={() => setActiveNav("Productos")}>
-                      <span className="rey-home3-quick-icon blue"><Package size={18}/></span>
-                      <small>Inventario</small>
-                    </button>
-                    <button className="rey-home3-quick-btn" onClick={() => setActiveNav("Reportes")}>
-                      <span className="rey-home3-quick-icon green"><BarChart2 size={18}/></span>
-                      <small>Reportes</small>
-                    </button>
-                  </div>
-
-                  <div className="rey-home3-heading">
-                    <h2>Movimientos recientes</h2>
-                    <button onClick={() => setActiveNav("Huevos")}>Ver todos <ChevronRight size={14}/></button>
-                  </div>
-                  <div className="rey-home3-activity-list">
-                    {movimientosHuevosInicio.filter(m => m.tipo === "venta").slice(0, 4).map((m, index) => (
-                      <div className="rey-home3-activity-row" key={m.id || index}>
-                        <span className="rey-home3-activity-time">{m.fecha ? new Date(m.fecha).toLocaleTimeString("es-CL", {hour:"2-digit", minute:"2-digit"}) : "--:--"}</span>
-                        <div><strong>{m.calidad || "Venta de huevos"}</strong><small>{Number(m.huevos || m.unidades || 0)} huevos · {m.metodoPago || "Efectivo"}</small></div>
-                        <strong className="rey-home3-activity-amount mono">{fmt(Number(m.ingreso || 0))}</strong>
-                      </div>
-                    ))}
-                    {movimientosHuevosInicio.filter(m => m.tipo === "venta").length === 0 && (
-                      <div className="rey-home3-empty"><span>🥚</span><strong>Aún no hay ventas de huevos</strong><p>Las nuevas ventas aparecerán aquí.</p></div>
-                    )}
-                  </div>
-                </div>
+              <div className="rey-mobile-home">
+                <ReyDelHuevoInicio
+                  currentUser={currentUser}
+                  saludo={saludoHora}
+                  fecha={fechaInicio}
+                  ventasHoy={ventasHuevosHoyTotal}
+                  bandejasHoy={bandejasVendidasHoy}
+                  huevosHoy={huevosVendidosHoy}
+                  gananciaHoy={gananciasHoy}
+                  deltaVentas={porcentajeVentas}
+                  deltaHuevos={porcentajeVentas}
+                  deltaGanancia={porcentajeGanancias}
+                  egresosHoy={egresosHoyInicio}
+                  movimientos={actividadInicio}
+                  stockBajo={stockBajoRep.length}
+                  notificaciones={notificaciones.length}
+                  dark={D}
+                  onToggleDark={toggleDark}
+                  onNotifications={() => setNotifOpen(!notifOpen)}
+                  onNavigate={setActiveNav}
+                  onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
+                />
               </div>
-            </div>
             </>
           )}
 
