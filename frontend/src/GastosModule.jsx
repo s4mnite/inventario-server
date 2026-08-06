@@ -183,15 +183,18 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
       if (!producto) return { ...emptyItemInventario(), productoId };
       const costoActual = Math.max(0, Number(producto.costo || 0));
       const unidadesPorManga = Math.max(0, Number(producto.mangaCantidad || 0));
-      // BUG FIX: antes se precargaba `producto.mangaPrecio`, que es el precio
-      // de VENTA del bulto al cliente (el que se usa en el punto de venta),
-      // no lo que se paga al comprarlo. Eso hacía que, al registrar la compra
-      // de un producto con manga activa, el gasto (y el costo promedio que
-      // este gasto actualiza) quedara calculado con el precio de venta en vez
-      // del de compra. Ahora se parte de una estimación basada en el costo
-      // unitario de compra × unidades por manga — el usuario la ajusta al
-      // monto real pagado en esta compra si es distinto.
-      const precioMangaEstimado = unidadesPorManga > 0 ? costoActual * unidadesPorManga : 0;
+      // Precio real pagado por manga, configurado en el producto (Editar
+      // Producto → "Precio compra por manga"). Si el producto no tiene ese
+      // dato cargado (productos antiguos, o nunca se llenó ese campo), se
+      // usa como respaldo una estimación: costo unitario de compra × unidades
+      // por manga. En ambos casos el usuario puede ajustar el monto a lo
+      // realmente pagado en esta compra si es distinto.
+      // BUG FIX (histórico): antes se precargaba `producto.mangaPrecio`, que
+      // es el precio de VENTA del bulto al cliente, nunca el de compra.
+      const mangaCostoCompraProducto = Math.max(0, Number(producto.mangaCostoCompra || 0));
+      const precioMangaEstimado = mangaCostoCompraProducto > 0
+        ? mangaCostoCompraProducto
+        : (unidadesPorManga > 0 ? costoActual * unidadesPorManga : 0);
       const tieneManga = Boolean(producto.mangaActiva && unidadesPorManga > 0 && Number(producto.mangaPrecio || 0) > 0);
       return {
         ...x,
@@ -378,7 +381,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
       // aplica aparte contra el módulo Huevos (y únicamente al crear, no al
       // editar — ver aplicarEntradasHuevos).
       const productoItems = form.itemsInventario.filter(x => x.tipo !== "huevo");
-      const huevoItems = form.itemsInventario.filter(x => x.tipo === "huevo" && x.calidadId && Number(x.cantidad) > 0);
+      const huevoItems = form.itemsInventario.filter(x => x.tipo === "huevo" && x.calidadId && Number(x.cantidad) > 0 && x.actualizarStock !== false);
 
       const payload = {
         ...form,
@@ -499,15 +502,42 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                 {it.productoId && it.tipo==="huevo" && <>
                   <p style={{ margin:"0 0 8px",fontSize:11,color:muted }}>Costo de compra actual: <strong style={{color:text}}>{fmt(it.costoActual)}</strong> por huevo</p>
 
+                  <button
+                    type="button"
+                    onClick={()=>cambiarItem(i,"actualizarStock",!(it.actualizarStock!==false))}
+                    style={{
+                      display:"flex",alignItems:"center",gap:8,width:"100%",
+                      border:`1.5px solid ${it.actualizarStock!==false?"#15803d":border}`,
+                      background:it.actualizarStock!==false?(darkMode?"rgba(21,128,61,0.15)":"#f0fdf4"):card,
+                      borderRadius:9,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
+                    }}
+                  >
+                    <span style={{
+                      width:32,height:18,borderRadius:999,flexShrink:0,position:"relative",
+                      background:it.actualizarStock!==false?"#15803d":(darkMode?"#3f3f46":"#d4d4d8"),
+                      transition:"background .15s",
+                    }}>
+                      <span style={{
+                        position:"absolute",top:2,left:it.actualizarStock!==false?16:2,
+                        width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left .15s",
+                      }}/>
+                    </span>
+                    <span style={{ fontSize:12,fontWeight:750,color:text }}>
+                      {it.actualizarStock!==false ? "Agregar al stock" : "No agregar al stock (solo gasto)"}
+                    </span>
+                  </button>
+
                   <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:7 }}>
                     <label style={{ fontSize:11,fontWeight:700,color:muted }}>Cajas (180 c/u)<input type="number" min="0" value={it.cajasHuevos} onChange={e=>cambiarItemHuevo(i,{cajasHuevos:e.target.value})} style={inputStyle(card,text,border)} /></label>
                     <label style={{ fontSize:11,fontWeight:700,color:muted }}>Bandejas (30 c/u)<input type="number" min="0" value={it.bandejasHuevos} onChange={e=>cambiarItemHuevo(i,{bandejasHuevos:e.target.value})} style={inputStyle(card,text,border)} /></label>
                   </div>
                   <label style={{ display:"block",marginTop:7,fontSize:11,fontWeight:700,color:muted }}>Precio pagado por caja (compra)<input type="number" min="0" value={it.costoCajaCompra} onChange={e=>cambiarItemHuevo(i,{costoCajaCompra:e.target.value})} style={inputStyle(card,text,border)} /></label>
-                  <p style={{margin:"6px 0 0",fontSize:10,color:muted}}>Este monto es lo pagado al comprar — no el precio de venta al cliente. Al guardar, esta entrada se suma automáticamente al stock del módulo Huevos.</p>
+                  <p style={{margin:"6px 0 0",fontSize:10,color:muted}}>Este monto es lo pagado al comprar — no el precio de venta al cliente.{it.actualizarStock!==false?" Al guardar, esta entrada se suma automáticamente al stock del módulo Huevos.":" El stock del módulo Huevos no se modificará."}</p>
 
                   <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
-                    {unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades.toLocaleString("es-CL")}</strong> huevos al stock · costo por huevo {fmt(costoCalc)}</> : "Ingresa cajas o bandejas para calcular"}
+                    {it.actualizarStock===false
+                      ? <>No se sumará stock · costo por huevo {fmt(costoCalc)}</>
+                      : (unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades.toLocaleString("es-CL")}</strong> huevos al stock · costo por huevo {fmt(costoCalc)}</> : "Ingresa cajas o bandejas para calcular")}
                     {" · "}Subtotal: <strong style={{color:text}}>{fmt(subtotalItem(it))}</strong>
                   </p>
                 </>}

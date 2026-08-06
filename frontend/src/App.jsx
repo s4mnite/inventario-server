@@ -2245,7 +2245,7 @@ export default function App() {
   // esGerente se mantienen intactos (activeNav sigue pudiendo valer "Usuarios").
 
   // ── Productos ──
-  const openAdd = () => { setForm({ nombre: "", categoria: categorias[0] || "", precio: "", costo: "", incrementoPct: "", stock: "", img: "📦", imagenUrl: "", codigoBarra: "", mangaActiva: false, mangaCantidad: "", mangaPrecio: "", promoActiva: false, promoCantMin: "", promoPrecio: "" }); setModal("add"); };
+  const openAdd = () => { setForm({ nombre: "", categoria: categorias[0] || "", precio: "", costo: "", incrementoPct: "", stock: "", img: "📦", imagenUrl: "", codigoBarra: "", mangaActiva: false, mangaCantidad: "", mangaPrecio: "", mangaCostoCompra: "", promoActiva: false, promoCantMin: "", promoPrecio: "" }); setModal("add"); };
   const openEdit = (p) => {
     const incrementoPct = p.incrementoPct ?? (Number(p.costo || 0) > 0 ? calcIncrementPct(p.costo, p.precio).toFixed(2) : "");
     setForm({ ...p, incrementoPct });
@@ -3416,12 +3416,27 @@ export default function App() {
   const topProductosRep = Object.values(repProdMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 8);
 
   // ── Costo/Beneficio del período ──────────────────────────────────────────
+  // BUG FIX: antes solo buscaba el costo en `products`, así que los ítems de
+  // huevos (que no son un "producto" con nombre coincidente) siempre sumaban
+  // costo $0 aquí — el ingreso de la venta de huevos sí se contaba pero su
+  // costo no, inflando el margen cada vez que se vendían huevos. Ahora el
+  // costo de huevos se calcula igual que en el resto de la app: con el costo
+  // de COMPRA guardado en el propio ítem de la venta (costoCaja), nunca con
+  // el precio de venta.
   const costosPeriodo = (() => {
     const prodMap = {};
     products.forEach(p => { prodMap[p.nombre] = p.costo || 0; });
     let costoTotal = 0;
     ventasPeriodo.forEach(v => v.items?.forEach(i => {
-      costoTotal += (prodMap[i.nombre] || 0) * (i.cantidad || 1);
+      if (i.tipoItem === "huevo") {
+        const huevosVendidos = Number(i.huevos || 0);
+        const costoCajaCompra = Number(i.costoCaja || 0);
+        costoTotal += (huevosVendidos / 180) * costoCajaCompra;
+        return;
+      }
+      const costoUnitario = Number(i.costo ?? i.precioCosto ?? prodMap[i.nombre] ?? 0);
+      const unidades = Number(i.cantidad || i.cantidadFormatos || 1) * Number(i.unidadesPorManga || 1);
+      costoTotal += costoUnitario * unidades;
     }));
     return costoTotal;
   })();
@@ -6074,21 +6089,34 @@ export default function App() {
                 </button>
               </div>
               {form.mangaActiva && (
-                <div style={{ display: "flex", gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Unidades por manga</label>
-                    <input type="number" min="2" value={form.mangaCantidad || ""} onChange={e => setForm(f => ({ ...f, mangaCantidad: e.target.value }))} placeholder="Ej: 12" style={inp} />
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Unidades por manga</label>
+                      <input type="number" min="2" value={form.mangaCantidad || ""} onChange={e => setForm(f => ({ ...f, mangaCantidad: e.target.value }))} placeholder="Ej: 12" style={inp} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>
+                        Precio por manga
+                        {form.mangaCantidad && form.mangaPrecio && form.precio && +form.mangaCantidad > 0 && (
+                          <span style={{ marginLeft: 6, color: "#10b981", fontWeight: 600 }}>
+                            ({fmt(+form.mangaPrecio / +form.mangaCantidad)} c/u)
+                          </span>
+                        )}
+                      </label>
+                      <input type="number" min="0" value={form.mangaPrecio || ""} onChange={e => setForm(f => ({ ...f, mangaPrecio: e.target.value }))} placeholder="Ej: 8000" style={inp} />
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ marginTop: 10 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>
-                      Precio por manga
-                      {form.mangaCantidad && form.mangaPrecio && form.precio && +form.mangaCantidad > 0 && (
-                        <span style={{ marginLeft: 6, color: "#10b981", fontWeight: 600 }}>
-                          ({fmt(+form.mangaPrecio / +form.mangaCantidad)} c/u)
+                      Precio compra por manga
+                      {form.mangaCantidad && form.mangaCostoCompra && +form.mangaCantidad > 0 && (
+                        <span style={{ marginLeft: 6, color: "#f59e0b", fontWeight: 600 }}>
+                          ({fmt(+form.mangaCostoCompra / +form.mangaCantidad)} c/u)
                         </span>
                       )}
                     </label>
-                    <input type="number" min="0" value={form.mangaPrecio || ""} onChange={e => setForm(f => ({ ...f, mangaPrecio: e.target.value }))} placeholder="Ej: 8000" style={inp} />
+                    <input type="number" min="0" value={form.mangaCostoCompra || ""} onChange={e => setForm(f => ({ ...f, mangaCostoCompra: e.target.value }))} placeholder="Ej: 6400 (lo que pagas por la manga)" style={inp} />
+                    <p style={{ margin: "4px 0 0", fontSize: 10, color: textMuted }}>Lo que pagas al proveedor por la manga completa (no lo que cobras al cliente). Se usa para precargar el precio de compra en Gastos.</p>
                   </div>
                 </div>
               )}
