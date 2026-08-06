@@ -6089,6 +6089,7 @@ export default function App() {
                 </button>
               </div>
               {form.mangaActiva && (
+                <>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Unidades por manga</label>
@@ -6118,7 +6119,7 @@ export default function App() {
                     <input type="number" min="0" value={form.mangaCostoCompra || ""} onChange={e => setForm(f => ({ ...f, mangaCostoCompra: e.target.value }))} placeholder="Ej: 6400 (lo que pagas por la manga)" style={inp} />
                     <p style={{ margin: "4px 0 0", fontSize: 10, color: textMuted }}>Lo que pagas al proveedor por la manga completa (no lo que cobras al cliente). Se usa para precargar el precio de compra en Gastos.</p>
                   </div>
-                </div>
+                </>
               )}
             </div>
             {/* Promoción por cantidad */}
