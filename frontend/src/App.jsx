@@ -488,6 +488,7 @@ const css = `
     .dashboard-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
     .dashboard-charts { grid-template-columns: 1fr !important; }
     .mobile-topbar { padding: 0 14px !important; height: 54px !important; }
+    .dashboard-mobile-topbar { display: none !important; }
     .mobile-topbar h1 { font-size: 16px !important; }
     .mobile-main { padding: 12px !important; padding-bottom: 80px !important; }
     .mobile-modal { width: calc(100vw - 24px) !important; max-width: 100% !important; max-height: 85vh !important; overflow-y: auto !important; border-radius: 20px 20px 16px 16px !important; }
@@ -3106,25 +3107,32 @@ export default function App() {
   const porcentajeVentas = ventasHuevosAyerTotal > 0 ? (diferenciaVentas / ventasHuevosAyerTotal) * 100 : (ventasHuevosHoyTotal > 0 ? 100 : 0);
   const saludoHora = hoyDate.getHours() < 12 ? "Buenos días" : hoyDate.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
   const fechaInicio = hoyDate.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
-  const valorInventarioReal = products.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.precio || 0), 0);
   const bandejasVendidasHoy = Math.floor(huevosVendidosHoy / 30);
-  const egresosHoyInicio = gastosReporte
-    .filter(g => String(g.fecha || "").slice(0, 10) === hoyClave)
-    .reduce((sum, g) => sum + Number(g.total || 0), 0);
-  const actividadInicio = [
-    ...ventasHoy.map(v => ({
-      id: v.id || v._id || v.timestamp, tipo: "venta", positivo: true,
-      titulo: (v.items || []).some(i => i.tipoItem === "huevo") ? "Venta de huevos" : "Venta de inventario",
-      detalle: (v.items || []).slice(0, 2).map(i => i.nombre || i.calidad).filter(Boolean).join(", ") || (v.pago || "Venta"),
-      hora: new Date(v.timestamp || v.creadoEn || v.fecha || Date.now()).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
-      monto: Number(v.total || 0), fechaOrden: new Date(v.timestamp || v.creadoEn || v.fecha || 0).getTime(),
+  const gastosHoyInicio = gastosReporte.filter(g => fechaLocalClave(g?.fecha || g?.creadoEn || g?.createdAt) === hoyClave);
+  const egresosHoyInicio = gastosHoyInicio.reduce((sum, g) => sum + Number(g?.total || 0), 0);
+  const movimientosInicioDashboard = [
+    ...ventasHoy.map((v, index) => ({
+      id: v.id || v._id || `venta-${index}`,
+      tipo: "venta",
+      titulo: (v.items || []).some(i => i?.tipoItem === "huevo") ? "Venta de huevos" : "Venta de inventario",
+      detalle: (v.items || []).map(i => i?.nombre).filter(Boolean).slice(0, 2).join(" · ") || (v.pago || v.metodoPago || "Venta"),
+      hora: new Date(v.timestamp || v.createdAt || v.creadoEn || Date.now()).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
+      monto: Number(v.total || 0),
+      positivo: true,
+      fechaOrden: new Date(v.timestamp || v.createdAt || v.creadoEn || 0).getTime(),
     })),
-    ...gastosReporte.filter(g => String(g.fecha || "").slice(0, 10) === hoyClave).map(g => ({
-      id: g.id || g._id, tipo: "gasto", positivo: false, titulo: "Gasto registrado",
-      detalle: g.comercio || g.categoria || "Gasto", hora: g.creadoEn ? new Date(g.creadoEn).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "Hoy",
-      monto: Number(g.total || 0), fechaOrden: new Date(g.creadoEn || g.fecha || 0).getTime(),
+    ...gastosHoyInicio.map((g, index) => ({
+      id: g.id || g._id || `gasto-${index}`,
+      tipo: "gasto",
+      titulo: "Gasto registrado",
+      detalle: g.comercio || g.descripcion || g.categoria || "Gasto",
+      hora: new Date(g.creadoEn || g.createdAt || `${g.fecha || hoyClave}T12:00:00`).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
+      monto: Number(g.total || 0),
+      positivo: false,
+      fechaOrden: new Date(g.creadoEn || g.createdAt || `${g.fecha || hoyClave}T12:00:00`).getTime(),
     })),
-  ].sort((a,b) => b.fechaOrden - a.fechaOrden);
+  ].sort((a, b) => b.fechaOrden - a.fechaOrden);
+  const valorInventarioReal = products.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.precio || 0), 0);
 
   // Mes anterior
   const mesAnteriorNum = mesActual === 0 ? 11 : mesActual - 1;
@@ -3652,7 +3660,7 @@ export default function App() {
       {/* ── Main ── */}
       <div className="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <header className="mobile-topbar" style={{ background: D ? "#13152a" : "#fff", borderBottom: `1px solid ${borderColor}`, padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <header className={`mobile-topbar ${activeNav === "Dashboard" ? "dashboard-mobile-topbar" : ""}`} style={{ background: D ? "#13152a" : "#fff", borderBottom: `1px solid ${borderColor}`, padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{navItems.find(n => n.name === activeNav)?.label || activeNav}</h1>
             <p className="header-date" style={{ margin: 0, fontSize: 12, color: textMuted }}>{new Date().toLocaleDateString("es-CL", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
@@ -3796,13 +3804,13 @@ export default function App() {
                   deltaHuevos={porcentajeVentas}
                   deltaGanancia={porcentajeGanancias}
                   egresosHoy={egresosHoyInicio}
-                  movimientos={actividadInicio}
+                  movimientos={movimientosInicioDashboard}
                   stockBajo={stockBajoRep.length}
                   notificaciones={notificaciones.length}
                   dark={D}
                   onToggleDark={toggleDark}
                   onNotifications={() => setNotifOpen(!notifOpen)}
-                  onNavigate={setActiveNav}
+                  onNavigate={(destino) => setActiveNav(destino)}
                   onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
                 />
               </div>
