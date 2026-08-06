@@ -6,6 +6,11 @@ import {
 } from "lucide-react";
 import { API, fmt } from "./lib/utils";
 
+// Debe coincidir con las mismas constantes usadas en HuevosModule.jsx:
+// una caja de huevos tiene 180 unidades y una bandeja 30.
+const EGG_BOX_UNITS = 180;
+const EGG_TRAY_UNITS = 30;
+
 const CATEGORIAS_BASE = [
   { id: "huevos", label: "Huevos", icon: Package },
   { id: "combustible", label: "Combustible", icon: Fuel },
@@ -36,9 +41,14 @@ const emptyForm = () => ({
 
 const emptyItemInventario = () => ({
   productoId: "", nombre: "", costoActual: 0,
+  tipo: "producto", // "producto" | "huevo"
   modo: "unitario", // "unitario" | "manga"
   cantidad: 1, costoUnitario: 0,
   unidadesPorManga: 0, precioManga: 0, cantidadMangas: 1,
+  // Solo para tipo "huevo": la cantidad se ingresa en cajas/bandejas (no en
+  // huevos sueltos), y el costo se ingresa como lo que se paga por caja —
+  // igual que la lógica del módulo Huevos — nunca como precio de venta.
+  calidadId: "", cajasHuevos: 1, bandejasHuevos: 0, costoCajaCompra: 0,
 });
 
 // Unidades totales que suma este ítem al stock, sin importar el modo elegido.
@@ -70,7 +80,9 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [huevosInventory, setHuevosInventory] = useState([]);
   const authHeaders = { "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" };
+  const jsonHeaders = { "Content-Type": "application/json", ...authHeaders };
 
   const bg = darkMode ? "#121522" : "#f7f7f5";
   const card = darkMode ? "#1c2030" : "#fff";
@@ -110,6 +122,22 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
   useEffect(() => { if (currentUser) cargar(); }, [currentUser?.usuario]);
 
+  // Trae las calidades de huevos configuradas (Súper, Extra, Primera...) para
+  // poder ofrecerlas como "producto" al registrar una compra en Gastos, con
+  // su costo de compra real (costoCaja), nunca el precio de venta.
+  useEffect(() => {
+    if (!currentUser?.usuario || !currentUser?._clave) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/huevos?_=${Date.now()}`, { headers: authHeaders, cache: "no-store" });
+        const data = await leerJsonSeguro(res, "No se pudo cargar el inventario de huevos.");
+        if (!cancelled) setHuevosInventory(Array.isArray(data.inventory) ? data.inventory : []);
+      } catch { /* si falla, simplemente no se ofrece huevos como producto */ }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.usuario]);
+
   const hoy = new Date().toISOString().slice(0, 10);
   const mes = hoy.slice(0, 7);
   const resumen = useMemo(() => ({
@@ -125,20 +153,50 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     ...prev,
     itemsInventario: prev.itemsInventario.map((x, idx) => {
       if (idx !== i) return x;
+
+      if (String(productoId).startsWith("huevo:")) {
+        const calidadId = String(productoId).slice(6);
+        const calidad = huevosInventory.find(q => q.id === calidadId);
+        if (!calidad) return { ...emptyItemInventario(), productoId };
+        // Costo de compra actual configurado para esta calidad (costoCaja),
+        // NUNCA el precio de venta (precioVentaUnitario / precioCaja).
+        const costoCajaCompra = Math.max(0, Number(calidad.costoCaja || 0));
+        const costoActual = costoCajaCompra / EGG_BOX_UNITS;
+        const cajasHuevos = 1, bandejasHuevos = 0;
+        return {
+          ...emptyItemInventario(),
+          productoId, tipo: "huevo", calidadId,
+          nombre: `Huevos ${calidad.nombre}`,
+          costoActual, costoUnitario: costoActual,
+          modo: "unitario",
+          cajasHuevos, bandejasHuevos, costoCajaCompra,
+          cantidad: cajasHuevos * EGG_BOX_UNITS + bandejasHuevos * EGG_TRAY_UNITS,
+        };
+      }
+
       const producto = products.find(p => String(p.id || p._id) === String(productoId));
       if (!producto) return { ...emptyItemInventario(), productoId };
       const costoActual = Math.max(0, Number(producto.costo || 0));
       const unidadesPorManga = Math.max(0, Number(producto.mangaCantidad || 0));
-      const precioManga = Math.max(0, Number(producto.mangaPrecio || 0));
-      const tieneManga = Boolean(producto.mangaActiva && unidadesPorManga > 0 && precioManga > 0);
+      // BUG FIX: antes se precargaba `producto.mangaPrecio`, que es el precio
+      // de VENTA del bulto al cliente (el que se usa en el punto de venta),
+      // no lo que se paga al comprarlo. Eso hacía que, al registrar la compra
+      // de un producto con manga activa, el gasto (y el costo promedio que
+      // este gasto actualiza) quedara calculado con el precio de venta en vez
+      // del de compra. Ahora se parte de una estimación basada en el costo
+      // unitario de compra × unidades por manga — el usuario la ajusta al
+      // monto real pagado en esta compra si es distinto.
+      const precioMangaEstimado = unidadesPorManga > 0 ? costoActual * unidadesPorManga : 0;
+      const tieneManga = Boolean(producto.mangaActiva && unidadesPorManga > 0 && Number(producto.mangaPrecio || 0) > 0);
       return {
         ...x,
         productoId,
+        tipo: "producto", calidadId: "",
         nombre: producto.nombre || "",
         costoActual,
         costoUnitario: costoActual,
         unidadesPorManga,
-        precioManga,
+        precioManga: precioMangaEstimado,
         modo: tieneManga ? x.modo : "unitario",
         cantidad: x.cantidad || 1,
         cantidadMangas: x.cantidadMangas || 1,
@@ -149,6 +207,25 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const cambiarItem = (i, key, value) => setForm(prev => ({ ...prev, itemsInventario: prev.itemsInventario.map((x, idx) => idx === i ? { ...x, [key]: value } : x) }));
   const cambiarModoItem = (i, modo) => cambiarItem(i, "modo", modo);
   const quitarItem = i => setForm(prev => ({ ...prev, itemsInventario: prev.itemsInventario.filter((_, idx) => idx !== i) }));
+
+  // Para ítems de huevos: la cantidad se ingresa en cajas/bandejas y el costo
+  // se ingresa como lo pagado por caja (180 huevos) — igual que en el módulo
+  // Huevos. `cantidad` (huevos totales) y `costoUnitario` (costo por huevo)
+  // quedan siempre derivados automáticamente para reutilizar los mismos
+  // cálculos de subtotal que el resto de los ítems de inventario.
+  const cambiarItemHuevo = (i, patch) => setForm(prev => ({
+    ...prev,
+    itemsInventario: prev.itemsInventario.map((x, idx) => {
+      if (idx !== i) return x;
+      const next = { ...x, ...patch };
+      const cajas = Math.max(0, Number(next.cajasHuevos || 0));
+      const bandejas = Math.max(0, Number(next.bandejasHuevos || 0));
+      const costoCaja = Math.max(0, Number(next.costoCajaCompra || 0));
+      next.cantidad = cajas * EGG_BOX_UNITS + bandejas * EGG_TRAY_UNITS;
+      next.costoUnitario = costoCaja / EGG_BOX_UNITS;
+      return next;
+    }),
+  }));
 
   const subtotalInventario = useMemo(
     () => form.itemsInventario.reduce((acc, it) => acc + subtotalItem(it), 0),
@@ -174,19 +251,34 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     setForm(prev => (prev.comercio === comercioAutoInventario ? prev : { ...prev, comercio: comercioAutoInventario }));
   }, [comercioAutoInventario, form.itemsInventario.length]);
 
+  // Si el gasto quedó compuesto solo por huevos, la categoría se ajusta sola
+  // a "huevos" para que el resumen de Mercadería y los reportes lo cuenten
+  // correctamente (el usuario igual puede cambiarla a mano después).
+  useEffect(() => {
+    const tieneHuevo = form.itemsInventario.some(x => x.tipo === "huevo");
+    const tieneProducto = form.itemsInventario.some(x => x.tipo !== "huevo" && x.productoId);
+    if (tieneHuevo && !tieneProducto && form.categoria !== "huevos") {
+      setForm(prev => ({ ...prev, categoria: "huevos" }));
+    }
+  }, [form.itemsInventario]);
+
   // Carga un gasto existente en el formulario para editarlo (mismo modal de "Registrar gasto").
   const abrirEditar = (g) => {
     const itemsInventario = (g.itemsInventario || []).map(it => {
       const producto = products.find(p => String(p.id || p._id) === String(it.productoId));
+      const costoUnitario = Math.max(0, Number(it.costoUnitario || 0));
+      const unidadesPorManga = Math.max(0, Number(producto?.mangaCantidad || 0));
       return {
         productoId: String(it.productoId || ""),
         nombre: it.nombre || producto?.nombre || "",
         costoActual: Math.max(0, Number(producto?.costo ?? it.costoUnitario ?? 0)),
         modo: "unitario",
         cantidad: Math.max(1, Number(it.cantidad || 1)),
-        costoUnitario: Math.max(0, Number(it.costoUnitario || 0)),
-        unidadesPorManga: Math.max(0, Number(producto?.mangaCantidad || 0)),
-        precioManga: Math.max(0, Number(producto?.mangaPrecio || 0)),
+        costoUnitario,
+        unidadesPorManga,
+        // Igual que al elegir un producto nuevo: se estima con el costo de
+        // compra, nunca con el precio de venta del bulto (producto.mangaPrecio).
+        precioManga: unidadesPorManga > 0 ? costoUnitario * unidadesPorManga : 0,
         cantidadMangas: 1,
       };
     });
@@ -206,26 +298,97 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     setModal(true);
   };
 
+  // Aplica la compra de huevos registrada desde Gastos al módulo Huevos:
+  // suma el stock, recalcula el costo promedio por caja y crea el mismo tipo
+  // de movimiento "entrada" que se generaría entrando por ese módulo. Se
+  // ejecuta solo al CREAR un gasto nuevo (nunca al editar uno existente).
+  const aplicarEntradasHuevos = async (huevoItems, fechaMovimiento) => {
+    if (!huevoItems.length) return;
+    try {
+      // Se relee el inventario justo antes de aplicar los cambios (en vez de
+      // usar el estado ya cargado en este componente) para no pisar cambios
+      // hechos mientras tanto desde el módulo Huevos en otra sesión.
+      const res = await fetch(`${API}/api/huevos?_=${Date.now()}`, { headers: authHeaders, cache: "no-store" });
+      const data = await leerJsonSeguro(res, "No se pudo sincronizar el inventario de huevos.");
+      let inventory = Array.isArray(data.inventory) ? data.inventory : [];
+      const movementsNuevos = [];
+
+      huevoItems.forEach((item, idx) => {
+        const units = Math.max(0, Number(item.cantidad || 0));
+        const unitCost = Math.max(0, Number(item.costoUnitario || 0));
+        const q = inventory.find(x => x.id === item.calidadId);
+        if (!q || units <= 0) return;
+
+        const oldStock = Math.max(0, Number(q.stockHuevos || 0));
+        const oldUnitCost = Math.max(0, Number(q.costoCaja || 0)) / EGG_BOX_UNITS;
+        const totalCompra = units * unitCost;
+        const totalCostAfter = (oldStock * oldUnitCost) + totalCompra;
+        const nextStock = oldStock + units;
+        const averageUnitCost = nextStock > 0 ? totalCostAfter / nextStock : unitCost;
+
+        inventory = inventory.map(x => x.id === q.id
+          ? { ...x, stockHuevos: nextStock, costoCaja: Math.round(averageUnitCost * EGG_BOX_UNITS) }
+          : x);
+
+        movementsNuevos.push({
+          id: Date.now() + idx,
+          fechaIngreso: fechaMovimiento,
+          fecha: new Date().toISOString(),
+          tipo: "entrada",
+          calidadId: q.id, calidad: q.nombre,
+          cajas: 0, bandejas: 0, unidades: units, huevos: units,
+          motivo: "Compra registrada desde Gastos",
+          observaciones: form.comercio ? `Vinculado al gasto: ${form.comercio}` : "",
+          usuario: currentUser?.usuario || "Usuario",
+          ingreso: 0, costo: totalCompra, ganancia: -totalCompra,
+          precioCaja: 0, precioBandeja: 0, precioUnidad: 0,
+          valorUnitarioCompra: unitCost, totalCompra,
+          precioVentaUnitario: Number(q.precioVentaUnitario || 0),
+          ventaEsperada: 0, gananciaEstimada: 0, descuento: 0, metodoPago: "",
+          origen: "gastos",
+        });
+      });
+
+      if (!movementsNuevos.length) return;
+      const res2 = await fetch(`${API}/api/huevos/movimientos`, {
+        method: "POST", headers: jsonHeaders,
+        body: JSON.stringify({ inventory, movement: movementsNuevos[0], movements: movementsNuevos }),
+      });
+      const data2 = await leerJsonSeguro(res2, "No se pudo actualizar el inventario de huevos.");
+      setHuevosInventory(data2.inventory || inventory);
+    } catch (e) {
+      setError(prev => (prev ? `${prev} ` : "") + `El gasto se guardó, pero no se pudo actualizar el inventario de huevos: ${e.message}. Revisa el módulo Huevos.`);
+    }
+  };
+
   const guardar = async () => {
     setError("");
     if (form.itemsInventario.length === 0 && !form.comercio.trim()) return setError("Ingresa el comercio o descripción del gasto.");
     if (Number(form.total) <= 0) return setError("Ingresa un total válido.");
     try {
+      // Los ítems de huevos no viven en la colección "productos": se guardan
+      // en el gasto solo como parte del total/descripción, y su stock se
+      // aplica aparte contra el módulo Huevos (y únicamente al crear, no al
+      // editar — ver aplicarEntradasHuevos).
+      const productoItems = form.itemsInventario.filter(x => x.tipo !== "huevo");
+      const huevoItems = form.itemsInventario.filter(x => x.tipo === "huevo" && x.calidadId && Number(x.cantidad) > 0);
+
       const payload = {
         ...form,
         comercio: form.comercio.trim() || "Compra de inventario",
         total: Number(form.total),
         iva: Number(form.iva || 0),
-        itemsInventario: form.itemsInventario
+        itemsInventario: productoItems
           .map(x => ({ productoId: x.productoId, cantidad: unidadesItem(x), costoUnitario: costoUnitarioItem(x) }))
           .filter(x => x.productoId && x.cantidad > 0),
       };
       const res = editingId
-        ? await fetch(`${API}/api/gastos/${editingId}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders }, body: JSON.stringify(payload) })
-        : await fetch(`${API}/api/gastos`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders }, body: JSON.stringify(payload) });
+        ? await fetch(`${API}/api/gastos/${editingId}`, { method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload) })
+        : await fetch(`${API}/api/gastos`, { method: "POST", headers: jsonHeaders, body: JSON.stringify(payload) });
       const data = await leerJsonSeguro(res, editingId ? "No se pudo guardar la edición." : "No se pudo guardar el gasto.");
       setGastos(prev => editingId ? prev.map(g => (g.id || g._id) === editingId ? data.gasto : g) : [data.gasto, ...prev]);
       if (data.productos && setProducts) setProducts(data.productos);
+      if (!editingId && huevoItems.length) await aplicarEntradasHuevos(huevoItems, form.fecha);
       setModal(false); setForm(emptyForm()); setEditingId(null);
     } catch (e) { setError(e.message); }
   };
@@ -303,7 +466,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
           <div style={{ marginTop:16,paddingTop:14,borderTop:`1px solid ${border}` }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-              <div><p style={{ margin:0,fontWeight:850 }}>Compra de inventario</p><p style={{ margin:"2px 0 0",fontSize:11,color:muted }}>Opcional: aumenta stock y actualiza costo promedio.</p></div>
+              <div><p style={{ margin:0,fontWeight:850 }}>Compra de inventario</p><p style={{ margin:"2px 0 0",fontSize:11,color:muted }}>Opcional: aumenta stock y actualiza costo promedio.{editingId?" Los huevos solo se pueden agregar al crear un gasto nuevo, no al editar.":""}</p></div>
               <button onClick={agregarItemInventario} style={{ border:0,background:"#15803d",color:"#fff",borderRadius:10,padding:"8px 10px",fontWeight:800,display:"flex",alignItems:"center",gap:6 }}><Plus size={14}/> Producto</button>
             </div>
 
@@ -316,12 +479,33 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                 <div style={{ display:"flex",gap:7,marginBottom:8 }}>
                   <select value={it.productoId} onChange={e=>seleccionarProductoItem(i,e.target.value)} style={{...inputStyle(card,text,border),marginTop:0,flex:1}}>
                     <option value="">Producto...</option>
-                    {products.map(p=><option key={p.id||p._id} value={p.id||p._id}>{p.nombre}</option>)}
+                    {!editingId && huevosInventory.length>0 && <optgroup label="Huevos">
+                      {huevosInventory.map(q=><option key={`huevo:${q.id}`} value={`huevo:${q.id}`}>🥚 Huevos - {q.nombre}</option>)}
+                    </optgroup>}
+                    <optgroup label="Productos">
+                      {products.map(p=><option key={p.id||p._id} value={p.id||p._id}>{p.nombre}</option>)}
+                    </optgroup>
                   </select>
                   <button onClick={()=>quitarItem(i)} style={{ border:0,background:"#fee2e2",color:"#dc2626",borderRadius:9,padding:"0 11px",flexShrink:0 }}><X size={15}/></button>
                 </div>
 
-                {it.productoId && <>
+                {it.productoId && it.tipo==="huevo" && <>
+                  <p style={{ margin:"0 0 8px",fontSize:11,color:muted }}>Costo de compra actual: <strong style={{color:text}}>{fmt(it.costoActual)}</strong> por huevo</p>
+
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:7 }}>
+                    <label style={{ fontSize:11,fontWeight:700,color:muted }}>Cajas (180 c/u)<input type="number" min="0" value={it.cajasHuevos} onChange={e=>cambiarItemHuevo(i,{cajasHuevos:e.target.value})} style={inputStyle(card,text,border)} /></label>
+                    <label style={{ fontSize:11,fontWeight:700,color:muted }}>Bandejas (30 c/u)<input type="number" min="0" value={it.bandejasHuevos} onChange={e=>cambiarItemHuevo(i,{bandejasHuevos:e.target.value})} style={inputStyle(card,text,border)} /></label>
+                  </div>
+                  <label style={{ display:"block",marginTop:7,fontSize:11,fontWeight:700,color:muted }}>Precio pagado por caja (compra)<input type="number" min="0" value={it.costoCajaCompra} onChange={e=>cambiarItemHuevo(i,{costoCajaCompra:e.target.value})} style={inputStyle(card,text,border)} /></label>
+                  <p style={{margin:"6px 0 0",fontSize:10,color:muted}}>Este monto es lo pagado al comprar — no el precio de venta al cliente. Al guardar, esta entrada se suma automáticamente al stock del módulo Huevos.</p>
+
+                  <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
+                    {unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades.toLocaleString("es-CL")}</strong> huevos al stock · costo por huevo {fmt(costoCalc)}</> : "Ingresa cajas o bandejas para calcular"}
+                    {" · "}Subtotal: <strong style={{color:text}}>{fmt(subtotalItem(it))}</strong>
+                  </p>
+                </>}
+
+                {it.productoId && it.tipo!=="huevo" && <>
                   <p style={{ margin:"0 0 8px",fontSize:11,color:muted }}>Costo actual: <strong style={{color:text}}>{fmt(it.costoActual)}</strong> por unidad</p>
 
                   <div style={{ display:"flex",gap:7,marginBottom:8 }}>
@@ -337,9 +521,11 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                   ) : (
                     <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:7 }}>
                       <label style={{ fontSize:11,fontWeight:700,color:muted }}>Cantidad de mangas<input type="number" min="1" value={it.cantidadMangas} onChange={e=>cambiarItem(i,"cantidadMangas",e.target.value)} style={inputStyle(card,text,border)} /></label>
-                      <label style={{ fontSize:11,fontWeight:700,color:muted }}>Precio por manga<input type="number" min="0" value={it.precioManga} onChange={e=>cambiarItem(i,"precioManga",e.target.value)} style={inputStyle(card,text,border)} /></label>
+                      <label style={{ fontSize:11,fontWeight:700,color:muted }}>Precio pagado por manga (compra)<input type="number" min="0" value={it.precioManga} onChange={e=>cambiarItem(i,"precioManga",e.target.value)} style={inputStyle(card,text,border)} /></label>
                     </div>
                   )}
+
+                  {it.modo==="manga" && Number(producto?.mangaPrecio||0)>0 && <p style={{margin:"6px 0 0",fontSize:10,color:muted}}>Referencia: precio de venta al público de esta manga {fmt(producto.mangaPrecio)} — no uses este valor como precio de compra.</p>}
 
                   <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
                     {unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades}</strong> unidades al stock · costo unitario {fmt(costoCalc)}</> : "Ingresa cantidad para calcular"}

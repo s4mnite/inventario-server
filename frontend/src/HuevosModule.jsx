@@ -93,6 +93,33 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     "x-clave": currentUser?._clave || "",
   };
 
+  // Registra en el módulo Gastos (categoría "huevos") el costo real de una
+  // compra de huevos, para que aparezca en Gastos y en los egresos de
+  // Reportes. Es un intento aparte del guardado de la entrada: si falla no
+  // revierte ni bloquea la entrada ya guardada, solo avisa que hay que
+  // agregarla a mano en Gastos.
+  const registrarGastoDeCompraHuevos = async ({ calidad, total, unidades, fechaIngreso }) => {
+    try {
+      const res = await fetch(`${API}/api/gastos`, {
+        method: "POST", headers: eggHeaders,
+        body: JSON.stringify({
+          comercio: `Entrada de huevos · ${calidad}`,
+          fecha: fechaIngreso,
+          total,
+          categoria: "huevos",
+          metodoPago: "Efectivo",
+          notas: `Registrado automáticamente desde el módulo Huevos: ${Number(unidades || 0).toLocaleString("es-CL")} huevos de ${calidad}.`,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `Error ${res.status}`);
+      }
+    } catch (e) {
+      setError(`La entrada se guardó, pero no se pudo registrar el gasto asociado en el módulo Gastos: ${e.message}. Puedes agregarlo manualmente.`);
+    }
+  };
+
   const syncEggState = async (nextInventory, movementOrList = null) => {
     const list = Array.isArray(movementOrList) ? movementOrList : (movementOrList ? [movementOrList] : []);
     // Enviamos ambos formatos para ser compatibles con cualquier versión del backend:
@@ -423,6 +450,22 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       setError(e.message || "No se pudo guardar el movimiento.");
       return;
     }
+
+    // BUG FIX: una compra de huevos (entrada) nunca aparecía en el módulo
+    // Gastos ni en los egresos de Reportes, porque huevos vive en su propia
+    // colección separada de "gastos". Ahora cada entrada registra también un
+    // gasto en categoría "huevos". El monto SIEMPRE es lo que se pagó al
+    // comprar (purchaseTotal = cantidad × costo por unidad de compra) y
+    // nunca algo derivado del precio o del monto de venta.
+    if (form.tipo === "entrada" && purchaseTotal > 0) {
+      registrarGastoDeCompraHuevos({
+        calidad: selectedQuality.nombre,
+        total: purchaseTotal,
+        unidades: formUnits,
+        fechaIngreso: form.fechaIngreso,
+      });
+    }
+
     setForm({
       tipo: "entrada", calidadId: selectedQuality.id, cantidad: "",
       motivo: "Compra de mercadería", observaciones: "", descuento: "", metodoPago: "efectivo",
