@@ -4220,9 +4220,9 @@ export default function App() {
                           { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, icon: "🏦" },
                           { label: "Total", val: totalPeriodo, icon: "Σ" },
                         ].map(({ label, val, icon }) => (
-                          <div key={label} style={{ padding: 14, borderRadius: 14, background: bgCard2, textAlign: "center" }}>
+                          <div key={label} style={{ padding: "12px 6px", borderRadius: 14, background: bgCard2, textAlign: "center", minWidth: 0 }}>
                             <div style={{ fontSize: 18 }}>{icon}</div>
-                            <strong style={{ display: "block", fontSize: 18, marginTop: 6, color: label === "Total" ? "#10b981" : textPrimary }} className="mono">{fmt(val)}</strong>
+                            <strong style={{ display: "block", fontSize: 15, marginTop: 6, color: label === "Total" ? "#10b981" : textPrimary, wordBreak: "break-word", lineHeight: 1.15 }} className="mono">{fmt(val)}</strong>
                             <span style={{ fontSize: 11, color: textMuted }}>{label}</span>
                           </div>
                         ))}
@@ -4470,7 +4470,7 @@ export default function App() {
                         <p style={{ margin: 0, fontSize: 13, color: textMuted, textAlign: "center", padding: "10px 0" }}>Sin mermas registradas en este período.</p>
                       ) : (
                         <>
-                          <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 10 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 8 }}>
                             {[
                               ["Vencido", mermasPorMotivo.porMotivo["Vencido"], "#e5a22b"],
                               ["Dañado", mermasPorMotivo.porMotivo["Dañado"], "#d9483f"],
@@ -4478,10 +4478,10 @@ export default function App() {
                               ["Error inv.", mermasPorMotivo.porMotivo["Error de inventario"], "#8b5cf6"],
                               ["Total", mermasPorMotivo.unidadesTotal, "#c7362f"],
                             ].map(([label, value, color]) => (
-                              <div key={label} style={{ padding: "12px 8px", borderRadius: 12, background: bgCard2, textAlign: "center" }}>
-                                <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${color}22`, color, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 14 }}>📦</div>
-                                <strong style={{ display: "block", fontSize: 17, color: textPrimary }}>{Number(value || 0)}</strong>
-                                <span style={{ fontSize: 10, color: textMuted }}>{label}</span>
+                              <div key={label} style={{ padding: "10px 4px", borderRadius: 12, background: bgCard2, textAlign: "center", minWidth: 0 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${color}22`, color, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12 }}>📦</div>
+                                <strong style={{ display: "block", fontSize: 15, color: textPrimary, wordBreak: "break-word", lineHeight: 1.15 }}>{Number(value || 0)}</strong>
+                                <span style={{ fontSize: 9.5, color: textMuted }}>{label}</span>
                               </div>
                             ))}
                           </div>

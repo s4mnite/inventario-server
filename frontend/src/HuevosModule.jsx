@@ -1274,7 +1274,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
             ["Débito",eggReport.paymentBreakdown.debito,"💳"],
             ["Transferencia",eggReport.paymentBreakdown.transferencia,"🏦"],
             ["Total",eggReport.paymentBreakdown.total,"Σ"]
-          ].map(([label,value,icon])=><div key={label} style={{padding:14,borderRadius:14,background:bgCard2,textAlign:"center"}}><div style={{fontSize:18}}>{icon}</div><strong style={{display:"block",fontSize:18,marginTop:6,color:label==="Total"?(D?"#4fae93":"#2f6f5e"):textPrimary}}>{fmt(value)}</strong><span style={{fontSize:11,color:textMuted}}>{label}</span></div>)}
+          ].map(([label,value,icon])=><div key={label} style={{padding:"12px 6px",borderRadius:14,background:bgCard2,textAlign:"center",minWidth:0}}><div style={{fontSize:18}}>{icon}</div><strong style={{display:"block",fontSize:15,marginTop:6,color:label==="Total"?(D?"#4fae93":"#2f6f5e"):textPrimary,wordBreak:"break-word",lineHeight:1.15}}>{fmt(value)}</strong><span style={{fontSize:11,color:textMuted}}>{label}</span></div>)}
         </div>
       </div>
       <div className="egg-report-kpis egg-report-inventory-kpis" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:12}}>
