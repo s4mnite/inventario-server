@@ -2678,6 +2678,17 @@ export default function App() {
     });
   };
 
+  const setFreeEggCantidad = (quality, nuevaCantRaw) => {
+    setFreeEggCart(prev => {
+      const current = prev[quality.id] || { formato: "bandeja", cantidad: 0 };
+      const unitsPer = current.formato === "caja" ? 180 : 30;
+      const max = Math.floor(Number(quality.stockHuevos || 0) / unitsPer);
+      const nuevaCant = Math.floor(Number(nuevaCantRaw));
+      if (!Number.isFinite(nuevaCant)) return prev;
+      return { ...prev, [quality.id]: { ...current, cantidad: Math.max(0, Math.min(max, nuevaCant)) } };
+    });
+  };
+
   const setFreeEggFormat = (quality, formato) => {
     setFreeEggCart(prev => {
       const current = prev[quality.id] || { cantidad: 0 };
@@ -2751,6 +2762,36 @@ export default function App() {
         pricingLabel: "Precio manual",
       };
     }));
+  };
+
+  // Permite escribir la cantidad directamente (además de usar los botones +/−)
+  const fijarCantidadCarrito = (prod, nuevaCantRaw, esManga = false) => {
+    setCarritoError("");
+    const nuevaCant = Math.floor(Number(nuevaCantRaw));
+    if (!prod || !Number.isFinite(nuevaCant)) return;
+    if (nuevaCant <= 0) {
+      quitarDelCarrito(prod.id, esManga);
+      return;
+    }
+    const pricing = calcularPrecioProducto(prod, nuevaCant, Boolean(esManga));
+    if (pricing.unidadesTotales > Number(prod.stock || 0)) {
+      setCarritoError(`Stock insuficiente para ${prod.nombre}.`);
+      return;
+    }
+    const existente = carrito.find(c => String(c.productoId) === String(prod.id) && Boolean(c.esManga) === Boolean(esManga));
+    if (existente) {
+      cambiarCantidadCarrito(prod.id, nuevaCant, esManga);
+      return;
+    }
+    const nuevoItem = {
+      productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
+      precio: pricing.precio, precioNormal: Number(prod.precio || 0),
+      cantidad: nuevaCant, subtotal: pricing.subtotal,
+      enPromo: pricing.enPromo, aplicoManga: pricing.aplicoManga,
+      promoLabel: pricing.promoLabel, mangaLabel: pricing.mangaLabel, pricingLabel: pricing.pricingLabel,
+      esManga: Boolean(esManga), unidadesPorManga: pricing.unidadesPorManga, unidadesTotales: pricing.unidadesTotales,
+    };
+    setCarrito(prev => [...prev, nuevoItem]);
   };
 
   const cambiarCantidadCarrito = (productoId, nuevaCant, esManga) => {
@@ -3442,6 +3483,32 @@ export default function App() {
   })();
   const ingresosPeriodo   = ventasPeriodo.reduce((s, v) => s + v.total, 0);
   const gananciaPeriodo   = ingresosPeriodo - costosPeriodo;
+
+  // ── Pérdidas del período (mermas de inventario general) ──────────────────
+  // Usamos el id (timestamp) de cada merma para filtrar por período, ya que
+  // `fecha` se guarda como texto localizado (es-CL) y no es parseable de forma
+  // confiable con `new Date()`.
+  const mermasPeriodo = mermas.filter(m => {
+    const d = new Date(Number(m.id) || NaN);
+    if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+    if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
+    if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+    return true;
+  });
+  const mermasPorMotivo = (() => {
+    const prodMap = {}; products.forEach(p => { prodMap[p.id] = p; });
+    const acc = { "Vencido": 0, "Dañado": 0, "Robo": 0, "Error de inventario": 0, "Otro": 0 };
+    let valorTotal = 0, unidadesTotal = 0;
+    mermasPeriodo.forEach(m => {
+      const cant = Number(m.cantidad || 0);
+      const motivo = acc.hasOwnProperty(m.motivo) ? m.motivo : "Otro";
+      acc[motivo] = (acc[motivo] || 0) + cant;
+      unidadesTotal += cant;
+      const costoUnit = Number(prodMap[m.productoId]?.costo || 0);
+      valorTotal += costoUnit * cant;
+    });
+    return { porMotivo: acc, unidadesTotal, valorTotal };
+  })();
 
   // ── Ingresos / Egresos / Balance del período (bloque financiero de Reportes) ──
   // Egresos = todos los gastos registrados en el módulo Gastos (incluye compras de
@@ -4396,6 +4463,33 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Pérdidas del período (mermas) */}
+                    <div style={{ ...card, marginTop: 16 }}>
+                      <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 800, color: textPrimary }}>⚠️ Pérdidas del período</h3>
+                      {mermasPeriodo.length === 0 ? (
+                        <p style={{ margin: 0, fontSize: 13, color: textMuted, textAlign: "center", padding: "10px 0" }}>Sin mermas registradas en este período.</p>
+                      ) : (
+                        <>
+                          <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 10 }}>
+                            {[
+                              ["Vencido", mermasPorMotivo.porMotivo["Vencido"], "#e5a22b"],
+                              ["Dañado", mermasPorMotivo.porMotivo["Dañado"], "#d9483f"],
+                              ["Robo", mermasPorMotivo.porMotivo["Robo"], "#e03131"],
+                              ["Error inv.", mermasPorMotivo.porMotivo["Error de inventario"], "#8b5cf6"],
+                              ["Total", mermasPorMotivo.unidadesTotal, "#c7362f"],
+                            ].map(([label, value, color]) => (
+                              <div key={label} style={{ padding: "12px 8px", borderRadius: 12, background: bgCard2, textAlign: "center" }}>
+                                <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${color}22`, color, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 14 }}>📦</div>
+                                <strong style={{ display: "block", fontSize: 17, color: textPrimary }}>{Number(value || 0)}</strong>
+                                <span style={{ fontSize: 10, color: textMuted }}>{label}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ margin: "13px 0 0", fontSize: 11, color: textMuted }}>Valor perdido al costo: <strong style={{ color: "#e03131" }}>{fmt(mermasPorMotivo.valorTotal)}</strong> · {mermasPeriodo.length} registro{mermasPeriodo.length===1?"":"s"}</p>
+                        </>
+                      )}
+                    </div>
+
                     {/* Resumen financiero */}
                     <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 16 }}>
                       <div style={{ ...card, background: D ? "linear-gradient(135deg,#1a1d2e,#252840)" : "linear-gradient(135deg,#1a1a2e,#2d2d4e)" }}>
@@ -4475,7 +4569,7 @@ export default function App() {
                       return <article key={q.id} className="free-egg-card">
                         <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
                         <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
-                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><span>{row.cantidad||0}</span><button disabled={(row.cantidad||0)>=max} onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button disabled={(row.cantidad||0)>=max} onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
                       </article>;
                     })}
                   </div>}
@@ -4519,7 +4613,15 @@ export default function App() {
                         <h4>{p.nombre}</h4><strong className="mono">{fmt(p.precio)}</strong>
                         <div className="sales-prod-controls">
                           <button disabled={!item} onClick={()=>item && (item.cantidad===1?quitarDelCarrito(p.id,false):cambiarCantidadCarrito(p.id,item.cantidad-1,false))}>−</button>
-                          <span>{item?.cantidad||0}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            inputMode="numeric"
+                            value={item?.cantidad ?? 0}
+                            onFocus={e=>e.target.select()}
+                            onChange={e=>fijarCantidadCarrito(p,e.target.value,false)}
+                            style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0,MozAppearance:"textfield"}}
+                          />
                           <button onClick={()=>agregarProductoRapido(p)}>+</button>
                         </div>
                       </article>;
@@ -4544,7 +4646,19 @@ export default function App() {
                       </button>
                       {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualCarrito(item.productoId,item.esManga,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:8,background:bgCard,color:textPrimary,fontWeight:800}} />}
                     </div>
-                    <div className="sales-cart-step"><button onClick={()=>item.cantidad===1?quitarDelCarrito(item.productoId,item.esManga):cambiarCantidadCarrito(item.productoId,item.cantidad-1,item.esManga)}>−</button><span>{item.cantidad}</span><button onClick={()=>cambiarCantidadCarrito(item.productoId,item.cantidad+1,item.esManga)}>+</button></div>
+                    <div className="sales-cart-step">
+                      <button onClick={()=>item.cantidad===1?quitarDelCarrito(item.productoId,item.esManga):cambiarCantidadCarrito(item.productoId,item.cantidad-1,item.esManga)}>−</button>
+                      <input
+                        type="number"
+                        min="0"
+                        inputMode="numeric"
+                        value={item.cantidad}
+                        onFocus={e=>e.target.select()}
+                        onChange={e=>{ const prod = products.find(pr=>String(pr.id)===String(item.productoId)); if (prod) fijarCantidadCarrito(prod,e.target.value,item.esManga); }}
+                        style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}}
+                      />
+                      <button onClick={()=>cambiarCantidadCarrito(item.productoId,item.cantidad+1,item.esManga)}>+</button>
+                    </div>
                     <strong className="mono">{fmt(item.subtotal)}</strong>
                     <button className="trash" onClick={()=>quitarDelCarrito(item.productoId,item.esManga)}><Trash2 size={15}/></button>
                   </div>)}
