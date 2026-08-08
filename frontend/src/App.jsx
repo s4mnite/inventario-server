@@ -1647,7 +1647,8 @@ export default function App() {
   const [boletaGenerando, setBoletaGenerando] = useState(false);
   const [filtroBoleta, setFiltroBoleta] = useState("Todos");
   const [reporteTab, setReporteTab] = useState("ventas"); // "ventas" | "inventario"
-  const [reportePeriodo, setReportePeriodo] = useState("mes"); // "semana" | "mes" | "todo"
+  const [reportePeriodo, setReportePeriodo] = useState("mes"); // "dia" | "semana" | "mes" | "todo"
+  const [reporteFecha, setReporteFecha] = useState(() => new Date().toISOString().slice(0, 10)); // ancla para reportePeriodo === "dia"
 
   // Categorías
   const [nuevaCat, setNuevaCat] = useState("");
@@ -3431,6 +3432,7 @@ export default function App() {
     if (!fecha) return reportePeriodo === "todo";
     const d = new Date(fecha);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
@@ -3491,6 +3493,7 @@ export default function App() {
   const mermasPeriodo = mermas.filter(m => {
     const d = new Date(Number(m.id) || NaN);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
@@ -3518,6 +3521,7 @@ export default function App() {
     if (!fecha) return reportePeriodo === "todo";
     const d = new Date(fecha);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
@@ -4156,11 +4160,15 @@ export default function App() {
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>Reportes</h2>
                     <p style={{ margin: 0, fontSize: 13, color: textMuted }}>Análisis detallado de ventas e inventario</p>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {["semana","mes","todo"].map(p => (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {reportePeriodo === "dia" && (
+                      <input type="date" value={reporteFecha} onChange={e => setReporteFecha(e.target.value)}
+                        style={{ padding: "7px 10px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 12, fontFamily: "inherit" }} />
+                    )}
+                    {["dia","semana","mes","todo"].map(p => (
                       <button key={p} onClick={() => setReportePeriodo(p)}
                         style={{ padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${reportePeriodo === p ? "#d71920" : borderColor2}`, background: reportePeriodo === p ? "#d71920" : bgCard2, color: reportePeriodo === p ? "#fff" : textSecondary, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}>
-                        {p === "semana" ? "7 días" : p === "mes" ? "Este mes" : "Todo"}
+                        {p === "dia" ? "Día" : p === "semana" ? "7 días" : p === "mes" ? "Este mes" : "Todo"}
                       </button>
                     ))}
                   </div>

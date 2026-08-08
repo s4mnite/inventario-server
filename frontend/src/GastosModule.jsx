@@ -411,6 +411,34 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
   const filtrados = gastos.filter(g => `${g.comercio} ${g.categoria} ${g.numeroDocumento}`.toLowerCase().includes(busqueda.toLowerCase()));
 
+  // Agrupa los gastos filtrados por día (fecha) y ordena los grupos del más
+  // reciente al más antiguo, para mostrar la lista separada por fecha con
+  // un subtotal por día.
+  const gruposPorDia = useMemo(() => {
+    const mapa = new Map();
+    filtrados.forEach(g => {
+      const clave = String(g.fecha || "").slice(0, 10) || "Sin fecha";
+      if (!mapa.has(clave)) mapa.set(clave, []);
+      mapa.get(clave).push(g);
+    });
+    return [...mapa.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([fecha, items]) => ({
+        fecha,
+        items,
+        total: items.reduce((s, g) => s + Number(g.total || 0), 0),
+      }));
+  }, [filtrados]);
+
+  const etiquetaDia = fecha => {
+    if (fecha === hoy) return "Hoy";
+    const ayer = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (fecha === ayer) return "Ayer";
+    const d = new Date(`${fecha}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return fecha;
+    return d.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
+  };
+
   return <div style={{ background:bg, minHeight:"100%", padding:"clamp(12px,2vw,24px)", color:text }}>
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:18, flexWrap:"wrap" }}>
       <div><h2 style={{ margin:0, fontSize:24 }}>Gastos</h2><p style={{ margin:"4px 0 0", color:muted, fontSize:13 }}>Compras y egresos del local</p></div>
@@ -429,16 +457,24 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
     {error && !modal && <div style={{ background:"#fff1f2",border:"1px solid #fecdd3",color:"#be123c",padding:12,borderRadius:12,marginBottom:12 }}><AlertCircle size={15}/> {error}</div>}
     <div style={{ background:card, border:`1px solid ${border}`, borderRadius:16, overflow:"hidden" }}>
-      {loading ? <p style={{ padding:24,color:muted }}>Cargando gastos...</p> : filtrados.length === 0 ? <div style={{ padding:40,textAlign:"center",color:muted }}><Receipt size={38}/><p>No hay gastos registrados.</p></div> : filtrados.map((g,i) => {
-        const cat = categoriasGasto.find(x=>x.id===g.categoria) || categoriasGasto.at(-1); const Icon=cat.icon;
-        return <div key={g.id||g._id} style={{ display:"flex",alignItems:"center",gap:12,padding:14,borderBottom:i<filtrados.length-1?`1px solid ${border}`:"none" }}>
-          <div style={{ width:42,height:42,borderRadius:12,background:"#fff3bf",display:"flex",alignItems:"center",justifyContent:"center",color:"#d97706" }}><Icon size={19}/></div>
-          <div style={{ flex:1,minWidth:0 }}><p style={{ margin:0,fontWeight:850,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{g.comercio}</p><p style={{ margin:"3px 0 0",color:muted,fontSize:11 }}>{g.fecha} · {cat.label}{g.numeroDocumento?` · N° ${g.numeroDocumento}`:""}</p></div>
-          <div style={{ textAlign:"right" }}><p style={{ margin:0,fontWeight:900,color:"#d71920" }}>-{fmt(g.total)}</p>{g.imagenUrl&&<a href={`${API}${g.imagenUrl}`} target="_blank" rel="noreferrer" style={{ color:muted,fontSize:10 }}>Ver boleta</a>}</div>
-          <button onClick={()=>abrirEditar(g)} style={{ border:0,background:"transparent",color:"#2563eb",padding:7 }}><Pencil size={16}/></button>
-          <button onClick={()=>eliminar(g.id||g._id)} style={{ border:0,background:"transparent",color:"#dc2626",padding:7 }}><Trash2 size={16}/></button>
-        </div>;
-      })}
+      {loading ? <p style={{ padding:24,color:muted }}>Cargando gastos...</p> : filtrados.length === 0 ? <div style={{ padding:40,textAlign:"center",color:muted }}><Receipt size={38}/><p>No hay gastos registrados.</p></div> : gruposPorDia.map((grupo, gi) => (
+        <div key={grupo.fecha}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:darkMode?"#181c2a":"#f7f7f5",borderBottom:`1px solid ${border}`,borderTop:gi>0?`1px solid ${border}`:"none",position:"sticky",top:0 }}>
+            <p style={{ margin:0,fontSize:12,fontWeight:850,color:muted,textTransform:"capitalize" }}>{etiquetaDia(grupo.fecha)}</p>
+            <p style={{ margin:0,fontSize:12,fontWeight:900,color:"#d71920" }}>-{fmt(grupo.total)}</p>
+          </div>
+          {grupo.items.map((g,i) => {
+            const cat = categoriasGasto.find(x=>x.id===g.categoria) || categoriasGasto.at(-1); const Icon=cat.icon;
+            return <div key={g.id||g._id} style={{ display:"flex",alignItems:"center",gap:12,padding:14,borderBottom:(i<grupo.items.length-1||gi<gruposPorDia.length-1)?`1px solid ${border}`:"none" }}>
+              <div style={{ width:42,height:42,borderRadius:12,background:"#fff3bf",display:"flex",alignItems:"center",justifyContent:"center",color:"#d97706" }}><Icon size={19}/></div>
+              <div style={{ flex:1,minWidth:0 }}><p style={{ margin:0,fontWeight:850,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{g.comercio}</p><p style={{ margin:"3px 0 0",color:muted,fontSize:11 }}>{g.fecha} · {cat.label}{g.numeroDocumento?` · N° ${g.numeroDocumento}`:""}</p></div>
+              <div style={{ textAlign:"right" }}><p style={{ margin:0,fontWeight:900,color:"#d71920" }}>-{fmt(g.total)}</p>{g.imagenUrl&&<a href={`${API}${g.imagenUrl}`} target="_blank" rel="noreferrer" style={{ color:muted,fontSize:10 }}>Ver boleta</a>}</div>
+              <button onClick={()=>abrirEditar(g)} style={{ border:0,background:"transparent",color:"#2563eb",padding:7 }}><Pencil size={16}/></button>
+              <button onClick={()=>eliminar(g.id||g._id)} style={{ border:0,background:"transparent",color:"#dc2626",padding:7 }}><Trash2 size={16}/></button>
+            </div>;
+          })}
+        </div>
+      ))}
     </div>
 
     {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:12000,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
