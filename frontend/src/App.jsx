@@ -17,7 +17,7 @@ import {
 import EggModule from "./HuevosModule";
 import GastosModule from "./GastosModule";
 import ReyDelHuevoInicio from "./ReyDelHuevoInicio";
-import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement } from "./lib/utils";
+import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout } from "./lib/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const APP_VERSION = "4.0.1";
@@ -40,7 +40,14 @@ const calcularPrecioProducto = (producto, cantidad, esManga = false) => {
   const promoCantidad = Math.max(0, Number(producto?.promoCantMin || 0));
   const promoPrecio = Math.max(0, Number(producto?.promoPrecio || 0));
   const mangaValida = Boolean(producto?.mangaActiva && mangaCantidad > 0 && mangaPrecio > 0);
-  const promoValida = Boolean(producto?.promoActiva && promoCantidad > 0 && promoPrecio > 0);
+  // Si la promoción tiene fecha de inicio y/o fin, solo está vigente dentro de
+  // ese rango. Fuera de él (todavía no empieza, o ya terminó) se ignora y el
+  // producto vuelve solo al precio normal, sin que haya que desactivarla a mano.
+  const hoy = todayLocalISO();
+  const promoDesde = String(producto?.promoFechaInicio || "");
+  const promoHasta = String(producto?.promoFechaFin || "");
+  const promoVigentePorFecha = (!promoDesde || hoy >= promoDesde) && (!promoHasta || hoy <= promoHasta);
+  const promoValida = Boolean(producto?.promoActiva && promoCantidad > 0 && promoPrecio > 0 && promoVigentePorFecha);
 
   if (esManga && mangaValida) {
     const subtotal = qty * mangaPrecio;
@@ -1751,8 +1758,8 @@ export default function App() {
     if (!empresa) return false;
     try {
       const [rActual, rHistorial] = await Promise.all([
-        fetch(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}`, { cache: "no-store" }),
-        fetch(`${API}/api/caja/historial?empresa=${encodeURIComponent(empresa)}&limit=100&_=${Date.now()}`, { cache: "no-store" }),
+        fetchConTimeout(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}`, { cache: "no-store" }),
+        fetchConTimeout(`${API}/api/caja/historial?empresa=${encodeURIComponent(empresa)}&limit=100&_=${Date.now()}`, { cache: "no-store" }),
       ]);
 
       const tipoActual = rActual.headers.get("content-type") || "";
@@ -1969,8 +1976,8 @@ export default function App() {
     const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
     try {
       const [rv, rb] = await Promise.all([
-        fetch(API + "/api/ventas" + suffix, { headers, cache: "no-store" }),
-        fetch(API + "/api/boletas" + suffix, { headers, cache: "no-store" }),
+        fetchConTimeout(API + "/api/ventas" + suffix, { headers, cache: "no-store" }),
+        fetchConTimeout(API + "/api/boletas" + suffix, { headers, cache: "no-store" }),
       ]);
       const [ventasData, boletasData] = await Promise.all([rv.json(), rb.json()]);
       if (!rv.ok) throw new Error(ventasData?.error || "No se pudieron sincronizar las ventas.");
@@ -2019,7 +2026,7 @@ export default function App() {
     if (!currentUser) return false;
     const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
     try {
-      const res = await fetch(API + "/api/gastos", { headers, cache: "no-store" });
+      const res = await fetchConTimeout(API + "/api/gastos", { headers, cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "No se pudieron sincronizar los gastos.");
       setGastosReporte(Array.isArray(data) ? data : []);
@@ -2055,8 +2062,8 @@ export default function App() {
     const empresa = empresaActiva;
     try {
       const [rp, rc] = await Promise.all([
-        fetch(`${API}/api/productos?_=${Date.now()}`, { cache: "no-store" }),
-        fetch(`${API}/api/categorias?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}`, { cache: "no-store" }),
+        fetchConTimeout(`${API}/api/productos?_=${Date.now()}`, { cache: "no-store" }),
+        fetchConTimeout(`${API}/api/categorias?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}`, { cache: "no-store" }),
       ]);
       const [productosData, categoriasData] = await Promise.all([rp.json(), rc.json()]);
       if (!rp.ok) throw new Error(productosData?.error || "No se pudieron sincronizar los productos.");
@@ -2246,7 +2253,7 @@ export default function App() {
   // esGerente se mantienen intactos (activeNav sigue pudiendo valer "Usuarios").
 
   // ── Productos ──
-  const openAdd = () => { setForm({ nombre: "", categoria: categorias[0] || "", precio: "", costo: "", incrementoPct: "", stock: "", img: "📦", imagenUrl: "", codigoBarra: "", mangaActiva: false, mangaCantidad: "", mangaPrecio: "", mangaCostoCompra: "", promoActiva: false, promoCantMin: "", promoPrecio: "" }); setModal("add"); };
+  const openAdd = () => { setForm({ nombre: "", categoria: categorias[0] || "", precio: "", costo: "", incrementoPct: "", stock: "", img: "📦", imagenUrl: "", codigoBarra: "", mangaActiva: false, mangaCantidad: "", mangaPrecio: "", mangaCostoCompra: "", promoActiva: false, promoCantMin: "", promoPrecio: "", promoFechaInicio: "", promoFechaFin: "" }); setModal("add"); };
   const openEdit = (p) => {
     const incrementoPct = p.incrementoPct ?? (Number(p.costo || 0) > 0 ? calcIncrementPct(p.costo, p.precio).toFixed(2) : "");
     setForm({ ...p, incrementoPct });
@@ -2518,9 +2525,11 @@ export default function App() {
   };
 
   // ── Carrito ──
+  // El stock ya no filtra qué productos son "vendibles": se puede vender aunque
+  // no haya stock disponible, así que estos productos deben poder buscarse igual.
   const productosBusqueda = busquedaVenta.length > 0
-    ? products.filter(p => p.stock > 0 && p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase())).slice(0, 6)
-    : products.filter(p => p.stock > 0).slice(0, 6);
+    ? products.filter(p => p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase())).slice(0, 6)
+    : products.slice(0, 6);
 
   const seleccionarProductoVenta = (prod) => {
     setProductoSeleccionadoVenta(prod);
@@ -2542,10 +2551,8 @@ export default function App() {
     const nuevaCantidad = Number(itemExistente?.cantidad || 0) + cant;
     const pricing = calcularPrecioProducto(prod, nuevaCantidad, esManga);
 
-    if (pricing.unidadesTotales > Number(prod.stock || 0)) {
-      setCarritoError(`Stock insuficiente. Disponible: ${prod.stock} unidades${tieneManga ? ` (${Math.floor(Number(prod.stock || 0) / Number(prod.mangaCantidad))} mangas)` : ""}.`);
-      return;
-    }
+    // El stock no bloquea la venta: si no alcanza, el inventario queda en
+    // negativo y se muestra en rojo para regularizarlo después.
 
     const nuevoItem = {
       productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
@@ -2568,14 +2575,11 @@ export default function App() {
 
   const agregarProductoRapido = (prod) => {
     setCarritoError("");
-    if (!prod || Number(prod.stock || 0) <= 0) return;
+    if (!prod) return;
     const existente = carrito.find(c => String(c.productoId) === String(prod.id) && !c.esManga);
     const nuevaCantidad = Number(existente?.cantidad || 0) + 1;
     const pricing = calcularPrecioProducto(prod, nuevaCantidad, false);
-    if (pricing.unidadesTotales > Number(prod.stock || 0)) {
-      setCarritoError(`Stock insuficiente para ${prod.nombre}.`);
-      return;
-    }
+    // El stock no bloquea la venta; puede quedar negativo.
     const nuevoItem = {
       productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
       precio: pricing.precio, precioNormal: Number(prod.precio || 0),
@@ -2670,32 +2674,28 @@ export default function App() {
     return () => { cancelled = true; };
   }, [saleFlowType, activeNav, currentUser?.usuario, currentUser?._clave]);
 
+  // El stock de huevos ya no limita la cantidad máxima seleccionable: se puede
+  // vender aunque no haya stock suficiente y el inventario queda en negativo.
   const changeFreeEgg = (quality, delta) => {
     setFreeEggCart(prev => {
       const current = prev[quality.id] || { formato: "bandeja", cantidad: 0 };
-      const unitsPer = current.formato === "caja" ? 180 : 30;
-      const max = Math.floor(Number(quality.stockHuevos || 0) / unitsPer);
-      return { ...prev, [quality.id]: { ...current, cantidad: Math.max(0, Math.min(max, Number(current.cantidad || 0) + delta)) } };
+      return { ...prev, [quality.id]: { ...current, cantidad: Math.max(0, Number(current.cantidad || 0) + delta) } };
     });
   };
 
   const setFreeEggCantidad = (quality, nuevaCantRaw) => {
     setFreeEggCart(prev => {
       const current = prev[quality.id] || { formato: "bandeja", cantidad: 0 };
-      const unitsPer = current.formato === "caja" ? 180 : 30;
-      const max = Math.floor(Number(quality.stockHuevos || 0) / unitsPer);
       const nuevaCant = Math.floor(Number(nuevaCantRaw));
       if (!Number.isFinite(nuevaCant)) return prev;
-      return { ...prev, [quality.id]: { ...current, cantidad: Math.max(0, Math.min(max, nuevaCant)) } };
+      return { ...prev, [quality.id]: { ...current, cantidad: Math.max(0, nuevaCant) } };
     });
   };
 
   const setFreeEggFormat = (quality, formato) => {
     setFreeEggCart(prev => {
       const current = prev[quality.id] || { cantidad: 0 };
-      const unitsPer = formato === "caja" ? 180 : 30;
-      const max = Math.floor(Number(quality.stockHuevos || 0) / unitsPer);
-      return { ...prev, [quality.id]: { formato, cantidad: Math.min(Number(current.cantidad || 0), max) } };
+      return { ...prev, [quality.id]: { formato, cantidad: Number(current.cantidad || 0) } };
     });
   };
 
@@ -2775,10 +2775,7 @@ export default function App() {
       return;
     }
     const pricing = calcularPrecioProducto(prod, nuevaCant, Boolean(esManga));
-    if (pricing.unidadesTotales > Number(prod.stock || 0)) {
-      setCarritoError(`Stock insuficiente para ${prod.nombre}.`);
-      return;
-    }
+    // El stock no bloquea la venta; puede quedar negativo.
     const existente = carrito.find(c => String(c.productoId) === String(prod.id) && Boolean(c.esManga) === Boolean(esManga));
     if (existente) {
       cambiarCantidadCarrito(prod.id, nuevaCant, esManga);
@@ -2799,7 +2796,7 @@ export default function App() {
     const prod = products.find(p => String(p.id) === String(productoId));
     if (!prod || nuevaCant < 1) return;
     const pricing = calcularPrecioProducto(prod, nuevaCant, Boolean(esManga));
-    if (pricing.unidadesTotales > Number(prod.stock || 0)) return;
+    // El stock no bloquea la venta; puede quedar negativo.
     setCarrito(prev => prev.map(c => {
       if (!(String(c.productoId) === String(productoId) && Boolean(c.esManga) === Boolean(esManga))) return c;
       if (c.precioManualActivo) {
@@ -3970,7 +3967,7 @@ export default function App() {
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: p.mangaActiva && p.mangaCantidad && p.mangaPrecio ? 6 : 10 }}>
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(p.precio)}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: p.stock === 0 ? "#fff1f2" : p.stock <= (config.stockMinimo || 5) ? "#fffbeb" : D ? "rgba(16,185,129,0.15)" : "#ecfdf5", color: p.stock === 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#d97706" : "#059669" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: p.stock <= 0 ? "#fff1f2" : p.stock <= (config.stockMinimo || 5) ? "#fffbeb" : D ? "rgba(16,185,129,0.15)" : "#ecfdf5", color: p.stock <= 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#d97706" : "#059669" }}>
                           {p.stock} uds{p.mangaActiva && p.mangaCantidad && +p.mangaCantidad > 0 ? ` / ${Math.floor(p.stock / +p.mangaCantidad)} m` : ""}
                         </span>
                       </div>
@@ -3980,6 +3977,20 @@ export default function App() {
                           <span style={{ fontSize: 12, fontWeight: 800, color: "#d97706" }}>{fmt(+p.mangaPrecio)}</span>
                         </div>
                       )}
+                      {p.promoActiva && p.promoCantMin && p.promoPrecio && (() => {
+                        const hoy = todayLocalISO();
+                        const desde = String(p.promoFechaInicio || "");
+                        const hasta = String(p.promoFechaFin || "");
+                        const vigente = (!desde || hoy >= desde) && (!hasta || hoy <= hasta);
+                        return (
+                          <div style={{ marginBottom: 8, padding: "5px 10px", background: vigente ? (D ? "rgba(215,25,32,0.15)" : "#fff1f2") : (D ? "rgba(107,114,128,0.15)" : "#f3f4f6"), borderRadius: 8, border: `1px solid ${vigente ? (D ? "rgba(215,25,32,0.3)" : "#fecdd3") : borderColor2}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, color: vigente ? "#d71920" : textMuted, fontWeight: 600 }}>
+                              🏷️ {p.promoCantMin}x{fmt(+p.promoPrecio)}{(desde || hasta) ? ` · ${desde || "…"} a ${hasta || "…"}` : ""}
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: vigente ? "#d71920" : textMuted }}>{vigente ? "Vigente" : "No vigente"}</span>
+                          </div>
+                        );
+                      })()}
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <input type="number" min="1" placeholder="Cantidad" value={quickStock[p.id] || ""} onChange={e => setQuickStock(prev => ({ ...prev, [p.id]: e.target.value }))} onKeyDown={e => e.key === "Enter" && handleQuickStock(p)} style={{ flex: 1, minWidth: 0, padding: "7px 8px", borderRadius: 8, border: `1.5px solid ${borderColor2}`, background: D ? "#1a1d2e" : "#fafafa", color: textPrimary, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
                         <button onClick={() => handleQuickStock(p)} style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}>+ Stock</button>
@@ -4002,7 +4013,7 @@ export default function App() {
                         }
                       </div>
                       {/* Badge stock */}
-                      <div style={{ position: "absolute", top: -2, left: -2, background: p.stock === 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#f59e0b" : "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 8, whiteSpace: "nowrap" }}>
+                      <div style={{ position: "absolute", top: -2, left: -2, background: p.stock <= 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#f59e0b" : "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 8, whiteSpace: "nowrap" }}>
                         {p.stock} uds{p.mangaActiva && p.mangaCantidad && +p.mangaCantidad > 0 ? ` / ${Math.floor(p.stock / +p.mangaCantidad)} m` : ""}
                       </div>
                     </div>
@@ -4573,11 +4584,10 @@ export default function App() {
                   {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
                     {freeEggInventory.map(q => {
                       const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
-                      const max = Math.floor(Number(q.stockHuevos || 0) / (row.formato === "caja" ? 180 : 30));
                       return <article key={q.id} className="free-egg-card">
-                        <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+                        <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
                         <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
-                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button disabled={(row.cantidad||0)>=max} onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
                       </article>;
                     })}
                   </div>}
@@ -4614,10 +4624,10 @@ export default function App() {
                   <div className="sales-cats-v2">{["Todos", ...categorias].map(cat => <button key={cat} className={saleCatFilter===cat?"active":""} onClick={()=>setSaleCatFilter(cat)}>{cat}</button>)}</div>
                   {carritoError && <div className="sales-error-v2">⚠ {carritoError}</div>}
                   <div className="sales-product-grid-v2">
-                    {products.filter(p => Number(p.stock)>0 && (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
+                    {products.filter(p => (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
                       const item=carrito.find(c=>String(c.productoId)===String(p.id) && !c.esManga);
                       return <article key={p.id}>
-                        <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em>{p.stock} uds</em></div>
+                        <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em style={Number(p.stock) < 0 ? { background: "#e03131" } : undefined}>{p.stock} uds</em></div>
                         <h4>{p.nombre}</h4><strong className="mono">{fmt(p.precio)}</strong>
                         <div className="sales-prod-controls">
                           <button disabled={!item} onClick={()=>item && (item.cantidad===1?quitarDelCarrito(p.id,false):cambiarCantidadCarrito(p.id,item.cantidad-1,false))}>−</button>
@@ -4736,7 +4746,7 @@ export default function App() {
                               <span style={{ fontSize: 20 }}>{p.img}</span>
                               <div style={{ flex: 1 }}>
                                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: textPrimary }}>{p.nombre}</p>
-                                <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{p.categoria} · Stock: {p.stock}</p>
+                                <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{p.categoria} · Stock: <span style={{ color: Number(p.stock) < 0 ? "#e03131" : textMuted, fontWeight: Number(p.stock) < 0 ? 800 : 400 }}>{p.stock}</span></p>
                               </div>
                               <span style={{ fontSize: 12, fontWeight: 800, color: "#10b981", fontFamily: "JetBrains Mono" }}>{fmt(p.precio)}</span>
                             </div>
@@ -6067,14 +6077,19 @@ export default function App() {
               <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Costo (precio de compra)</label>
               <input type="number" min="0" value={form.costo || ""} onChange={e => {
                 const costo = e.target.value;
-                setForm(f => ({ ...f, costo, precio: costo && f.incrementoPct !== "" ? String(Math.round(priceFromIncrement(costo, f.incrementoPct))) : f.precio }));
+                // Solo autocompletamos el precio si el usuario todavía no escribió uno
+                // manualmente. Si ya hay un precio (propio o cargado al editar), Costo
+                // nunca debe pisarlo.
+                setForm(f => ({ ...f, costo, precio: !f.precio && costo && f.incrementoPct !== "" ? String(Math.round(priceFromIncrement(costo, f.incrementoPct))) : f.precio }));
               }} placeholder="Opcional" style={inp} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Incremento sobre el costo (%)</label>
               <input type="number" min="-100" step="0.01" value={form.incrementoPct ?? ""} onChange={e => {
                 const incrementoPct = e.target.value;
-                setForm(f => ({ ...f, incrementoPct, precio: f.costo && incrementoPct !== "" ? String(Math.round(priceFromIncrement(f.costo, incrementoPct))) : f.precio }));
+                // Mismo criterio: Incremento % solo calcula el precio cuando el campo
+                // Precio de venta está vacío. Si ya tiene un valor manual, se respeta.
+                setForm(f => ({ ...f, incrementoPct, precio: !f.precio && f.costo && incrementoPct !== "" ? String(Math.round(priceFromIncrement(f.costo, incrementoPct))) : f.precio }));
               }} placeholder="Ej: 18" style={inp} />
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -6257,6 +6272,7 @@ export default function App() {
                 </button>
               </div>
               {form.promoActiva && (
+                <>
                 <div style={{ display: "flex", gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Cantidad mínima</label>
@@ -6267,6 +6283,22 @@ export default function App() {
                     <input type="number" min="0" value={form.promoPrecio || ""} onChange={e => setForm(f => ({ ...f, promoPrecio: e.target.value }))} placeholder="Ej: 800" style={inp} />
                   </div>
                 </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Vigente desde</label>
+                    <input type="date" value={form.promoFechaInicio || ""} onChange={e => setForm(f => ({ ...f, promoFechaInicio: e.target.value }))} style={inp} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Vigente hasta</label>
+                    <input type="date" value={form.promoFechaFin || ""} min={form.promoFechaInicio || undefined} onChange={e => setForm(f => ({ ...f, promoFechaFin: e.target.value }))} style={inp} />
+                  </div>
+                </div>
+                <p style={{ margin: "8px 0 0", fontSize: 10, color: textMuted }}>
+                  {form.promoFechaInicio || form.promoFechaFin
+                    ? "Fuera de este rango de fechas el producto vuelve solo al precio normal, sin que tengas que desactivar la promoción."
+                    : "Sin fechas, la promoción queda activa siempre hasta que la apagues manualmente."}
+                </p>
+                </>
               )}
             </div>
             </div>

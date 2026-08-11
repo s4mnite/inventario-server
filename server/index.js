@@ -543,7 +543,8 @@ app.post("/api/ventas", async (req, res) => {
         const units = Number(item.huevos || 0);
         if (!quality) return res.status(400).json({ error: `Categoría de huevos no encontrada: ${item.calidad || item.calidadId}` });
         if (units <= 0) return res.status(400).json({ error: `Cantidad inválida para ${quality.nombre}` });
-        if (Number(quality.stockHuevos || 0) < units) return res.status(400).json({ error: `Stock insuficiente de huevos ${quality.nombre}` });
+        // El stock no bloquea la venta: si no alcanza, el inventario de huevos
+        // queda en negativo (se regulariza con una entrada posterior).
       }
     }
 
@@ -595,7 +596,7 @@ app.post("/api/ventas", async (req, res) => {
       const chileDate = `${chileDateParts.year}-${chileDateParts.month}-${chileDateParts.day}`;
       eggInventory = eggInventoryActual.map(q => {
         const soldUnits = eggItems.filter(item => String(item.calidadId) === String(q.id)).reduce((sum, item) => sum + Number(item.huevos || 0), 0);
-        return soldUnits ? { ...q, stockHuevos: Math.max(0, Number(q.stockHuevos || 0) - soldUnits) } : q;
+        return soldUnits ? { ...q, stockHuevos: Number(q.stockHuevos || 0) - soldUnits } : q;
       });
       const eggMovements = eggItems.map((item, index) => {
         const ingreso = Number(item.subtotal || 0);
@@ -1154,7 +1155,9 @@ const limpiarInventarioHuevos = (inventory) => {
     ...q,
     id: String(q.id || ""),
     nombre: String(q.nombre || "Sin nombre"),
-    stockHuevos: Math.max(0, Number(q.stockHuevos || 0)),
+    // El stock de huevos SÍ puede ser negativo (venta sin stock suficiente),
+    // a diferencia de costos y precios, que siempre deben ser >= 0.
+    stockHuevos: Number(q.stockHuevos || 0),
     costoCaja: Math.max(0, Number(q.costoCaja || 0)),
     precioCaja: Math.max(0, Number(q.precioCaja || 0)),
     precioBandeja: Math.max(0, Number(q.precioBandeja || 0)),

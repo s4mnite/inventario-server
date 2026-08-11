@@ -13,6 +13,17 @@ export const todayLocalISO = () => {
   return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
 };
 
+// fetch con límite de tiempo. Si el celular estuvo bloqueado/dormido un rato,
+// el navegador puede dejar una petición "colgada" sin resolver nunca. Este
+// helper la aborta a los `ms` y lanza un error claro, para que las pantallas
+// de sincronización (caja, ventas, productos) puedan reintentar solas en vez
+// de quedar pegadas esperando una respuesta que no va a llegar.
+export const fetchConTimeout = (url, options = {}, ms = 12000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+};
+
 
 // Incremento/recargo sobre el costo (no margen sobre la venta).
 export const calcIncrementPct = (costo, precio) => {
