@@ -3135,6 +3135,11 @@ export default function App() {
         fecha: venta.timestamp || venta.createdAt || venta.creadoEn || venta.fechaISO || venta.fecha,
       })))
     .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+  // Pagos del día para el Dashboard: se calculan SOLO sobre ventasHoy (ya
+  // filtradas por fecha local), nunca sobre el total histórico de `ventas`.
+  const pagoEfectivoHoy = ventasHoy.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0);
+  const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
+  const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
   const ventasHuevosHoyTotal = ventasHoy.reduce((sum, v) => sum + Number(v.total || 0), 0);
   const ventasHuevosAyerTotal = ventasAyer.reduce((sum, v) => sum + Number(v.total || 0), 0);
   const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
@@ -3887,6 +3892,9 @@ export default function App() {
                   deltaHuevos={porcentajeVentas}
                   deltaGanancia={porcentajeGanancias}
                   egresosHoy={egresosHoyInicio}
+                  efectivoHoy={pagoEfectivoHoy}
+                  debitoHoy={pagoTarjetaHoy}
+                  transferenciaHoy={pagoTransferenciaHoy}
                   movimientos={movimientosInicioDashboard}
                   stockBajo={stockBajoRep.length}
                   notificaciones={notificaciones.length}
