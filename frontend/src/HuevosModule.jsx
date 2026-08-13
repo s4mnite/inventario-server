@@ -340,13 +340,9 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     if (!allowedTypes.includes(movementType)) { setError("Tipo de movimiento inválido."); return; }
     if (!selectedQuality || formUnits <= 0) { setError("Ingresa una cantidad válida."); return; }
     if (form.tipo === "venta" && formUnits % EGG_TRAY_UNITS !== 0) { setError("Los huevos solo se venden por bandeja de 30 o caja de 180. La cantidad debe ser múltiplo de 30."); return; }
-    if (["rotos", "trizados", "ajuste_salida"].includes(form.tipo) && formUnits > selectedQuality.stockHuevos) {
-      setError(`Stock insuficiente. Disponible: ${selectedQuality.stockHuevos.toLocaleString("es-CL")} huevos.`); return;
-    }
-    // La venta ("venta") no se bloquea por falta de stock: si no alcanza, el
-    // inventario de huevos queda en negativo y se regulariza con una entrada
-    // posterior. Los demás egresos (merma, rotos, trizados, ajuste de salida)
-    // sí requieren stock disponible porque representan pérdidas físicas reales.
+    // Ningún egreso (venta, rotos, trizados, ajuste de salida) se bloquea por
+    // falta de stock: si no alcanza, el inventario queda en negativo y se
+    // regulariza con una entrada posterior.
     // Todo movimiento que no sea entrada debe ir siempre al último lote
     // activo de la categoría. Si no hay ninguno, no se registra a ciegas.
     const activeLot = eggLots.find(l => l.calidadId === selectedQuality.id && l.stockRestante > 0);
