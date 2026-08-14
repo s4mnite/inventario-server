@@ -842,6 +842,18 @@ const css = `
     .sales-floating-cart-v2 strong{font-size:15px;font-weight:900}
     .sales-back-v2{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--accent);font-weight:800;font-size:13px;padding:0 0 12px;cursor:pointer;font-family:inherit}
     .sales-checkout-v2{padding-top:14px}
+    .free-eggs-grid{display:flex;flex-direction:column;gap:10px}
+    .free-egg-card{border:1px solid var(--border);border-radius:16px;padding:13px;background:var(--bg-card)}
+    .free-egg-card>div:first-child{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+    .free-egg-icon{width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:#fff3cd;display:grid;place-items:center;font-size:21px}
+    .free-egg-card h4{margin:0 0 2px;font-size:13px;font-weight:800;color:var(--text-primary)}
+    .free-egg-card small{font-size:11px;color:var(--text-secondary)}
+    .free-egg-format{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
+    .free-egg-format button{border:1.5px solid var(--border);border-radius:11px;background:var(--bg-card-2);color:var(--text-secondary);font:700 12px inherit;padding:9px 6px}
+    .free-egg-format button.active{border-color:#0aaa78;background:rgba(10,170,120,.1);color:#0aaa78}
+    .free-egg-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .free-egg-bottom strong{color:#d71920;font-size:16px;font-weight:900}
+    .free-egg-bottom .sales-prod-controls{grid-template-columns:28px 40px 28px;margin-top:0}
     .sales-error-v2{font-size:11px;color:#c81e1e;background:#fff1f2;padding:8px 10px;border-radius:10px;margin-bottom:9px}
     .sales-product-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-product-grid-v2 article{border:1px solid var(--border);border-radius:15px;padding:9px;min-width:0;background:var(--bg-card)}.sales-prod-img{height:86px;border-radius:11px;background:var(--bg-card-2);display:grid;place-items:center;position:relative;overflow:hidden}.sales-prod-img img{width:100%;height:100%;object-fit:contain}.sales-prod-img span{font-size:38px}.sales-prod-img em{position:absolute;left:5px;bottom:5px;background:#0aaa78;color:#fff;border-radius:7px;padding:3px 6px;font:700 8px inherit;font-style:normal}.sales-product-grid-v2 h4{font-size:11px;line-height:1.2;height:27px;margin:8px 0 3px;color:var(--text-primary);overflow:hidden}.sales-product-grid-v2>article>strong{color:#d71920;font-size:14px}.sales-prod-controls{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:4px;margin-top:8px}.sales-prod-controls button,.sales-cart-step button{border:0;border-radius:8px;background:#f1f2f5;color:#1f2937;height:28px;font-size:17px}.sales-prod-controls button:last-child{background:#d71920;color:#fff}.sales-prod-controls span{text-align:center;font-weight:800;font-size:12px}
     .sales-cart-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto 22px;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border)}.sales-cart-thumb{width:38px;height:38px;border-radius:9px;background:var(--bg-card-2);display:grid;place-items:center;overflow:hidden}.sales-cart-thumb img{width:100%;height:100%;object-fit:contain}.sales-cart-name{min-width:0}.sales-cart-name b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}.sales-cart-name small{font-size:9px;color:#d71920}.sales-cart-step{display:flex;align-items:center;gap:4px}.sales-cart-step button{width:24px;height:24px;font-size:14px}.sales-cart-step span{font-size:11px;font-weight:800;min-width:15px;text-align:center}.sales-cart-row>strong{font-size:10px;color:var(--text-primary)}.sales-cart-row .trash{border:0;background:none;color:#d71920;padding:0}
@@ -4649,12 +4661,6 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="sales-choice-v2 sale-mode-summary">
-                  <h3>{saleFlowType === "free" ? "Venta libre" : "Venta de productos"}</h3>
-                  <p>{saleFlowType === "free" ? "Huevos y productos en una sola boleta. Los informes se separan automáticamente." : "Solo productos del inventario."}</p>
-                  <button onClick={() => setSaleChooserOpen(true)}>Cambiar tipo de venta</button>
-                </div>
-
                 {saleFlowType === "free" && <div className="sales-products-v2 free-eggs-section">
                   <div className="sales-products-head"><h3>Huevos</h3><span>{freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos</span></div>
                   {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
@@ -4668,6 +4674,12 @@ export default function App() {
                     })}
                   </div>}
                 </div>}
+
+                <div className="sales-choice-v2 sale-mode-summary">
+                  <h3>{saleFlowType === "free" ? "Venta libre" : "Venta de productos"}</h3>
+                  <p>{saleFlowType === "free" ? "Huevos y productos en una sola boleta. Los informes se separan automáticamente." : "Solo productos del inventario."}</p>
+                  <button onClick={() => setSaleChooserOpen(true)}>Cambiar tipo de venta</button>
+                </div>
                 </>}
 
                 {mobileSaleStep === "cobro" && <div className="sales-cart-v2 sales-checkout-v2">
