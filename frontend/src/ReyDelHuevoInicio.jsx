@@ -87,32 +87,32 @@ export default function ReyDelHuevoInicio({
     </div></section>
 
     <section style={styles.section}>
+      <h2 style={styles.title}>Pagos de hoy</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 10 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div style={{ ...styles.iconCircle, width: 36, height: 36, marginBottom: 8, background: "#dcfce7" }}><Banknote size={17} color="#16a34a"/></div>
+          <div style={{ color: "#7d8492", fontSize: 12 }}>Efectivo</div>
+          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(efectivoHoy)}</div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div style={{ ...styles.iconCircle, width: 36, height: 36, marginBottom: 8, background: "#dbeafe" }}><CreditCard size={17} color="#2563eb"/></div>
+          <div style={{ color: "#7d8492", fontSize: 12 }}>Débito/Tarjeta</div>
+          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(debitoHoy)}</div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div style={{ ...styles.iconCircle, width: 36, height: 36, marginBottom: 8, background: "#ede9fe" }}><Landmark size={17} color="#7c3aed"/></div>
+          <div style={{ color: "#7d8492", fontSize: 12 }}>Transferencia</div>
+          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(transferenciaHoy)}</div>
+        </div>
+      </div>
+    </section>
+
+    <section style={styles.section}>
       <h2 style={styles.title}>Resumen financiero</h2>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 13 }}>
         <Finance Icon={ArrowDown} label="Ingresos" value={ventasHoy} sub="Ventas netas" bg="#f0fdf4" border="#bbf7d0" color="#148a43" iconBg="#16a34a"/>
         <Finance Icon={ArrowUp} label="Egresos" value={egresosHoy} sub="Gastos y compras" bg="#fff4f4" border="#fecaca" color="#d71920" iconBg="#dc2626"/>
         <Finance Icon={Wallet} label="Balance" value={balance} sub="Ingresos - Egresos" bg="#fffbeb" border="#fde68a" color={balance >= 0 ? "#148a43" : "#d71920"} iconBg="#f5b700"/>
-      </div>
-    </section>
-
-    <section style={styles.section}>
-      <h2 style={styles.title}>Pagos de hoy</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 10 }}>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
-          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#dcfce7" }}><Banknote size={17} color="#16a34a"/></div>
-          <div style={{ color: "#7d8492", fontSize: 12 }}>Efectivo</div>
-          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(efectivoHoy)}</div>
-        </div>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
-          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#dbeafe" }}><CreditCard size={17} color="#2563eb"/></div>
-          <div style={{ color: "#7d8492", fontSize: 12 }}>Débito/Tarjeta</div>
-          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(debitoHoy)}</div>
-        </div>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
-          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#ede9fe" }}><Landmark size={17} color="#7c3aed"/></div>
-          <div style={{ color: "#7d8492", fontSize: 12 }}>Transferencia</div>
-          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(transferenciaHoy)}</div>
-        </div>
       </div>
     </section>
 
