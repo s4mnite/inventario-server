@@ -3882,6 +3882,16 @@ export default function App() {
                 </section>
 
                 <section className="desktop-section">
+                  <div className="desktop-section-title"><h3>Pagos de hoy</h3><button onClick={() => setActiveNav("Reportes")}>Ver reportes</button></div>
+                  <div className="desktop-kpi-grid">
+                    <article className="desktop-kpi-card"><span className="desktop-kpi-icon green">💵</span><div><small>Efectivo</small><strong>{fmt(pagoEfectivoHoy)}</strong></div></article>
+                    <article className="desktop-kpi-card"><span className="desktop-kpi-icon blue">💳</span><div><small>Débito/Tarjeta</small><strong>{fmt(pagoTarjetaHoy)}</strong></div></article>
+                    <article className="desktop-kpi-card"><span className="desktop-kpi-icon purple">🏦</span><div><small>Transferencia</small><strong>{fmt(pagoTransferenciaHoy)}</strong></div></article>
+                    <article className="desktop-kpi-card"><span className="desktop-kpi-icon yellow">−</span><div><small>Gastos de hoy</small><strong>{fmt(egresosHoyInicio)}</strong><em onClick={() => setActiveNav("Gastos")} style={{ cursor: "pointer" }}>Ver gastos →</em></div></article>
+                  </div>
+                </section>
+
+                <section className="desktop-section">
                   <div className="desktop-section-title"><h3>Productos destacados</h3><button onClick={() => setActiveNav("Productos")}>Ver todos</button></div>
                   <div className="desktop-featured-grid">
                     {products.slice(0, 5).map((p, i) => (
