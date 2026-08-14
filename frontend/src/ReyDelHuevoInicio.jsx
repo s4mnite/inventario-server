@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Menu, Bell, Moon, Sun, DollarSign, ShoppingBasket, Egg, TrendingUp,
   ArrowDown, ArrowUp, Wallet, ShoppingCart, Package, BarChart3,
-  ScanLine, ChevronRight, AlertTriangle, Target, Banknote, CreditCard, Landmark
+  ScanLine, ChevronRight, AlertTriangle, Target, Banknote, CreditCard, Landmark, X
 } from "lucide-react";
 
 const money = (n) => "$" + Math.round(Number(n || 0)).toLocaleString("es-CL");
@@ -54,9 +54,11 @@ export default function ReyDelHuevoInicio({
   currentUser, saludo, fecha, ventasHoy = 0, bandejasHoy = 0, huevosHoy = 0,
   gananciaHoy = 0, deltaVentas = 0, deltaHuevos = 0, deltaGanancia = 0,
   egresosHoy = 0, efectivoHoy = 0, debitoHoy = 0, transferenciaHoy = 0,
-  movimientos = [], stockBajo = 0, notificaciones = 0,
-  dark = false, onToggleDark, onNotifications, onNavigate, onVentaHuevos
+  movimientos = [], stockBajo = 0, notificaciones = [],
+  dark = false, onToggleDark, onNotifications, onNavigate, onVentaHuevos, onMenu
 }) {
+  const [notifOpen, setNotifOpen] = useState(false);
+  const listaNotif = Array.isArray(notificaciones) ? notificaciones : [];
   const nombre = String(currentUser?.nombre || "Usuario").split(" ")[0];
   const balance = Number(ventasHoy || 0) - Number(egresosHoy || 0);
   const meta = 600000;
@@ -65,14 +67,32 @@ export default function ReyDelHuevoInicio({
     <header style={styles.header}>
       <div style={{ position: "absolute", right: -20, bottom: -35, fontSize: 150, opacity: .13 }}>👑</div>
       <div style={styles.top}>
-        <button style={{ ...styles.iconButton, background: "transparent", boxShadow: "none" }} aria-label="Menú"><Menu size={27}/></button>
+        <button style={{ ...styles.iconButton, background: "transparent", boxShadow: "none" }} aria-label="Menú" onClick={() => onMenu?.()}><Menu size={27}/></button>
         <div style={styles.brand}>
           <div style={styles.logo}>🐔</div>
           <div><div style={{ fontWeight: 950, fontSize: 20, lineHeight: 1 }}><span>REY </span><span style={{ color: "#d71920" }}>DEL HUEVO</span></div><small style={{ fontSize: 10 }}>Los mejores huevos de Rancagua</small></div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ ...styles.iconButton, position: "relative" }} onClick={onNotifications}><Bell size={21}/>{notificaciones > 0 && <span style={{ position: "absolute", right: -3, top: -4, minWidth: 20, height: 20, borderRadius: 10, background: "#e31d2b", color: "white", fontSize: 11, display: "grid", placeItems: "center", fontWeight: 800 }}>{Math.min(notificaciones, 9)}</span>}</button>
-          <button style={styles.iconButton} onClick={onToggleDark}>{dark ? <Sun size={21}/> : <Moon size={21}/>}</button>
+          <div style={{ position: "relative" }}>
+            <button style={{ ...styles.iconButton, position: "relative", color: "#171923" }} onClick={() => { setNotifOpen(o => !o); onNotifications?.(); }}><Bell size={21} color="#171923"/>{listaNotif.length > 0 && <span style={{ position: "absolute", right: -3, top: -4, minWidth: 20, height: 20, borderRadius: 10, background: "#e31d2b", color: "white", fontSize: 11, display: "grid", placeItems: "center", fontWeight: 800 }}>{Math.min(listaNotif.length, 9)}</span>}</button>
+            {notifOpen && (
+              <div style={{ position: "absolute", right: 0, top: 52, width: "min(320px, 82vw)", background: "#fff", borderRadius: 16, boxShadow: "0 12px 40px rgba(0,0,0,.18)", zIndex: 60, overflow: "hidden", color: "#171923" }}>
+                <div style={{ padding: "13px 15px", borderBottom: "1px solid #eef0f4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>Notificaciones</p>
+                  <button onClick={() => setNotifOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#8b919c" }}><X size={16}/></button>
+                </div>
+                {listaNotif.length === 0
+                  ? <p style={{ padding: "22px", textAlign: "center", color: "#8b919c", fontSize: 13 }}>Sin notificaciones 🎉</p>
+                  : listaNotif.map((n, i) => (
+                    <div key={i} style={{ padding: "12px 15px", borderBottom: "1px solid #eef0f4", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.color || "#f5b700", flexShrink: 0, marginTop: 5 }} />
+                      <p style={{ margin: 0, fontSize: 13, color: "#514512", lineHeight: 1.5 }}>{n.msg}</p>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+          <button style={styles.iconButton} onClick={onToggleDark}>{dark ? <Sun size={21} color="#171923"/> : <Moon size={21} color="#171923"/>}</button>
         </div>
       </div>
       <h1 style={{ position: "relative", margin: "34px 0 5px", fontSize: 27, fontWeight: 950 }}>¡{saludo}, {nombre}! 👋</h1>

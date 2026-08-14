@@ -86,6 +86,8 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const [busqueda, setBusqueda] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [huevosInventory, setHuevosInventory] = useState([]);
+  const [productoBuscadorOpen, setProductoBuscadorOpen] = useState(null); // índice del item cuyo buscador está abierto
+  const [productoBusqueda, setProductoBusqueda] = useState("");
   const authHeaders = { "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" };
   const jsonHeaders = { "Content-Type": "application/json", ...authHeaders };
 
@@ -522,16 +524,50 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
               const unidades = unidadesItem(it);
               const costoCalc = costoUnitarioItem(it);
               return <div key={i} style={{ border:`1px solid ${border}`,borderRadius:12,padding:10,marginBottom:10,background:bg }}>
-                <div style={{ display:"flex",gap:7,marginBottom:8 }}>
-                  <select value={it.productoId} onChange={e=>seleccionarProductoItem(i,e.target.value)} style={{...inputStyle(card,text,border),marginTop:0,flex:1}}>
-                    <option value="">Producto...</option>
-                    {!editingId && huevosInventory.length>0 && <optgroup label="Huevos">
-                      {huevosInventory.map(q=><option key={`huevo:${q.id}`} value={`huevo:${q.id}`}>🥚 Huevos - {q.nombre}</option>)}
-                    </optgroup>}
-                    <optgroup label="Productos">
-                      {products.map(p=><option key={p.id||p._id} value={p.id||p._id}>{p.nombre}</option>)}
-                    </optgroup>
-                  </select>
+                <div style={{ display:"flex",gap:7,marginBottom:8,position:"relative" }}>
+                  <button
+                    type="button"
+                    onClick={() => { setProductoBuscadorOpen(productoBuscadorOpen===i ? null : i); setProductoBusqueda(""); }}
+                    style={{ ...inputStyle(card,text,border),marginTop:0,flex:1,display:"flex",alignItems:"center",justifyContent:"space-between",textAlign:"left",cursor:"pointer",gap:8 }}
+                  >
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color: it.productoId ? text : muted}}>
+                      {it.productoId
+                        ? (it.tipo==="huevo" ? `🥚 ${it.nombre || "Huevo"}` : (producto?.nombre || "Producto..."))
+                        : "Producto..."}
+                    </span>
+                    <ChevronDown size={16}/>
+                  </button>
+
+                  {productoBuscadorOpen===i && <div style={{position:"absolute",zIndex:30,left:0,right:0,top:"calc(100% + 5px)",background:card,border:`1px solid ${border}`,borderRadius:12,boxShadow:"0 12px 30px rgba(0,0,0,.18)",maxHeight:320,display:"flex",flexDirection:"column"}}>
+                    <input
+                      autoFocus
+                      value={productoBusqueda}
+                      onChange={e=>setProductoBusqueda(e.target.value)}
+                      placeholder="Escribe para buscar..."
+                      style={{...inputStyle(card,text,border),margin:8,marginBottom:4,flexShrink:0}}
+                    />
+                    <div style={{overflowY:"auto",padding:8,paddingTop:0}}>
+                      {(() => {
+                        const q = productoBusqueda.trim().toLowerCase();
+                        const huevosFiltrados = (!editingId ? huevosInventory : []).filter(hv => !q || hv.nombre.toLowerCase().includes(q));
+                        const productosFiltrados = products.filter(p => !q || p.nombre.toLowerCase().includes(q));
+                        if (!huevosFiltrados.length && !productosFiltrados.length) {
+                          return <div style={{padding:"14px 10px",fontSize:12,color:muted,textAlign:"center"}}>Sin resultados para "{productoBusqueda}"</div>;
+                        }
+                        return <>
+                          {huevosFiltrados.length>0 && <>
+                            <div style={{padding:"7px 10px 5px",fontSize:10,fontWeight:900,letterSpacing:.6,color:muted}}>HUEVOS</div>
+                            {huevosFiltrados.map(hv => <button type="button" key={`huevo:${hv.id}`} onClick={()=>{seleccionarProductoItem(i,`huevo:${hv.id}`);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:9,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>🥚 Huevos - {hv.nombre}</button>)}
+                          </>}
+                          {productosFiltrados.length>0 && <>
+                            <div style={{padding:"7px 10px 5px",fontSize:10,fontWeight:900,letterSpacing:.6,color:muted}}>PRODUCTOS</div>
+                            {productosFiltrados.map(p => <button type="button" key={p.id||p._id} onClick={()=>{seleccionarProductoItem(i,p.id||p._id);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:9,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>{p.nombre}</button>)}
+                          </>}
+                        </>;
+                      })()}
+                    </div>
+                  </div>}
+
                   <button onClick={()=>quitarItem(i)} style={{ border:0,background:"#fee2e2",color:"#dc2626",borderRadius:9,padding:"0 11px",flexShrink:0 }}><X size={15}/></button>
                 </div>
 

@@ -3926,10 +3926,11 @@ export default function App() {
                   transferenciaHoy={pagoTransferenciaHoy}
                   movimientos={movimientosInicioDashboard}
                   stockBajo={stockBajoRep.length}
-                  notificaciones={notificaciones.length}
+                  notificaciones={notificaciones}
                   dark={D}
                   onToggleDark={toggleDark}
-                  onNotifications={() => setNotifOpen(!notifOpen)}
+                  onNotifications={() => {}}
+                  onMenu={() => setMoreMenuOpen(true)}
                   onNavigate={(destino) => setActiveNav(destino)}
                   onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
                 />
