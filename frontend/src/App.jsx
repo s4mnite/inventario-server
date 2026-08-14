@@ -11,7 +11,7 @@ import {
   Eye, EyeOff, UserPlus, Edit3, Download, Star, TrendingDown, Award, Activity,
   Smile, Calendar, FileText, Ban, CheckCircle, Mail, Clock, Moon, Sun, RefreshCw,
   Receipt, Zap, Send, AlertCircle, ExternalLink, Printer, Building2,
-  TrendingUp, Layers, Scan, Menu,
+  TrendingUp, Layers, Scan, Menu, ChevronLeft,
 } from "lucide-react";
 
 import EggModule from "./HuevosModule";
@@ -822,7 +822,7 @@ const css = `
   .sales-mobile-v2 { display:none; }
   @media (max-width:768px){
     .sales-desktop-only{display:none!important}
-    .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:20px}
+    .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
     .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:22px;background:linear-gradient(135deg,#c90f1b,#e71928);color:#fff;box-shadow:0 10px 26px rgba(201,15,27,.22);margin-bottom:12px}
     .sales-total-icon{width:52px;height:52px;border-radius:16px;background:#fff2b7;color:#d08a00;display:grid;place-items:center;flex:none}
     .sales-total-hero span{display:block;font-size:12px;opacity:.85}.sales-total-hero strong{display:block;font-size:27px;line-height:1.1;margin-top:3px;overflow-wrap:anywhere}
@@ -835,6 +835,13 @@ const css = `
     .sales-search-v2{height:46px;border:1.5px solid var(--border);border-radius:13px;display:flex;align-items:center;gap:8px;padding:0 5px 0 12px;background:var(--bg-card-2)}.sales-search-v2 input{border:0;outline:0;background:transparent;color:var(--text-primary);font:inherit;width:100%;min-width:0}.sales-scan-v2{width:38px;height:36px;flex:0 0 38px;border:0;border-radius:10px;background:#ffc400;color:#241400;display:grid;place-items:center;font-size:18px;cursor:pointer}.sales-scan-v2:active{transform:scale(.95)}
     .sales-search-sticky-v2{position:sticky;top:-1px;z-index:8;background:var(--bg-card);margin:0 -14px;padding:0 14px 10px;border-radius:20px 20px 0 0}
     .sales-cats-v2{display:flex;overflow-x:auto;gap:7px;padding:10px 0 12px;scrollbar-width:none}.sales-cats-v2 button{flex:none;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);border-radius:999px;padding:7px 11px;font:600 10px inherit}.sales-cats-v2 button.active{background:#ffc400;color:#351800;border-color:#ffc400}
+    .sales-floating-cart-v2{position:fixed;left:14px;right:14px;bottom:calc(72px + env(safe-area-inset-bottom,0px) + 12px);z-index:150;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#d71920,#ef2b32);color:#fff;border:0;border-radius:16px;padding:13px 16px;box-shadow:0 10px 30px rgba(215,25,32,.35);font-family:inherit;cursor:pointer}
+    .sales-floating-cart-v2:active{transform:scale(.97)}
+    .sales-floating-cart-count{background:rgba(255,255,255,.25);border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;padding:0 6px}
+    .sales-floating-cart-label{flex:1;text-align:left;font-weight:800;font-size:13px}
+    .sales-floating-cart-v2 strong{font-size:15px;font-weight:900}
+    .sales-back-v2{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--accent);font-weight:800;font-size:13px;padding:0 0 12px;cursor:pointer;font-family:inherit}
+    .sales-checkout-v2{padding-top:14px}
     .sales-error-v2{font-size:11px;color:#c81e1e;background:#fff1f2;padding:8px 10px;border-radius:10px;margin-bottom:9px}
     .sales-product-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-product-grid-v2 article{border:1px solid var(--border);border-radius:15px;padding:9px;min-width:0;background:var(--bg-card)}.sales-prod-img{height:86px;border-radius:11px;background:var(--bg-card-2);display:grid;place-items:center;position:relative;overflow:hidden}.sales-prod-img img{width:100%;height:100%;object-fit:contain}.sales-prod-img span{font-size:38px}.sales-prod-img em{position:absolute;left:5px;bottom:5px;background:#0aaa78;color:#fff;border-radius:7px;padding:3px 6px;font:700 8px inherit;font-style:normal}.sales-product-grid-v2 h4{font-size:11px;line-height:1.2;height:27px;margin:8px 0 3px;color:var(--text-primary);overflow:hidden}.sales-product-grid-v2>article>strong{color:#d71920;font-size:14px}.sales-prod-controls{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:4px;margin-top:8px}.sales-prod-controls button,.sales-cart-step button{border:0;border-radius:8px;background:#f1f2f5;color:#1f2937;height:28px;font-size:17px}.sales-prod-controls button:last-child{background:#d71920;color:#fff}.sales-prod-controls span{text-align:center;font-weight:800;font-size:12px}
     .sales-cart-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto 22px;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border)}.sales-cart-thumb{width:38px;height:38px;border-radius:9px;background:var(--bg-card-2);display:grid;place-items:center;overflow:hidden}.sales-cart-thumb img{width:100%;height:100%;object-fit:contain}.sales-cart-name{min-width:0}.sales-cart-name b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}.sales-cart-name small{font-size:9px;color:#d71920}.sales-cart-step{display:flex;align-items:center;gap:4px}.sales-cart-step button{width:24px;height:24px;font-size:14px}.sales-cart-step span{font-size:11px;font-weight:800;min-width:15px;text-align:center}.sales-cart-row>strong{font-size:10px;color:var(--text-primary)}.sales-cart-row .trash{border:0;background:none;color:#d71920;padding:0}
@@ -1636,6 +1643,7 @@ export default function App() {
   const [boletas, setBoletas] = useState(getBoletas);
   const [gastosReporte, setGastosReporte] = useState([]); // usados solo por el bloque Ingresos/Egresos/Balance de Reportes
   const [carrito, setCarrito] = useState([]);
+  const [mobileSaleStep, setMobileSaleStep] = useState("catalogo"); // catalogo | cobro (flujo móvil de Ventas)
   const [busquedaVenta, setBusquedaVenta] = useState("");
   const [showBusquedaDropdown, setShowBusquedaDropdown] = useState(false);
   const [productoSeleccionadoVenta, setProductoSeleccionadoVenta] = useState(null);
@@ -2986,6 +2994,7 @@ export default function App() {
 
       setCarrito([]);
       setFreeEggCart({});
+      setMobileSaleStep("catalogo");
       if (Array.isArray(data.eggInventory)) setFreeEggInventory(data.eggInventory);
       setDineroRecibido("");
       setPago("Efectivo");
@@ -3694,12 +3703,12 @@ export default function App() {
               </div>
               <button onClick={() => setSaleChooserOpen(false)} aria-label="Cerrar"><X size={21}/></button>
             </div>
-            <button className="sale-choice-card egg" onClick={() => { setSaleFlowType("free"); setEggSaleMode(false); setActiveNav("Ventas"); setSaleChooserOpen(false); }}>
+            <button className="sale-choice-card egg" onClick={() => { setSaleFlowType("free"); setEggSaleMode(false); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); }}>
               <span className="sale-choice-icon">🛒</span>
               <span className="sale-choice-copy"><strong>Venta libre</strong><small>Agrega huevos y productos en una sola boleta.</small></span>
               <ChevronRight size={24}/>
             </button>
-            <button className="sale-choice-card products" onClick={() => { setSaleFlowType("products"); setEggSaleMode(false); setFreeEggCart({}); setActiveNav("Ventas"); setSaleChooserOpen(false); }}>
+            <button className="sale-choice-card products" onClick={() => { setSaleFlowType("products"); setEggSaleMode(false); setFreeEggCart({}); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); }}>
               <span className="sale-choice-icon"><ShoppingBag size={30}/></span>
               <span className="sale-choice-copy"><strong>Venta de productos</strong><small>Vende solo productos del inventario.</small></span>
               <ChevronRight size={24}/>
@@ -4571,6 +4580,7 @@ export default function App() {
               </div>
 
               <section className="sales-mobile-v2">
+                {mobileSaleStep === "catalogo" && <>
                 <div className="sales-total-hero">
                   <div className="sales-total-icon"><DollarSign size={24} /></div>
                   <div><span>Total general</span><strong className="mono">{fmt(totalGeneral)}</strong></div>
@@ -4658,8 +4668,11 @@ export default function App() {
                     })}
                   </div>}
                 </div>}
-                {(carrito.length>0 || freeEggItems.length>0) && <div className="sales-cart-v2">
-                  <div className="sales-cart-title"><h3>Carrito de venta</h3><button onClick={()=>setCarrito([])}>Vaciar</button></div>
+                </>}
+
+                {mobileSaleStep === "cobro" && <div className="sales-cart-v2 sales-checkout-v2">
+                  <button type="button" className="sales-back-v2" onClick={()=>setMobileSaleStep("catalogo")}><ChevronLeft size={18}/> Seguir agregando productos</button>
+                  <div className="sales-cart-title"><h3>Cobrar</h3><button onClick={()=>{setCarrito([]);setFreeEggCart({});}}>Vaciar</button></div>
                   {freeEggItems.map(item=><div className="sales-cart-row" key={`egg-${item.calidadId}`}>
                     <div className="sales-cart-thumb"><span>🥚</span></div>
                     <div className="sales-cart-name"><b>{item.calidad}</b><small>{item.cantidadFormatos} {item.formato}{item.cantidadFormatos===1?"":"s"} · {item.huevos} huevos</small></div>
@@ -4692,6 +4705,7 @@ export default function App() {
                     <strong className="mono">{fmt(item.subtotal)}</strong>
                     <button className="trash" onClick={()=>quitarDelCarrito(item.productoId,item.esManga)}><Trash2 size={15}/></button>
                   </div>)}
+                  {carrito.length===0 && freeEggItems.length===0 && <p style={{color:textMuted,textAlign:"center",padding:"20px 0"}}>El carrito está vacío. Vuelve a productos para agregar algo.</p>}
                   <div className="sales-cart-total"><span>Total a pagar</span><strong className="mono">{fmt(totalCarrito)}</strong></div>
 
                   <div style={{ marginBottom: 14, padding: 12, borderRadius: 12, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
@@ -4710,9 +4724,17 @@ export default function App() {
                     {[{val:"Efectivo",icon:Banknote},{val:"Tarjeta",icon:CreditCard},{val:"Transferencia",icon:CreditCard}].map(({val,icon:Icon})=><button key={val} className={pago===val?"active":""} onClick={()=>setPago(val)}><Icon size={22}/><span>{val}</span></button>)}
                   </div>
                   {pago==="Efectivo" && <div className="sales-cash-v2"><label>Dinero recibido</label><input type="number" min={totalCarrito} value={dineroRecibido} onChange={e=>setDineroRecibido(e.target.value)} placeholder={String(totalCarrito)}/>{vuelto!==null&&vuelto>=0&&<span>Vuelto: {fmt(vuelto)}</span>}</div>}
-                  <button className="sales-finish-v2" disabled={boletaGenerando} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
+                  <button className="sales-finish-v2" disabled={boletaGenerando || (carrito.length===0 && freeEggItems.length===0)} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
                 </div>}
               </section>
+
+              {mobileSaleStep === "catalogo" && (carrito.length>0 || freeEggItems.length>0) && (
+                <button type="button" className="sales-floating-cart-v2" onClick={()=>setMobileSaleStep("cobro")}>
+                  <span className="sales-floating-cart-count">{carrito.reduce((s,i)=>s+i.cantidad,0) + freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)}</span>
+                  <span className="sales-floating-cart-label">Ver carrito y cobrar</span>
+                  <strong className="mono">{fmt(totalCarrito)}</strong>
+                </button>
+              )}
 
               <div className="ventas-grid sales-desktop-only" style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 18 }}>
                 {/* ── Formulario Nueva Venta ── */}
