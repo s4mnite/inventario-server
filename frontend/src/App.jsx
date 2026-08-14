@@ -11,7 +11,7 @@ import {
   Eye, EyeOff, UserPlus, Edit3, Download, Star, TrendingDown, Award, Activity,
   Smile, Calendar, FileText, Ban, CheckCircle, Mail, Clock, Moon, Sun, RefreshCw,
   Receipt, Zap, Send, AlertCircle, ExternalLink, Printer, Building2,
-  TrendingUp, Layers, Scan, Menu, ChevronLeft,
+  TrendingUp, Layers, Scan, Menu, ChevronLeft, Egg,
 } from "lucide-react";
 
 import EggModule from "./HuevosModule";
@@ -3461,13 +3461,15 @@ export default function App() {
     if (!fecha) return reportePeriodo === "todo";
     const d = new Date(fecha);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
+    if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
   });
   const totalPeriodo = ventasPeriodo.reduce((s, v) => s + Number(v.total || 0), 0);
   const ticketProm = ventasPeriodo.length > 0 ? Math.round(totalPeriodo / ventasPeriodo.length) : 0;
+  const huevosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
+  const productosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem !== "huevo" ? Number(item.cantidad || 0) * Number(item.unidadesPorManga || 1) : 0), 0), 0);
   const ventasPorDia = {};
   ventas.forEach(v => {
     if (!v.timestamp) return;
@@ -3522,7 +3524,7 @@ export default function App() {
   const mermasPeriodo = mermas.filter(m => {
     const d = new Date(Number(m.id) || NaN);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
+    if (reportePeriodo === "dia") return fechaLocalClave(d) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
@@ -3550,7 +3552,7 @@ export default function App() {
     if (!fecha) return reportePeriodo === "todo";
     const d = new Date(fecha);
     if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return d.toISOString().slice(0, 10) === reporteFecha;
+    if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
     if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
     if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     return true;
@@ -4255,6 +4257,8 @@ export default function App() {
                         { label: "Nº Transacciones", val: ventasPeriodo.length, icon: ShoppingCart, color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
                         { label: "Ticket Promedio", val: fmt(ticketProm), icon: Activity, color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
                         { label: "Mejor Día", val: graficoDias.length > 0 ? graficoDias.reduce((a,b) => b.total > a.total ? b : a, graficoDias[0])?.dia || "—" : "—", icon: Star, color: "#f59e0b", bg: D ? "rgba(245,158,11,0.15)" : "#fffbeb" },
+                        { label: "Productos vendidos", val: productosVendidosPeriodo.toLocaleString("es-CL"), icon: Package, color: "#2563eb", bg: D ? "rgba(37,99,235,0.15)" : "#eff6ff" },
+                        { label: "Huevos vendidos", val: huevosVendidosPeriodo.toLocaleString("es-CL"), icon: Egg, color: "#ea580c", bg: D ? "rgba(234,88,12,0.15)" : "#ffedd5" },
                       ].map(({ label, val, icon: Icon, color, bg }) => (
                         <div key={label} style={card} className="card-hover">
                           <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
