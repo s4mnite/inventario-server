@@ -4,12 +4,29 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#3b5bdb" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffc400" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Inventario</title>
+    <style>
+      html, body { background: #ffc400 !important; }
+      #app-loading-screen {
+        position: fixed; inset: 0; z-index: 99999;
+        background: linear-gradient(135deg, #ffd83d, #ffc400);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px;
+      }
+      #app-loading-screen .egg { font-size: 64px; animation: egg-spin 1.2s ease-in-out infinite; }
+      #app-loading-screen .label { color: #6f5710; font-weight: 700; font-size: 15px; font-family: system-ui, sans-serif; }
+      @keyframes egg-spin {
+        0%   { transform: rotate(0deg) scale(1); }
+        50%  { transform: rotate(180deg) scale(1.12); }
+        100% { transform: rotate(360deg) scale(1); }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="app-loading-screen"><div class="egg">🥚</div><div class="label">Cargando…</div></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

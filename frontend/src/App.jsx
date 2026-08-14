@@ -494,7 +494,7 @@ const css = `
     .stat-card { padding: 12px 14px !important; }
     .dashboard-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
     .dashboard-charts { grid-template-columns: 1fr !important; }
-    .mobile-topbar { padding: 0 14px !important; height: 54px !important; }
+    .mobile-topbar { padding: env(safe-area-inset-top, 0px) 14px 0 !important; height: calc(54px + env(safe-area-inset-top, 0px)) !important; }
     .dashboard-mobile-topbar { display: none !important; }
     .mobile-topbar h1 { font-size: 16px !important; }
     .mobile-main { padding: 12px !important; padding-bottom: 80px !important; }

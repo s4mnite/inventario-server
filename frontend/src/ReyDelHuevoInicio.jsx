@@ -9,8 +9,8 @@ const money = (n) => "$" + Math.round(Number(n || 0)).toLocaleString("es-CL");
 
 const cardShadow = "0 8px 24px rgba(23, 28, 40, .08)";
 const styles = {
-  root: { width: "calc(100% + 48px)", margin: "-20px -24px 0", background: "#f7f8fb", minHeight: "100%", paddingBottom: 110, color: "#171923" },
-  header: { position: "relative", overflow: "hidden", padding: "22px 20px 78px", borderRadius: "0 0 30px 30px", background: "linear-gradient(135deg,#ffd83d,#ffc400)" },
+  root: { width: "100vw", marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)", marginTop: -16, background: "#f7f8fb", minHeight: "100%", paddingBottom: 110, color: "#171923" },
+  header: { position: "relative", overflow: "hidden", padding: "calc(22px + env(safe-area-inset-top, 0px)) 20px 78px", borderRadius: "0 0 30px 30px", background: "linear-gradient(135deg,#ffd83d,#ffc400)" },
   top: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
   brand: { display: "flex", alignItems: "center", gap: 10, minWidth: 0 },
   logo: { width: 48, height: 48, borderRadius: "50%", background: "#fff", display: "grid", placeItems: "center", fontSize: 25, boxShadow: cardShadow },

@@ -37,3 +37,15 @@ createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </StrictMode>
 );
+
+// Oculta la pantalla de carga (huevo girando) una vez que React ya pintó la app
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const loader = document.getElementById("app-loading-screen");
+    if (loader) {
+      loader.style.transition = "opacity .25s ease";
+      loader.style.opacity = "0";
+      setTimeout(() => loader.remove(), 260);
+    }
+  });
+});
