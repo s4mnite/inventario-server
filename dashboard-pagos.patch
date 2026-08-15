@@ -1,0 +1,77 @@
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 47a3a5e..1cbaba8 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -3135,6 +3135,11 @@ export default function App() {
+         fecha: venta.timestamp || venta.createdAt || venta.creadoEn || venta.fechaISO || venta.fecha,
+       })))
+     .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
++  // Pagos del día para el Dashboard: se calculan SOLO sobre ventasHoy (ya
++  // filtradas por fecha local), nunca sobre el total histórico de `ventas`.
++  const pagoEfectivoHoy = ventasHoy.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0);
++  const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
++  const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
+   const ventasHuevosHoyTotal = ventasHoy.reduce((sum, v) => sum + Number(v.total || 0), 0);
+   const ventasHuevosAyerTotal = ventasAyer.reduce((sum, v) => sum + Number(v.total || 0), 0);
+   const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
+@@ -3887,6 +3892,9 @@ export default function App() {
+                   deltaHuevos={porcentajeVentas}
+                   deltaGanancia={porcentajeGanancias}
+                   egresosHoy={egresosHoyInicio}
++                  efectivoHoy={pagoEfectivoHoy}
++                  debitoHoy={pagoTarjetaHoy}
++                  transferenciaHoy={pagoTransferenciaHoy}
+                   movimientos={movimientosInicioDashboard}
+                   stockBajo={stockBajoRep.length}
+                   notificaciones={notificaciones.length}
+diff --git a/frontend/src/ReyDelHuevoInicio.jsx b/frontend/src/ReyDelHuevoInicio.jsx
+index 7a6b634..03e8671 100644
+--- a/frontend/src/ReyDelHuevoInicio.jsx
++++ b/frontend/src/ReyDelHuevoInicio.jsx
+@@ -2,7 +2,7 @@ import React from "react";
+ import {
+   Menu, Bell, Moon, Sun, DollarSign, ShoppingBasket, Egg, TrendingUp,
+   ArrowDown, ArrowUp, Wallet, ShoppingCart, Package, BarChart3,
+-  ScanLine, ChevronRight, AlertTriangle, Target
++  ScanLine, ChevronRight, AlertTriangle, Target, Banknote, CreditCard, Landmark
+ } from "lucide-react";
+ 
+ const money = (n) => "$" + Math.round(Number(n || 0)).toLocaleString("es-CL");
+@@ -53,7 +53,8 @@ function Quick({ Icon, title, sub, color, bg, onClick }) {
+ export default function ReyDelHuevoInicio({
+   currentUser, saludo, fecha, ventasHoy = 0, bandejasHoy = 0, huevosHoy = 0,
+   gananciaHoy = 0, deltaVentas = 0, deltaHuevos = 0, deltaGanancia = 0,
+-  egresosHoy = 0, movimientos = [], stockBajo = 0, notificaciones = 0,
++  egresosHoy = 0, efectivoHoy = 0, debitoHoy = 0, transferenciaHoy = 0,
++  movimientos = [], stockBajo = 0, notificaciones = 0,
+   dark = false, onToggleDark, onNotifications, onNavigate, onVentaHuevos
+ }) {
+   const nombre = String(currentUser?.nombre || "Usuario").split(" ")[0];
+@@ -94,6 +95,27 @@ export default function ReyDelHuevoInicio({
+       </div>
+     </section>
+ 
++    <section style={styles.section}>
++      <h2 style={styles.title}>Pagos de hoy</h2>
++      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 10 }}>
++        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
++          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#dcfce7" }}><Banknote size={17} color="#16a34a"/></div>
++          <div style={{ color: "#7d8492", fontSize: 12 }}>Efectivo</div>
++          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(efectivoHoy)}</div>
++        </div>
++        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
++          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#dbeafe" }}><CreditCard size={17} color="#2563eb"/></div>
++          <div style={{ color: "#7d8492", fontSize: 12 }}>Débito/Tarjeta</div>
++          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(debitoHoy)}</div>
++        </div>
++        <div style={{ background: "#fff", borderRadius: 18, padding: "14px 10px", boxShadow: cardShadow, textAlign: "center" }}>
++          <div style={{ ...styles.iconCircle, width: 36, height: 36, margin: "0 auto 8px", background: "#ede9fe" }}><Landmark size={17} color="#7c3aed"/></div>
++          <div style={{ color: "#7d8492", fontSize: 12 }}>Transferencia</div>
++          <div style={{ fontSize: 15, fontWeight: 850, marginTop: 2 }}>{money(transferenciaHoy)}</div>
++        </div>
++      </div>
++    </section>
++
+     <section style={styles.section}><h2 style={styles.title}>Accesos rápidos</h2><div style={styles.grid2}>
+       <Quick Icon={Egg} title="Registrar venta" sub="Huevos" color="#fff" bg="#f4b400" onClick={onVentaHuevos}/>
+       <Quick Icon={ShoppingCart} title="Venta" sub="Inventario" color="#fff" bg="#dc2626" onClick={() => onNavigate?.("Ventas")}/>

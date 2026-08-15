@@ -1,0 +1,195 @@
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index b6c0347..7a69317 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -840,6 +840,9 @@ const css = `
+     .sales-floating-cart-count{background:rgba(255,255,255,.25);border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;padding:0 6px}
+     .sales-floating-cart-label{flex:1;text-align:left;font-weight:800;font-size:13px}
+     .sales-floating-cart-v2 strong{font-size:15px;font-weight:900}
++    .sales-venta-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
++    .sales-venta-tabs button{border:1.5px solid var(--border);border-radius:12px;background:var(--bg-card-2);color:var(--text-secondary);font:700 12px inherit;padding:10px 6px}
++    .sales-venta-tabs button.active{border-color:#d71920;background:rgba(215,25,32,.08);color:#d71920}
+     .sales-back-v2{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--accent);font-weight:800;font-size:13px;padding:0 0 12px;cursor:pointer;font-family:inherit}
+     .sales-checkout-v2{padding-top:14px}
+     .free-eggs-grid{display:flex;flex-direction:column;gap:10px}
+@@ -1656,6 +1659,7 @@ export default function App() {
+   const [gastosReporte, setGastosReporte] = useState([]); // usados solo por el bloque Ingresos/Egresos/Balance de Reportes
+   const [carrito, setCarrito] = useState([]);
+   const [mobileSaleStep, setMobileSaleStep] = useState("catalogo"); // catalogo | cobro (flujo móvil de Ventas)
++  const [ventaTab, setVentaTab] = useState("productos"); // productos | huevos (solo aplica en venta libre)
+   const [busquedaVenta, setBusquedaVenta] = useState("");
+   const [showBusquedaDropdown, setShowBusquedaDropdown] = useState(false);
+   const [productoSeleccionadoVenta, setProductoSeleccionadoVenta] = useState(null);
+@@ -3007,6 +3011,7 @@ export default function App() {
+       setCarrito([]);
+       setFreeEggCart({});
+       setMobileSaleStep("catalogo");
++      setVentaTab("productos");
+       if (Array.isArray(data.eggInventory)) setFreeEggInventory(data.eggInventory);
+       setDineroRecibido("");
+       setPago("Efectivo");
+@@ -3715,12 +3720,12 @@ export default function App() {
+               </div>
+               <button onClick={() => setSaleChooserOpen(false)} aria-label="Cerrar"><X size={21}/></button>
+             </div>
+-            <button className="sale-choice-card egg" onClick={() => { setSaleFlowType("free"); setEggSaleMode(false); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); }}>
++            <button className="sale-choice-card egg" onClick={() => { setSaleFlowType("free"); setEggSaleMode(false); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); setVentaTab("productos"); }}>
+               <span className="sale-choice-icon">🛒</span>
+               <span className="sale-choice-copy"><strong>Venta libre</strong><small>Agrega huevos y productos en una sola boleta.</small></span>
+               <ChevronRight size={24}/>
+             </button>
+-            <button className="sale-choice-card products" onClick={() => { setSaleFlowType("products"); setEggSaleMode(false); setFreeEggCart({}); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); }}>
++            <button className="sale-choice-card products" onClick={() => { setSaleFlowType("products"); setEggSaleMode(false); setFreeEggCart({}); setActiveNav("Ventas"); setSaleChooserOpen(false); setMobileSaleStep("catalogo"); setVentaTab("productos"); }}>
+               <span className="sale-choice-icon"><ShoppingBag size={30}/></span>
+               <span className="sale-choice-copy"><strong>Venta de productos</strong><small>Vende solo productos del inventario.</small></span>
+               <ChevronRight size={24}/>
+@@ -4606,74 +4611,84 @@ export default function App() {
+                 </div>
+ 
+                 <div className="sales-products-v2">
+-                  <div className="sales-products-head"><h3>Productos</h3><span>{carrito.reduce((s,i)=>s+i.cantidad,0)} en carrito</span></div>
+-                  <div className="sales-search-sticky-v2">
+-                    <div className="sales-search-v2">
+-                      <Search size={18}/>
+-                      <input
+-                        ref={salesSearchMobileRef}
+-                        value={busquedaVenta}
+-                        onChange={e=>setBusquedaVenta(e.target.value)}
+-                        onKeyDown={e => {
+-                          if (e.key === "Enter") {
+-                            e.preventDefault();
+-                            procesarCodigoVenta(e.currentTarget.value);
+-                          }
+-                        }}
+-                        autoComplete="off"
+-                        inputMode="text"
+-                        placeholder="Buscar o escanear código..."
+-                      />
+-                      <button
+-                        type="button"
+-                        className="sales-scan-v2"
+-                        onClick={() => setShowScanner(true)}
+-                        title="Escanear código de barras o QR"
+-                        aria-label="Escanear código de barras o QR"
+-                      >
+-                        📷
+-                      </button>
+-                    </div>
+-                    <div className="sales-cats-v2">{["Todos", ...categorias].map(cat => <button key={cat} className={saleCatFilter===cat?"active":""} onClick={()=>setSaleCatFilter(cat)}>{cat}</button>)}</div>
++                  <div className="sales-products-head">
++                    <h3>{ventaTab === "huevos" ? "Huevos" : "Productos"}</h3>
++                    <span>{ventaTab === "huevos" ? `${freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos` : `${carrito.reduce((s,i)=>s+i.cantidad,0)} en carrito`}</span>
+                   </div>
+-                  {carritoError && <div className="sales-error-v2">⚠ {carritoError}</div>}
+-                  <div className="sales-product-grid-v2">
+-                    {products.filter(p => (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
+-                      const item=carrito.find(c=>String(c.productoId)===String(p.id) && !c.esManga);
+-                      return <article key={p.id}>
+-                        <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em style={Number(p.stock) < 0 ? { background: "#e03131" } : undefined}>{p.stock} uds</em></div>
+-                        <h4>{p.nombre}</h4><strong className="mono">{fmt(p.precio)}</strong>
+-                        <div className="sales-prod-controls">
+-                          <button disabled={!item} onClick={()=>item && (item.cantidad===1?quitarDelCarrito(p.id,false):cambiarCantidadCarrito(p.id,item.cantidad-1,false))}>−</button>
+-                          <input
+-                            type="number"
+-                            min="0"
+-                            inputMode="numeric"
+-                            value={item?.cantidad ?? 0}
+-                            onFocus={e=>e.target.select()}
+-                            onChange={e=>fijarCantidadCarrito(p,e.target.value,false)}
+-                            style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0,MozAppearance:"textfield"}}
+-                          />
+-                          <button onClick={()=>agregarProductoRapido(p)}>+</button>
+-                        </div>
+-                      </article>;
+-                    })}
+-                  </div>
+-                </div>
+ 
+-                {saleFlowType === "free" && <div className="sales-products-v2 free-eggs-section">
+-                  <div className="sales-products-head"><h3>Huevos</h3><span>{freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos</span></div>
+-                  {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
+-                    {freeEggInventory.map(q => {
+-                      const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
+-                      return <article key={q.id} className="free-egg-card">
+-                        <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+-                        <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
+-                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+-                      </article>;
+-                    })}
++                  {saleFlowType === "free" && <div className="sales-venta-tabs">
++                    <button type="button" className={ventaTab==="productos"?"active":""} onClick={()=>setVentaTab("productos")}>📦 Productos</button>
++                    <button type="button" className={ventaTab==="huevos"?"active":""} onClick={()=>setVentaTab("huevos")}>🥚 Huevos</button>
+                   </div>}
+-                </div>}
++
++                  {ventaTab === "productos" && <>
++                    <div className="sales-search-sticky-v2">
++                      <div className="sales-search-v2">
++                        <Search size={18}/>
++                        <input
++                          ref={salesSearchMobileRef}
++                          value={busquedaVenta}
++                          onChange={e=>setBusquedaVenta(e.target.value)}
++                          onKeyDown={e => {
++                            if (e.key === "Enter") {
++                              e.preventDefault();
++                              procesarCodigoVenta(e.currentTarget.value);
++                            }
++                          }}
++                          autoComplete="off"
++                          inputMode="text"
++                          placeholder="Buscar o escanear código..."
++                        />
++                        <button
++                          type="button"
++                          className="sales-scan-v2"
++                          onClick={() => setShowScanner(true)}
++                          title="Escanear código de barras o QR"
++                          aria-label="Escanear código de barras o QR"
++                        >
++                          📷
++                        </button>
++                      </div>
++                      <div className="sales-cats-v2">{["Todos", ...categorias].map(cat => <button key={cat} className={saleCatFilter===cat?"active":""} onClick={()=>setSaleCatFilter(cat)}>{cat}</button>)}</div>
++                    </div>
++                    {carritoError && <div className="sales-error-v2">⚠ {carritoError}</div>}
++                    <div className="sales-product-grid-v2">
++                      {products.filter(p => (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
++                        const item=carrito.find(c=>String(c.productoId)===String(p.id) && !c.esManga);
++                        return <article key={p.id}>
++                          <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em style={Number(p.stock) < 0 ? { background: "#e03131" } : undefined}>{p.stock} uds</em></div>
++                          <h4>{p.nombre}</h4><strong className="mono">{fmt(p.precio)}</strong>
++                          <div className="sales-prod-controls">
++                            <button disabled={!item} onClick={()=>item && (item.cantidad===1?quitarDelCarrito(p.id,false):cambiarCantidadCarrito(p.id,item.cantidad-1,false))}>−</button>
++                            <input
++                              type="number"
++                              min="0"
++                              inputMode="numeric"
++                              value={item?.cantidad ?? 0}
++                              onFocus={e=>e.target.select()}
++                              onChange={e=>fijarCantidadCarrito(p,e.target.value,false)}
++                              style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0,MozAppearance:"textfield"}}
++                            />
++                            <button onClick={()=>agregarProductoRapido(p)}>+</button>
++                          </div>
++                        </article>;
++                      })}
++                    </div>
++                  </>}
++
++                  {ventaTab === "huevos" && saleFlowType === "free" && (
++                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
++                      {freeEggInventory.map(q => {
++                        const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
++                        return <article key={q.id} className="free-egg-card">
++                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
++                          <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
++                          <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
++                        </article>;
++                      })}
++                    </div>
++                  )}
++                </div>
+ 
+                 <div className="sales-choice-v2 sale-mode-summary">
+                   <h3>{saleFlowType === "free" ? "Venta libre" : "Venta de productos"}</h3>

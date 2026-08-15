@@ -1,0 +1,75 @@
+--- App.orig.jsx	2026-08-15 19:37:34.569582281 +0000
++++ App.jsx	2026-08-15 19:38:25.416588436 +0000
+@@ -1638,6 +1638,7 @@
+   const [saleChooserOpen, setSaleChooserOpen] = useState(false);
+   const [saleFlowType, setSaleFlowType] = useState("products"); // products | free
+   const [freeEggInventory, setFreeEggInventory] = useState([]);
++  const [freeEggMovimientos, setFreeEggMovimientos] = useState([]);
+   const [freeEggCart, setFreeEggCart] = useState({});
+   const [freeEggLoading, setFreeEggLoading] = useState(false);
+   const [products, setProducts] = useState(initialProducts);
+@@ -2683,7 +2684,7 @@
+     if (saleFlowType !== "free" || !currentUser || activeNav !== "Ventas") return;
+     let cancelled = false;
+     setFreeEggLoading(true);
+-    fetch(`${API}/api/huevos`, {
++    fetchConTimeout(`${API}/api/huevos`, {
+       headers: {
+         "x-usuario": currentUser?.usuario || "",
+         "x-clave": currentUser?._clave || "",
+@@ -2692,13 +2693,36 @@
+       .then(async res => {
+         const data = await res.json();
+         if (!res.ok) throw new Error(data.error || "No se pudo cargar el inventario de huevos.");
+-        if (!cancelled) setFreeEggInventory(Array.isArray(data.inventory) ? data.inventory : []);
++        if (!cancelled) {
++          setFreeEggInventory(Array.isArray(data.inventory) ? data.inventory : []);
++          setFreeEggMovimientos(Array.isArray(data.movements) ? data.movements : []);
++        }
+       })
+       .catch(err => { if (!cancelled) setVentaError(err.message); })
+       .finally(() => { if (!cancelled) setFreeEggLoading(false); });
+     return () => { cancelled = true; };
+   }, [saleFlowType, activeNav, currentUser?.usuario, currentUser?._clave]);
+ 
++  // El stock que se muestra y se usa para vender en "Venta libre" viene de los
++  // movimientos reales (misma fuente que los lotes en el módulo Huevos), no
++  // del contador aparte inventory.stockHuevos — ese contador puede quedar
++  // desincronizado (por ejemplo tras una entrada que no terminó de
++  // sincronizar) y mostraba stock negativo en Ventas aunque el lote de
++  // Huevos ya tuviera la entrada registrada.
++  const stockHuevosPorCalidad = useMemo(() => {
++    const map = {};
++    freeEggMovimientos.forEach(m => {
++      const id = m.calidadId || m.calidad;
++      if (!id) return;
++      const unidades = Number(m.huevos || 0);
++      if (["entrada", "ajuste_entrada"].includes(m.tipo)) map[id] = (map[id] || 0) + unidades;
++      else if (["venta", "merma", "rotos", "trizados", "ajuste_salida"].includes(m.tipo)) map[id] = (map[id] || 0) - unidades;
++      // "transferencia" no cambia el total de la calidad, solo mueve stock entre lotes.
++    });
++    return map;
++  }, [freeEggMovimientos]);
++  const stockDeHuevo = q => Number(stockHuevosPorCalidad[q.id] ?? q.stockHuevos ?? 0);
++
+   // El stock de huevos ya no limita la cantidad máxima seleccionable: se puede
+   // vender aunque no haya stock suficiente y el inventario queda en negativo.
+   const changeFreeEgg = (quality, delta) => {
+@@ -2734,7 +2758,7 @@
+       tipoItem: "huevo", calidadId: q.id, calidad: q.nombre, nombre: `Huevos ${q.nombre} · ${formato}`,
+       formato, cantidadFormatos: cantidad, cantidad, unidadesPorFormato, huevos: cantidad * unidadesPorFormato,
+       precio: precioFormato, subtotal: cantidad * precioFormato, costoCaja: Number(q.costoCaja || 0),
+-      precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: Number(q.stockHuevos || 0),
++      precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: stockDeHuevo(q),
+     };
+   }).filter(item => item.cantidadFormatos > 0);
+ 
+@@ -4696,7 +4720,7 @@
+                       {freeEggInventory.map(q => {
+                         const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
+                         return <article key={q.id} className="free-egg-card">
+-                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
++                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+                           <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
+                           <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+                         </article>;

@@ -1,0 +1,123 @@
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 1cbaba8..2f53699 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -833,6 +833,7 @@ const css = `
+     .sales-choice-v2 h3,.sales-products-v2 h3,.sales-cart-v2 h3{font-size:15px;margin:0 0 11px;color:var(--text-primary)}.sales-choice-v2>div{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-choice-v2 button{border:1.5px solid var(--border);background:var(--bg-card-2);border-radius:16px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-primary);font-family:inherit}.sales-choice-v2 button.active{border-color:#e71928;background:rgba(231,25,40,.05);color:#d71920}.sales-choice-v2 .egg{font-size:28px}.sales-choice-v2 small{font-size:9px;color:var(--text-muted)}
+     .sales-products-head,.sales-cart-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.sales-products-head span{font-size:10px;color:#d71920;font-weight:700}.sales-cart-title button{border:0;background:none;color:#d71920;font-weight:700}
+     .sales-search-v2{height:46px;border:1.5px solid var(--border);border-radius:13px;display:flex;align-items:center;gap:8px;padding:0 5px 0 12px;background:var(--bg-card-2)}.sales-search-v2 input{border:0;outline:0;background:transparent;color:var(--text-primary);font:inherit;width:100%;min-width:0}.sales-scan-v2{width:38px;height:36px;flex:0 0 38px;border:0;border-radius:10px;background:#ffc400;color:#241400;display:grid;place-items:center;font-size:18px;cursor:pointer}.sales-scan-v2:active{transform:scale(.95)}
++    .sales-search-sticky-v2{position:sticky;top:-1px;z-index:8;background:var(--bg-card);margin:0 -14px;padding:0 14px 10px;border-radius:20px 20px 0 0}
+     .sales-cats-v2{display:flex;overflow-x:auto;gap:7px;padding:10px 0 12px;scrollbar-width:none}.sales-cats-v2 button{flex:none;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);border-radius:999px;padding:7px 11px;font:600 10px inherit}.sales-cats-v2 button.active{background:#ffc400;color:#351800;border-color:#ffc400}
+     .sales-error-v2{font-size:11px;color:#c81e1e;background:#fff1f2;padding:8px 10px;border-radius:10px;margin-bottom:9px}
+     .sales-product-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-product-grid-v2 article{border:1px solid var(--border);border-radius:15px;padding:9px;min-width:0;background:var(--bg-card)}.sales-prod-img{height:86px;border-radius:11px;background:var(--bg-card-2);display:grid;place-items:center;position:relative;overflow:hidden}.sales-prod-img img{width:100%;height:100%;object-fit:contain}.sales-prod-img span{font-size:38px}.sales-prod-img em{position:absolute;left:5px;bottom:5px;background:#0aaa78;color:#fff;border-radius:7px;padding:3px 6px;font:700 8px inherit;font-style:normal}.sales-product-grid-v2 h4{font-size:11px;line-height:1.2;height:27px;margin:8px 0 3px;color:var(--text-primary);overflow:hidden}.sales-product-grid-v2>article>strong{color:#d71920;font-size:14px}.sales-prod-controls{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:4px;margin-top:8px}.sales-prod-controls button,.sales-cart-step button{border:0;border-radius:8px;background:#f1f2f5;color:#1f2937;height:28px;font-size:17px}.sales-prod-controls button:last-child{background:#d71920;color:#fff}.sales-prod-controls span{text-align:center;font-weight:800;font-size:12px}
+@@ -4581,55 +4582,38 @@ export default function App() {
+                     { label: "Transferencia", value: totalTransferencia, icon: CreditCard, cls: "transfer" },
+                   ].map(({label,value,icon:Icon,cls}) => <div className={`sales-summary-mini ${cls}`} key={label}><Icon size={18}/><span>{label}</span><strong className="mono">{fmt(value)}</strong></div>)}
+                 </div>
+-                <div className="sales-choice-v2 sale-mode-summary">
+-                  <h3>{saleFlowType === "free" ? "Venta libre" : "Venta de productos"}</h3>
+-                  <p>{saleFlowType === "free" ? "Huevos y productos en una sola boleta. Los informes se separan automáticamente." : "Solo productos del inventario."}</p>
+-                  <button onClick={() => setSaleChooserOpen(true)}>Cambiar tipo de venta</button>
+-                </div>
+-
+-                {saleFlowType === "free" && <div className="sales-products-v2 free-eggs-section">
+-                  <div className="sales-products-head"><h3>Huevos</h3><span>{freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos</span></div>
+-                  {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
+-                    {freeEggInventory.map(q => {
+-                      const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
+-                      return <article key={q.id} className="free-egg-card">
+-                        <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+-                        <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
+-                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+-                      </article>;
+-                    })}
+-                  </div>}
+-                </div>}
+ 
+                 <div className="sales-products-v2">
+                   <div className="sales-products-head"><h3>Productos</h3><span>{carrito.reduce((s,i)=>s+i.cantidad,0)} en carrito</span></div>
+-                  <div className="sales-search-v2">
+-                    <Search size={18}/>
+-                    <input
+-                      ref={salesSearchMobileRef}
+-                      value={busquedaVenta}
+-                      onChange={e=>setBusquedaVenta(e.target.value)}
+-                      onKeyDown={e => {
+-                        if (e.key === "Enter") {
+-                          e.preventDefault();
+-                          procesarCodigoVenta(e.currentTarget.value);
+-                        }
+-                      }}
+-                      autoComplete="off"
+-                      inputMode="text"
+-                      placeholder="Buscar o escanear código..."
+-                    />
+-                    <button
+-                      type="button"
+-                      className="sales-scan-v2"
+-                      onClick={() => setShowScanner(true)}
+-                      title="Escanear código de barras o QR"
+-                      aria-label="Escanear código de barras o QR"
+-                    >
+-                      📷
+-                    </button>
++                  <div className="sales-search-sticky-v2">
++                    <div className="sales-search-v2">
++                      <Search size={18}/>
++                      <input
++                        ref={salesSearchMobileRef}
++                        value={busquedaVenta}
++                        onChange={e=>setBusquedaVenta(e.target.value)}
++                        onKeyDown={e => {
++                          if (e.key === "Enter") {
++                            e.preventDefault();
++                            procesarCodigoVenta(e.currentTarget.value);
++                          }
++                        }}
++                        autoComplete="off"
++                        inputMode="text"
++                        placeholder="Buscar o escanear código..."
++                      />
++                      <button
++                        type="button"
++                        className="sales-scan-v2"
++                        onClick={() => setShowScanner(true)}
++                        title="Escanear código de barras o QR"
++                        aria-label="Escanear código de barras o QR"
++                      >
++                        📷
++                      </button>
++                    </div>
++                    <div className="sales-cats-v2">{["Todos", ...categorias].map(cat => <button key={cat} className={saleCatFilter===cat?"active":""} onClick={()=>setSaleCatFilter(cat)}>{cat}</button>)}</div>
+                   </div>
+-                  <div className="sales-cats-v2">{["Todos", ...categorias].map(cat => <button key={cat} className={saleCatFilter===cat?"active":""} onClick={()=>setSaleCatFilter(cat)}>{cat}</button>)}</div>
+                   {carritoError && <div className="sales-error-v2">⚠ {carritoError}</div>}
+                   <div className="sales-product-grid-v2">
+                     {products.filter(p => (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
+@@ -4654,6 +4638,26 @@ export default function App() {
+                     })}
+                   </div>
+                 </div>
++
++                <div className="sales-choice-v2 sale-mode-summary">
++                  <h3>{saleFlowType === "free" ? "Venta libre" : "Venta de productos"}</h3>
++                  <p>{saleFlowType === "free" ? "Huevos y productos en una sola boleta. Los informes se separan automáticamente." : "Solo productos del inventario."}</p>
++                  <button onClick={() => setSaleChooserOpen(true)}>Cambiar tipo de venta</button>
++                </div>
++
++                {saleFlowType === "free" && <div className="sales-products-v2 free-eggs-section">
++                  <div className="sales-products-head"><h3>Huevos</h3><span>{freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos</span></div>
++                  {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
++                    {freeEggInventory.map(q => {
++                      const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
++                      return <article key={q.id} className="free-egg-card">
++                        <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={Number(q.stockHuevos||0) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{Number(q.stockHuevos||0).toLocaleString("es-CL")} huevos disponibles</small></div></div>
++                        <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
++                        <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
++                      </article>;
++                    })}
++                  </div>}
++                </div>}
+                 {(carrito.length>0 || freeEggItems.length>0) && <div className="sales-cart-v2">
+                   <div className="sales-cart-title"><h3>Carrito de venta</h3><button onClick={()=>setCarrito([])}>Vaciar</button></div>
+                   {freeEggItems.map(item=><div className="sales-cart-row" key={`egg-${item.calidadId}`}>
