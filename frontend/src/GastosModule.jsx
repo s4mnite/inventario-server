@@ -83,6 +83,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null); // null = gasto nuevo; string = editando ese id
   const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false); // evita doble envío (doble tap) mientras la petición está en curso
   const [busqueda, setBusqueda] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [huevosInventory, setHuevosInventory] = useState([]);
@@ -374,9 +375,15 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   };
 
   const guardar = async () => {
+    // Protección contra doble tap/doble clic: si ya hay un guardado en curso,
+    // ignora los intentos siguientes hasta que termine (éxito o error). Sin
+    // esto, dos taps mandaban dos gastos y sumaban el stock de huevos dos
+    // veces (el lote nuevo quedaba con el doble de lo ingresado).
+    if (guardando) return;
     setError("");
     if (form.itemsInventario.length === 0 && !form.comercio.trim()) return setError("Ingresa el comercio o descripción del gasto.");
     if (Number(form.total) <= 0) return setError("Ingresa un total válido.");
+    setGuardando(true);
     try {
       // Los ítems de huevos no viven en la colección "productos": se guardan
       // en el gasto solo como parte del total/descripción, y su stock se
@@ -403,6 +410,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
       if (!editingId && huevoItems.length) await aplicarEntradasHuevos(huevoItems, form.fecha);
       setModal(false); setForm(emptyForm()); setEditingId(null);
     } catch (e) { setError(e.message); }
+    finally { setGuardando(false); }
   };
 
   const eliminar = async id => {
@@ -680,7 +688,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         </div>
 
         <div style={{ padding:"14px 18px",paddingBottom:"calc(14px + env(safe-area-inset-bottom))",borderTop:`1px solid ${border}`,background:card,flexShrink:0 }}>
-          <button onClick={guardar} style={{ width:"100%",padding:14,border:0,borderRadius:14,background:"#d71920",color:"#fff",fontWeight:900,fontSize:15 }}>{editingId?"Guardar cambios":"Guardar gasto"}</button>
+          <button onClick={guardar} disabled={guardando} style={{ width:"100%",padding:14,border:0,borderRadius:14,background:"#d71920",color:"#fff",fontWeight:900,fontSize:15,opacity:guardando?.6:1,cursor:guardando?"not-allowed":"pointer" }}>{guardando?"Guardando...":(editingId?"Guardar cambios":"Guardar gasto")}</button>
         </div>
       </div>
     </div>}
