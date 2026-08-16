@@ -129,13 +129,17 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     }
   };
 
-  const syncEggState = async (nextInventory, movementOrList = null) => {
+  // inventoryDelta: { calidadId, stockDelta, costoCaja?, precioVentaUnitario?, ... }
+  // Ya NO se manda el array "inventory" completo recalculado en el cliente:
+  // eso es lo que permitía que dos guardadas casi simultáneas (de la misma
+  // categoría o de categorías distintas) se pisaran entre sí. Ahora solo se
+  // manda "qué cambió" y el backend aplica ese cambio de forma atómica
+  // ($inc/$set sobre un único elemento del array, vía arrayFilters) — nunca
+  // reescribe el array completo.
+  const syncEggState = async (inventoryDelta, movementOrList = null) => {
     const list = Array.isArray(movementOrList) ? movementOrList : (movementOrList ? [movementOrList] : []);
-    // Enviamos ambos formatos para ser compatibles con cualquier versión del backend:
-    // - "movement" (singular): el primer movimiento (backends que esperan objeto único)
-    // - "movements" (plural):  el array completo (backends actualizados que aceptan lista)
     const body = {
-      inventory: nextInventory,
+      inventoryDelta: inventoryDelta || null,
       movement:  list[0] || null,   // singular — compatibilidad backend original
       movements: list,               // plural  — backends actualizados
     };
@@ -146,9 +150,10 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "No se pudieron guardar los huevos en el servidor.");
     const nextMovements = data.movements || (list.length ? [...list, ...movements] : movements);
-    setInventory(data.inventory || nextInventory);
+    const nextInventory = data.inventory || inventory;
+    setInventory(nextInventory);
     setMovements(nextMovements);
-    saveEggInventory(data.inventory || nextInventory);
+    saveEggInventory(nextInventory);
     saveEggMovements(nextMovements);
     return data;
   };
@@ -398,30 +403,43 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       costo = (formUnits / EGG_BOX_UNITS) * Number(selectedQuality.costoCaja || 0);
     }
 
-    const updatedInventory = inventory.map(q => {
-      if (q.id !== selectedQuality.id) return q;
-
-      // Para "venta" el stock puede quedar negativo (no se bloquea la venta por
-      // falta de stock); para el resto de movimientos de salida se mantiene el
-      // piso en 0 ya que representan pérdidas físicas y no pueden ser negativas.
-      const nextStock = form.tipo === "venta" ? (q.stockHuevos + sign * formUnits) : Math.max(0, q.stockHuevos + sign * formUnits);
-      if (form.tipo !== "entrada") return { ...q, stockHuevos: nextStock };
-
-      const oldStock = Math.max(0, Number(q.stockHuevos || 0));
-      const oldUnitCost = Number(q.costoCaja || 0) / EGG_BOX_UNITS;
+    // BUG FIX (concurrencia): antes se recalculaba el inventario completo de
+    // la categoría en JS (updatedInventory) y se mandaba entero al backend,
+    // que lo pisaba con $set — igual que pasaba con "movements" antes del
+    // fix. Ahora solo se manda el DELTA (cuánto cambia el stock) y el
+    // backend lo aplica de forma atómica con $inc, sin depender de una copia
+    // local que puede estar desactualizada si hubo otra guardada reciente.
+    //
+    // CAMBIO DE COMPORTAMIENTO: antes, para movimientos de salida que no
+    // fueran "venta" (rotos, trizados, ajuste_salida), el stock se topaba en
+    // 0 (Math.max(0, ...)) en vez de quedar negativo. Ese tope no se puede
+    // aplicar de forma atómica con $inc (requeriría leer el valor actual
+    // antes de decidir el tope, reintroduciendo la misma condición de
+    // carrera). Ahora estas categorías se comportan igual que "venta": si se
+    // registra más de lo que hay, el stock queda negativo y se ve como
+    // "faltante" en la UI — igual que ya pasa con eggLots (stockRestante
+    // negativo). Es preferible mostrar la deuda real a esconderla con un
+    // tope que además era la fuente del problema.
+    const stockDelta = sign * formUnits;
+    const inventoryDelta = { calidadId: selectedQuality.id, nombre: selectedQuality.nombre, stockDelta };
+    if (form.tipo === "entrada") {
+      // El costo promedio ponderado SÍ se calcula a partir del stock local
+      // conocido (no 100% atómico) — es una decisión deliberada: si dos
+      // entradas casi simultáneas de la MISMA categoría chocan, en el peor
+      // caso el costo promedio queda levemente desactualizado (impacto
+      // cosmético/contable menor), pero el stock (lo que causaba pérdidas
+      // reales) siempre queda correcto porque su delta se aplica con $inc.
+      const oldStock = Math.max(0, Number(selectedQuality.stockHuevos || 0));
+      const oldUnitCost = Number(selectedQuality.costoCaja || 0) / EGG_BOX_UNITS;
       const totalCostBefore = oldStock * oldUnitCost;
       const totalCostAfter = totalCostBefore + purchaseTotal;
-      const averageUnitCost = nextStock > 0 ? totalCostAfter / nextStock : purchaseUnitValue;
-
-      return {
-        ...q,
-        stockHuevos: nextStock,
-        costoCaja: Math.round(averageUnitCost * EGG_BOX_UNITS),
-        precioVentaUnitario: saleUnitValue,
-        precioBandeja: Math.round(saleUnitValue * EGG_TRAY_UNITS),
-        precioCaja: Math.round(saleUnitValue * EGG_BOX_UNITS),
-      };
-    });
+      const nextStockEstimado = oldStock + formUnits;
+      const averageUnitCost = nextStockEstimado > 0 ? totalCostAfter / nextStockEstimado : purchaseUnitValue;
+      inventoryDelta.costoCaja = Math.round(averageUnitCost * EGG_BOX_UNITS);
+      inventoryDelta.precioVentaUnitario = saleUnitValue;
+      inventoryDelta.precioBandeja = Math.round(saleUnitValue * EGG_TRAY_UNITS);
+      inventoryDelta.precioCaja = Math.round(saleUnitValue * EGG_BOX_UNITS);
+    }
     const movement = {
       id: Date.now(),
       fechaIngreso: ["entrada", "venta", "rotos", "trizados"].includes(form.tipo) ? form.fechaIngreso : "",
@@ -467,7 +485,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
 
     setGuardandoMov(true);
     try {
-      await syncEggState(updatedInventory, movementsToSend);
+      await syncEggState(inventoryDelta, movementsToSend);
       setShowMovement(false);
     } catch (e) {
       setError(e.message || "No se pudo guardar el movimiento.");
@@ -504,19 +522,19 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     // Revierte el efecto que tuvo este movimiento sobre el stock: las entradas
     // y ajustes de entrada sumaron, todo lo demás (venta/merma/rotos/trizados/
     // ajuste de salida) restó, así que aplicamos el signo contrario.
+    // Se manda como delta (no como array completo) para que el backend lo
+    // aplique atómicamente con $inc, igual que en registerMovement.
     const sign = ["entrada", "ajuste_entrada"].includes(m.tipo) ? 1 : -1;
-    const reversedInventory = inventory.map(q => q.id === m.calidadId
-      ? { ...q, stockHuevos: Math.max(0, Number(q.stockHuevos || 0) - sign * Number(m.huevos || 0)) }
-      : q);
+    const inventoryDelta = { calidadId: m.calidadId, stockDelta: -sign * Number(m.huevos || 0) };
     try {
       const res = await fetch(`${API}/api/huevos/movimientos/${m.id}`, {
         method: "DELETE", headers: eggHeaders,
-        body: JSON.stringify({ inventory: reversedInventory }),
+        body: JSON.stringify({ inventoryDelta }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo eliminar el movimiento.");
       const nextMovements = data.movements || movements.filter(x => x.id !== m.id);
-      const nextInventory = data.inventory || reversedInventory;
+      const nextInventory = data.inventory || inventory;
       setInventory(nextInventory);
       setMovements(nextMovements);
       saveEggInventory(nextInventory);
@@ -532,23 +550,28 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   };
   const saveQuality = async () => {
     const unitSale = Math.max(0, Number(editForm.precioVentaUnitario || 0));
-    const next = inventory.map(q => q.id === showEdit ? {
-      ...q,
-      costoCaja: Math.max(0, Number(editForm.costoCaja || 0)),
+    const costoCaja = Math.max(0, Number(editForm.costoCaja || 0));
+    // Se manda como delta de una sola categoría (no el array completo), para
+    // que editar la configuración de "Súper" no pueda pisar, por ejemplo,
+    // una venta de "Extra" guardada casi al mismo tiempo desde otra pantalla.
+    const inventoryDelta = {
+      calidadId: showEdit,
+      costoCaja,
       precioVentaUnitario: unitSale,
-      incrementoPct: Number(editForm.incrementoPct || calcIncrementPct(Number(editForm.costoCaja || 0) / EGG_BOX_UNITS, unitSale) || 0),
+      incrementoPct: Number(editForm.incrementoPct || calcIncrementPct(costoCaja / EGG_BOX_UNITS, unitSale) || 0),
       precioCaja: Math.round(unitSale * EGG_BOX_UNITS),
       precioBandeja: Math.round(unitSale * EGG_TRAY_UNITS),
       stockMinimoCajas: Math.max(0, Number(editForm.stockMinimoCajas || 0)),
-    } : q);
+    };
     try {
       const res = await fetch(`${API}/api/huevos/inventario`, {
-        method: "PUT", headers: eggHeaders, body: JSON.stringify({ inventory: next }),
+        method: "PUT", headers: eggHeaders, body: JSON.stringify({ inventoryDelta }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo actualizar la calidad.");
-      setInventory(data.inventory || next);
-      saveEggInventory(data.inventory || next);
+      const next = data.inventory || inventory;
+      setInventory(next);
+      saveEggInventory(next);
       setShowEdit(null);
     } catch (e) { setError(e.message || "No se pudo actualizar la calidad."); }
   };

@@ -1176,9 +1176,73 @@ app.get("/api/huevos", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Se asegura de que exista el documento de huevos para esta empresa/usuario
+// ANTES de intentar una actualización atómica con arrayFilters — si el
+// documento (o el array inventory) no existe todavía, un arrayFilter no
+// tiene sobre qué hacer match. $setOnInsert es un no-op si el documento ya
+// existe, así que llamar esto en cada request es seguro y barato.
+const ensureHuevosDoc = async (key) => {
+  await db.collection("huevos").updateOne(
+    { key },
+    { $setOnInsert: { key, inventory: inventarioHuevosInicial, movements: [], creadoEn: new Date() } },
+    { upsert: true }
+  );
+};
+
+// Si la categoría (calidadId) referenciada en un delta no existe todavía
+// dentro del array inventory (categoría nueva/custom), la agrega antes de
+// intentar el $set/$inc con arrayFilters. La condición "inventory.id": {$ne}
+// evita duplicados aunque dos requests casi simultáneas la disparen a la vez.
+const asegurarCategoriaHuevos = async (key, calidadId, nombre) => {
+  if (!calidadId) return;
+  await db.collection("huevos").updateOne(
+    { key, "inventory.id": { $ne: calidadId } },
+    { $push: { inventory: {
+      id: calidadId, nombre: nombre || calidadId, stockHuevos: 0,
+      costoCaja: 0, precioCaja: 0, precioBandeja: 0, precioVentaUnitario: 0,
+      stockMinimoCajas: 5,
+    } } }
+  );
+};
+
+// Actualiza SOLO el elemento del array inventory que corresponde a una
+// categoría (arrayFilters + $inc/$set), en vez de reescribir el array
+// completo. Esto es lo que hace que dos guardadas de categorías distintas
+// (o de la misma) ya no puedan pisarse entre sí.
+const aplicarDeltaInventario = (update, delta) => {
+  if (!delta || !delta.calidadId) return null;
+  if (Number(delta.stockDelta || 0) !== 0) {
+    update.$inc = { "inventory.$[q].stockHuevos": Number(delta.stockDelta) };
+  }
+  const camposAbsolutos = {};
+  ["costoCaja", "precioVentaUnitario", "precioCaja", "precioBandeja", "stockMinimoCajas", "incrementoPct"].forEach(f => {
+    if (delta[f] !== undefined) camposAbsolutos[`inventory.$[q].${f}`] = Number(delta[f]);
+  });
+  if (Object.keys(camposAbsolutos).length) update.$set = { ...(update.$set || {}), ...camposAbsolutos };
+  return [{ "q.id": delta.calidadId }];
+};
+
 app.put("/api/huevos/inventario", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const delta = req.body?.inventoryDelta || (req.body?.calidadId ? req.body : null);
+
+    if (delta && delta.calidadId) {
+      // Camino atómico: solo toca la categoría indicada.
+      await ensureHuevosDoc(req.eggKey);
+      await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+      const update = { $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() } };
+      const arrayFilters = aplicarDeltaInventario(update, delta);
+      const doc = await db.collection("huevos").findOneAndUpdate(
+        { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
+      );
+      return res.json({ ok: true, inventory: doc.inventory });
+    }
+
+    // Camino legado: reescribe el array completo. Se deja solo para los
+    // flujos que de verdad necesitan tocar TODAS las categorías a la vez
+    // (reset del módulo, migración inicial desde localStorage, o agregar
+    // categorías por defecto que falten) — no para ediciones normales.
     const inventory = limpiarInventarioHuevos(req.body?.inventory);
     await db.collection("huevos").updateOne(
       { key: req.eggKey },
@@ -1192,46 +1256,41 @@ app.put("/api/huevos/inventario", authHuevos, async (req, res) => {
 app.post("/api/huevos/movimientos", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
-    const inventory = limpiarInventarioHuevos(req.body?.inventory);
     // Acepta un solo movimiento (compatibilidad) o varios en una sola escritura
     // atómica — necesario para "entrada + transferencia automática de lote".
     const incoming = Array.isArray(req.body?.movements)
       ? req.body.movements
       : (req.body?.movement ? [req.body.movement] : []);
     const stamped = incoming.map(m => ({ ...m, guardadoEn: new Date().toISOString() }));
+    const delta = req.body?.inventoryDelta || null;
 
-    // BUG FIX: antes esto era leer todo el documento (findOne), armar la
-    // lista de movimientos en JS pegando los nuevos al principio, y
-    // reescribir el documento completo (updateOne + $set). Eso NO es
-    // atómico: si dos guardadas llegaban casi al mismo tiempo (p.ej. una
-    // entrada + su transferencia automática de lote, seguida poco después
-    // de una venta, o un reintento del cliente por timeout de red), la
-    // petición que terminaba de escribir último lo hacía con SU copia de
-    // "movements" leída ANTES de que la otra terminara — y borraba los
-    // movimientos que esa otra petición acababa de guardar. Así se perdían
-    // entradas, transferencias o ventas sin ningún error visible para el
-    // usuario. Ahora los movimientos nuevos se agregan con $push, que Mongo
-    // aplica de forma atómica: dos escrituras concurrentes ya no pueden
-    // pisarse entre sí, sin importar el orden en que el servidor las procese.
+    await ensureHuevosDoc(req.eggKey);
+    if (delta && delta.calidadId) await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+
+    // ATÓMICO: los movimientos se agregan con $push (nunca se reescribe el
+    // array completo, así que dos guardadas casi simultáneas no pueden
+    // pisarse — cada una hace su propio $push sobre lo que haya en ese
+    // instante en MongoDB, no sobre una copia leída antes en JS).
     const update = {
-      $set: { inventory, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
-      $setOnInsert: { creadoEn: new Date() },
+      $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
     };
     if (stamped.length) {
       update.$push = { movements: { $each: stamped, $position: 0, $slice: 5000 } };
-    } else {
-      update.$setOnInsert.movements = [];
+    }
+
+    let arrayFilters;
+    if (delta && delta.calidadId) {
+      arrayFilters = aplicarDeltaInventario(update, delta);
+    } else if (Array.isArray(req.body?.inventory)) {
+      // Compatibilidad con clientes viejos que todavía manden el array
+      // completo: se respeta, pero ya no es el camino recomendado.
+      update.$set.inventory = limpiarInventarioHuevos(req.body.inventory);
     }
 
     const doc = await db.collection("huevos").findOneAndUpdate(
-      { key: req.eggKey },
-      update,
-      { upsert: true, returnDocument: "after" }
+      { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
     );
-    // Compatibilidad: según la versión del driver, findOneAndUpdate devuelve
-    // el documento directo o envuelto en { value }.
-    const resultDoc = doc && doc.value !== undefined ? doc.value : doc;
-    res.json({ ok: true, inventory: resultDoc?.inventory || inventory, movements: resultDoc?.movements || [] });
+    res.json({ ok: true, inventory: doc.inventory, movements: doc.movements });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1255,16 +1314,32 @@ app.post("/api/huevos/reset", authHuevos, async (req, res) => {
 app.delete("/api/huevos/movimientos/:id", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
-    const inventory = limpiarInventarioHuevos(req.body?.inventory);
-    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
-    let movements = Array.isArray(doc?.movements) ? doc.movements : [];
-    movements = movements.filter(m => String(m.id) !== String(req.params.id));
-    await db.collection("huevos").updateOne(
-      { key: req.eggKey },
-      { $set: { inventory, movements, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() } },
-      { upsert: true }
+    const delta = req.body?.inventoryDelta || null;
+
+    await ensureHuevosDoc(req.eggKey);
+    if (delta && delta.calidadId) await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+
+    // ATÓMICO: $pull saca el movimiento del array y $inc revierte el stock
+    // en la misma escritura — no hace falta leer el documento antes.
+    // El id puede haberse guardado como Number (Date.now()) o String según
+    // el cliente que lo creó, así que se aceptan ambas formas al comparar.
+    const idNum = Number(req.params.id);
+    const update = {
+      $pull: { movements: { $or: [{ id: req.params.id }, ...(Number.isFinite(idNum) ? [{ id: idNum }] : [])] } },
+      $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
+    };
+    let arrayFilters;
+    if (delta && delta.calidadId) {
+      arrayFilters = aplicarDeltaInventario(update, delta);
+    } else if (Array.isArray(req.body?.inventory)) {
+      // Compatibilidad con clientes viejos.
+      update.$set.inventory = limpiarInventarioHuevos(req.body.inventory);
+    }
+
+    const doc = await db.collection("huevos").findOneAndUpdate(
+      { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
     );
-    res.json({ ok: true, inventory, movements });
+    res.json({ ok: true, inventory: doc.inventory, movements: doc.movements });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
