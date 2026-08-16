@@ -117,14 +117,20 @@ export const computeEggLots = (movements, inventory) => {
           const source = byId[String(m.loteOrigenId)];
           const dest = byId[String(m.loteDestinoId)];
           if (source && dest) {
-            const taken = Math.max(0, source.stockRestante);
+            // BUG FIX: antes se usaba Math.max(0, source.stockRestante), que
+            // descartaba la deuda si el lote origen había quedado con stock
+            // NEGATIVO (sobreventa antes de cerrarse) — esa deuda
+            // desaparecía en vez de restarse del lote nuevo, mostrando más
+            // stock disponible del real. Ahora se traspasa el saldo real,
+            // sea positivo o negativo.
+            const taken = Number(source.stockRestante || 0);
             if (taken > 0) {
               dest.costoTotal += taken * source.costoUnitario;
-              dest.stockRestante += taken;
               dest.transferidoDesde += taken;
-              const totalDisponibleLote = dest.huevosIniciales + dest.transferidoDesde;
-              dest.costoUnitario = totalDisponibleLote > 0 ? dest.costoTotal / totalDisponibleLote : dest.costoUnitario;
             }
+            dest.stockRestante += taken;
+            const totalDisponibleLote = dest.huevosIniciales + dest.transferidoDesde;
+            dest.costoUnitario = totalDisponibleLote > 0 ? dest.costoTotal / totalDisponibleLote : dest.costoUnitario;
             source.stockRestante = 0;
             source.estado = "cerrado";
             source.transferidoA = dest.id;
@@ -204,10 +210,20 @@ export const computeEggLots = (movements, inventory) => {
           viejo.vendidos = 0; viejo.ingreso = 0; viejo.costoVendido = 0; viejo.ganancia = 0;
           viejo.merma = 0; viejo.rotos = 0; viejo.trizados = 0; viejo.ajustes = 0;
           if (viejo.estado === "cerrado") return;
-          if (viejo.stockRestante > 0) {
-            vigente.costoTotal += viejo.stockRestante * viejo.costoUnitario;
+          // BUG FIX: antes solo se traspasaba el stock del lote viejo si era
+          // POSITIVO (stockRestante > 0). Si un lote viejo quedaba con
+          // deuda negativa (se vendió/mermó más de lo que tenía antes de
+          // cerrarse), esa deuda se descartaba en vez de restarse del lote
+          // nuevo — el lote nuevo mostraba más stock disponible del que
+          // realmente había, porque la sobreventa del lote anterior
+          // "desaparecía" en vez de arrastrarse. Ahora se traspasa el saldo
+          // siempre que no sea exactamente 0, sea positivo o negativo.
+          if (viejo.stockRestante !== 0) {
+            if (viejo.stockRestante > 0) {
+              vigente.costoTotal += viejo.stockRestante * viejo.costoUnitario;
+              vigente.transferidoDesde += viejo.stockRestante;
+            }
             vigente.stockRestante += viejo.stockRestante;
-            vigente.transferidoDesde += viejo.stockRestante;
             const totalDisponibleLote = vigente.huevosIniciales + vigente.transferidoDesde;
             vigente.costoUnitario = totalDisponibleLote > 0 ? vigente.costoTotal / totalDisponibleLote : vigente.costoUnitario;
             viejo.stockRestante = 0;

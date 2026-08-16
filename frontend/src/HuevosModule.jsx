@@ -348,9 +348,15 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     // Ningún egreso (venta, rotos, trizados, ajuste de salida) se bloquea por
     // falta de stock: si no alcanza, el inventario queda en negativo y se
     // regulariza con una entrada posterior.
-    // Todo movimiento que no sea entrada debe ir siempre al último lote
-    // activo de la categoría. Si no hay ninguno, no se registra a ciegas.
-    const activeLot = eggLots.find(l => l.calidadId === selectedQuality.id && l.stockRestante > 0);
+    // Se usa para decidir si una entrada nueva debe disparar un traspaso
+    // automático desde el lote vigente (el que no está cerrado), sea cual
+    // sea su stock. BUG FIX: antes exigía stockRestante > 0 para considerar
+    // un lote "activo" — si el lote vigente había quedado con stock
+    // NEGATIVO (sobreventa), esta búsqueda no lo encontraba, así que la
+    // entrada nueva NUNCA disparaba el traspaso y creaba un lote totalmente
+    // desconectado, dejando la deuda del lote viejo sin arrastrarse al
+    // nuevo (el nuevo lote se veía con más stock disponible del real).
+    const activeLot = eggLots.find(l => l.calidadId === selectedQuality.id && l.estado !== "cerrado");
     // BUG FIX: antes exigía que el lote calculado tuviera stockRestante > 0,
     // pero ese stock se recalcula aparte del stock real (inventory.stockHuevos).
     // Si ambos se desincronizan (ajustes viejos, migraciones, etc.), esto
