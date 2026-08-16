@@ -65,6 +65,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   const [loteFiltro, setLoteFiltro] = useState(null); // id de calidad, o null = todas
   const [movFiltroPeriodo, setMovFiltroPeriodo] = useState("todos"); // todos | hoy | semana | mes
   const [movFiltroTipo, setMovFiltroTipo] = useState("todos");
+  const [movFiltroCalidad, setMovFiltroCalidad] = useState("todas"); // "todas" o el id de una categoría de huevo
   const [showReset, setShowReset] = useState(false);
   const [resetText, setResetText] = useState("");
   const [resetting, setResetting] = useState(false);
@@ -1065,6 +1066,15 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         if (movFiltroPeriodo === "semana" && (!f || f < startOfWeek))  return false;
         if (movFiltroPeriodo === "mes"    && (!f || f < startOfMonth)) return false;
         if (movFiltroTipo !== "todos" && m.tipo !== movFiltroTipo) return false;
+        // Filtro por categoría: compara por calidadId, pero si un movimiento
+        // viejo trae un calidadId que ya no existe en el inventario actual,
+        // cae al mismo criterio que usa computeEggLots (comparar por nombre
+        // normalizado) para no dejarlo fuera del filtro por error.
+        if (movFiltroCalidad !== "todas") {
+          const mismaCalidad = m.calidadId === movFiltroCalidad
+            || String(m.calidad || "").trim().toLowerCase() === String(inventory.find(q => q.id === movFiltroCalidad)?.nombre || "").trim().toLowerCase();
+          if (!mismaCalidad) return false;
+        }
         return true;
       });
       return <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1075,6 +1085,10 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
           <select value={movFiltroTipo} onChange={e=>setMovFiltroTipo(e.target.value)} style={{...inp,width:"auto",padding:"7px 12px",fontSize:12,borderRadius:20}}>
             <option value="todos">Todos los tipos</option>
             {Object.entries(typeLabels).map(([id,label])=><option key={id} value={id}>{label}</option>)}
+          </select>
+          <select value={movFiltroCalidad} onChange={e=>setMovFiltroCalidad(e.target.value)} style={{...inp,width:"auto",padding:"7px 12px",fontSize:12,borderRadius:20}}>
+            <option value="todas">Todas las categorías</option>
+            {inventory.map(q=><option key={q.id} value={q.id}>{q.nombre}</option>)}
           </select>
         </div>
         {filtered.length===0 ? <div style={card}><div style={{textAlign:"center",padding:36,color:textMuted}}>No hay movimientos para este filtro.</div></div> :
