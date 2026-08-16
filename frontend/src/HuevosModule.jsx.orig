@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { DollarSign, Pencil, Plus, Trash2, TrendingDown, ChevronRight, Filter, ShoppingCart, Check, X, ArrowLeft, Info, Minus, Banknote, CreditCard, Landmark } from "lucide-react";
-import { API, fmt, todayLocalISO, calcIncrementPct, priceFromIncrement, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes } from "./lib/utils";
+import { API, fmt, todayLocalISO, calcIncrementPct, priceFromIncrement, fetchConTimeout } from "./lib/utils";
 
 // ─── Módulo independiente: Huevos ────────────────────────────────────────────
 const EGG_BOX_UNITS = 180;

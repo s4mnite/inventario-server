@@ -17,7 +17,7 @@ import {
 import EggModule from "./HuevosModule";
 import GastosModule from "./GastosModule";
 import ReyDelHuevoInicio from "./ReyDelHuevoInicio";
-import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout } from "./lib/utils";
+import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes } from "./lib/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const APP_VERSION = "4.0.1";
@@ -2703,24 +2703,18 @@ export default function App() {
     return () => { cancelled = true; };
   }, [saleFlowType, activeNav, currentUser?.usuario, currentUser?._clave]);
 
-  // El stock que se muestra y se usa para vender en "Venta libre" viene de los
-  // movimientos reales (misma fuente que los lotes en el módulo Huevos), no
-  // del contador aparte inventory.stockHuevos — ese contador puede quedar
-  // desincronizado (por ejemplo tras una entrada que no terminó de
-  // sincronizar) y mostraba stock negativo en Ventas aunque el lote de
-  // Huevos ya tuviera la entrada registrada.
-  const stockHuevosPorCalidad = useMemo(() => {
-    const map = {};
-    freeEggMovimientos.forEach(m => {
-      const id = m.calidadId || m.calidad;
-      if (!id) return;
-      const unidades = Number(m.huevos || 0);
-      if (["entrada", "ajuste_entrada"].includes(m.tipo)) map[id] = (map[id] || 0) + unidades;
-      else if (["venta", "merma", "rotos", "trizados", "ajuste_salida"].includes(m.tipo)) map[id] = (map[id] || 0) - unidades;
-      // "transferencia" no cambia el total de la calidad, solo mueve stock entre lotes.
-    });
-    return map;
-  }, [freeEggMovimientos]);
+  // El stock que se muestra y se usa para vender en "Venta libre" viene del
+  // MISMO cálculo por lotes que usa el módulo Huevos (computeEggLots +
+  // stockPorCalidadDeLotes, en lib/utils.js) — antes esta pantalla tenía su
+  // propia cuenta simplificada (entradas menos salidas de todo el
+  // historial), que sumaba también la deuda de lotes viejos ya cerrados y
+  // por eso podía mostrar stock negativo aunque el lote vigente tuviera
+  // huevos disponibles de verdad. Usar la misma función en los dos lados
+  // garantiza que nunca más muestren números distintos entre pantallas.
+  const stockHuevosPorCalidad = useMemo(
+    () => stockPorCalidadDeLotes(computeEggLots(freeEggMovimientos, freeEggInventory)),
+    [freeEggMovimientos, freeEggInventory]
+  );
   const stockDeHuevo = q => Number(stockHuevosPorCalidad[q.id] ?? q.stockHuevos ?? 0);
 
   // El stock de huevos ya no limita la cantidad máxima seleccionable: se puede
