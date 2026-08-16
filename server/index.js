@@ -1198,18 +1198,40 @@ app.post("/api/huevos/movimientos", authHuevos, async (req, res) => {
     const incoming = Array.isArray(req.body?.movements)
       ? req.body.movements
       : (req.body?.movement ? [req.body.movement] : []);
-    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
-    let movements = Array.isArray(doc?.movements) ? doc.movements : [];
-    if (incoming.length) {
-      const stamped = incoming.map(m => ({ ...m, guardadoEn: new Date().toISOString() }));
-      movements = [...stamped, ...movements].slice(0, 5000);
+    const stamped = incoming.map(m => ({ ...m, guardadoEn: new Date().toISOString() }));
+
+    // BUG FIX: antes esto era leer todo el documento (findOne), armar la
+    // lista de movimientos en JS pegando los nuevos al principio, y
+    // reescribir el documento completo (updateOne + $set). Eso NO es
+    // atómico: si dos guardadas llegaban casi al mismo tiempo (p.ej. una
+    // entrada + su transferencia automática de lote, seguida poco después
+    // de una venta, o un reintento del cliente por timeout de red), la
+    // petición que terminaba de escribir último lo hacía con SU copia de
+    // "movements" leída ANTES de que la otra terminara — y borraba los
+    // movimientos que esa otra petición acababa de guardar. Así se perdían
+    // entradas, transferencias o ventas sin ningún error visible para el
+    // usuario. Ahora los movimientos nuevos se agregan con $push, que Mongo
+    // aplica de forma atómica: dos escrituras concurrentes ya no pueden
+    // pisarse entre sí, sin importar el orden en que el servidor las procese.
+    const update = {
+      $set: { inventory, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
+      $setOnInsert: { creadoEn: new Date() },
+    };
+    if (stamped.length) {
+      update.$push = { movements: { $each: stamped, $position: 0, $slice: 5000 } };
+    } else {
+      update.$setOnInsert.movements = [];
     }
-    await db.collection("huevos").updateOne(
+
+    const doc = await db.collection("huevos").findOneAndUpdate(
       { key: req.eggKey },
-      { $set: { inventory, movements, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() }, $setOnInsert: { creadoEn: new Date() } },
-      { upsert: true }
+      update,
+      { upsert: true, returnDocument: "after" }
     );
-    res.json({ ok: true, inventory, movements });
+    // Compatibilidad: según la versión del driver, findOneAndUpdate devuelve
+    // el documento directo o envuelto en { value }.
+    const resultDoc = doc && doc.value !== undefined ? doc.value : doc;
+    res.json({ ok: true, inventory: resultDoc?.inventory || inventory, movements: resultDoc?.movements || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
