@@ -153,8 +153,14 @@ export const computeEggLots = (movements, inventory) => {
   
         const taken = units;
         const saleUnit = m.tipo === "venta" && units > 0 ? Number(m.ingreso || 0) / units : 0;
-        target.stockRestante -= taken;
         const allocatedCost = taken * target.costoUnitario;
+        // "Huevos disponibles" (stockRestante) = lo que ingresó al lote (+ lo
+        // traspasado de un lote anterior) menos TODO lo que salió de ahí:
+        // ventas, roto, trizados y ajustes de salida. Roto y trizados siguen
+        // teniendo su propio contador para mostrarlos aparte en la tarjeta,
+        // pero como son huevos que físicamente ya no están, también bajan
+        // el disponible — si no, se seguirían mostrando como vendibles.
+        target.stockRestante -= taken;
         if (m.tipo === "venta") {
           const allocatedIncome = taken * saleUnit;
           target.vendidos += taken;
@@ -189,26 +195,14 @@ export const computeEggLots = (movements, inventory) => {
         );
         const vigente = ordenado[ordenado.length - 1];
         ordenado.slice(0, -1).forEach(viejo => {
-          // BUG FIX: antes, si un lote viejo ya estaba "cerrado" (por una
-          // transferencia explícita), se saltaba por completo con este return
-          // — y sus estadísticas de consumo (ventas, merma, rotos, trizados,
-          // ajustes) que había acumulado ANTES de cerrarse se perdían para
-          // siempre, porque solo se traspasaba stock y costo. Ahora las
-          // estadísticas de consumo siempre se suman al lote vigente, esté
-          // cerrado o no; solo el traspaso de stock se salta si ya se hizo.
-          vigente.vendidos += viejo.vendidos;
-          vigente.ingreso += viejo.ingreso;
-          vigente.costoVendido += viejo.costoVendido;
-          vigente.ganancia += viejo.ganancia;
-          vigente.merma += viejo.merma;
-          vigente.rotos += viejo.rotos;
-          vigente.trizados += viejo.trizados;
-          vigente.ajustes += viejo.ajustes;
-          // Se dejan en 0 en el lote viejo para que su propia tarjeta (que
-          // sigue mostrándose, marcada como "cerrado") no duplique visualmente
-          // los mismos números que ahora también aparecen en el lote vigente.
-          viejo.vendidos = 0; viejo.ingreso = 0; viejo.costoVendido = 0; viejo.ganancia = 0;
-          viejo.merma = 0; viejo.rotos = 0; viejo.trizados = 0; viejo.ajustes = 0;
+          // Cada lote conserva SU PROPIA historia de consumo (ventas, merma,
+          // rotos, trizados, ajustes) tal como ocurrió mientras ese lote
+          // estaba activo — ya no se traslada al lote vigente ni se resetea
+          // a 0 al cerrarse. Así, la tarjeta de un lote cerrado sigue
+          // mostrando, por ejemplo, cuántos trizados salieron específicamente
+          // de ESE lote. Los totales de categoría (Reportes/Resumen) no usan
+          // estos campos por lote: se calculan aparte sumando directamente
+          // los movimientos crudos, así que no hay doble conteo.
           if (viejo.estado === "cerrado") return;
           // BUG FIX: antes solo se traspasaba el stock del lote viejo si era
           // POSITIVO (stockRestante > 0). Si un lote viejo quedaba con
