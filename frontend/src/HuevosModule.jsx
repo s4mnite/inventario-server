@@ -546,195 +546,35 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     } catch (e) { setError(e.message || "No se pudo actualizar la calidad."); }
   };
 
-  const totalEggs = inventory.reduce((s, q) => s + Number(q.stockHuevos || 0), 0);
-  const totalBreakdown = eggBreakdown(totalEggs);
   const sales = movements.filter(m => m.tipo === "venta");
   const wastes = movements.filter(m => ["merma", "rotos", "trizados"].includes(m.tipo));
   const revenue = sales.reduce((s, m) => s + Number(m.ingreso || 0), 0);
   const profit = sales.reduce((s, m) => s + Number(m.ganancia || 0), 0);
   const wasteUnits = wastes.reduce((s, m) => s + Number(m.huevos || 0), 0);
   const wasteCost = wastes.reduce((s, m) => s + Number(m.costo || 0), 0);
-  const inventoryCost = inventory.reduce((s, q) => s + (q.stockHuevos / EGG_BOX_UNITS) * Number(q.costoCaja || 0), 0);
-  const inventorySaleValue = inventory.reduce((s, q) => s + (q.stockHuevos / EGG_BOX_UNITS) * Number(q.precioCaja || 0), 0);
 
-  const eggLots = useMemo(() => {
-    // Se ordena por el momento REAL de registro (id = Date.now() al crear el
-    // movimiento), no por la fecha de ingreso elegida a mano.
-    const chronological = [...movements].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
-    const queues = {};
-    const byId = {};
-    const byKey = {}; // `${categoria}::${fechaIngreso}` -> mismo lote si coinciden
-    const lots = [];
+  const eggLots = useMemo(() => computeEggLots(movements, inventory), [movements, inventory]);
 
-    // Si un movimiento trae un calidadId que ya no existe en el inventario
-    // actual (categoría vieja/renombrada), pero su nombre SÍ calza con una
-    // categoría vigente, lo tratamos como esa categoría — así "Primera" con
-    // un id viejo y "Primera" con el id actual quedan en el mismo balde.
-    const normaliza = s => String(s || "").trim().toLowerCase();
-    const resolveQualityId = m => {
-      const rawId = m.calidadId || "";
-      if (rawId && inventory.some(q => q.id === rawId)) return rawId;
-      const porNombre = inventory.find(q => normaliza(q.nombre) === normaliza(m.calidad));
-      if (porNombre) return porNombre.id;
-      return rawId || normaliza(m.calidad) || "sin-calidad";
-    };
+  // El stock que se muestra y se usa para vender/gatillar alertas SIEMPRE
+  // sale del lote VIGENTE de cada calidad (el mismo que "Lotes por fecha"
+  // marca como "Lote activo"), no de la suma de todos los lotes ni del
+  // contador aparte inventory.stockHuevos.
+  //
+  // Por qué NO usar inventory.stockHuevos: es un contador que se actualiza
+  // a mano en cada movimiento y puede desincronizarse de los movimientos
+  // reales guardados (por ejemplo si una sincronización con el backend
+  // queda a medias). Cuando eso pasa, la tarjeta mostraba stock viejo o
+  // negativo aunque el lote de huevos ya tuviera la entrada registrada.
+  // Al derivar el stock de eggLots (que se recalcula siempre a partir de
+  // los movimientos guardados) queda conectado a la misma fuente de verdad
+  // que "Lotes por fecha".
+  const stockPorCalidad = useMemo(() => stockPorCalidadDeLotes(eggLots), [eggLots]);
+  const stockDe = q => q ? Number(stockPorCalidad[q.id] ?? q.stockHuevos ?? 0) : 0;
 
-    chronological.forEach(m => {
-      const qualityId = resolveQualityId(m);
-      if (!queues[qualityId]) queues[qualityId] = [];
-      const units = Math.max(0, Number(m.huevos || 0));
-
-      if (m.tipo === "entrada" || m.tipo === "ajuste_entrada") {
-        // Un "Ajuste de entrada" no pide fecha de lote (solo las entradas
-        // normales la piden), así que usa la fecha del día en que se registró.
-        // Si ese mismo día ya hay un lote real de esa calidad, se fusiona con
-        // él; si no, la consolidación de más abajo lo une al lote vigente.
-        const fechaIngreso = m.fechaIngreso || String(m.fecha || "").slice(0, 10);
-        const lotKey = `${qualityId}::${fechaIngreso}`;
-        const unitCost = Number(m.valorUnitarioCompra || 0) || (units > 0 ? Number(m.totalCompra || m.costo || 0) / units : 0);
-        const costoTotal = Number(m.totalCompra || m.costo || unitCost * units);
-
-        // Misma categoría + misma fecha de ingreso = el mismo lote: se suma
-        // en vez de crear una tarjeta duplicada.
-        const existing = byKey[lotKey];
-        if (existing) {
-          existing.huevosIniciales += units;
-          existing.stockRestante += units;
-          existing.costoTotal += costoTotal;
-          existing.costoUnitario = existing.huevosIniciales > 0 ? existing.costoTotal / existing.huevosIniciales : existing.costoUnitario;
-          byId[String(m.id)] = existing;
-          return;
-        }
-
-        const lot = {
-          id: String(m.id || `${qualityId}-${lots.length}`),
-          calidadId: qualityId, calidad: m.calidad || qualityId,
-          fechaIngreso, fechaRegistro: m.fecha || "",
-          // "huevosIniciales" representa SOLO la entrada real anotada por el usuario.
-          // El stock heredado de otro lote se guarda aparte en "transferidoDesde".
-          huevosIniciales: units, stockRestante: units, vendidos: 0, merma: 0, rotos: 0, trizados: 0, ajustes: 0,
-          costoUnitario: unitCost, costoTotal, ingreso: 0, costoVendido: 0, ganancia: 0,
-          estado: "activo", transferidoDesde: 0,
-        };
-        lots.push(lot); byId[String(m.id)] = lot; byKey[lotKey] = lot; queues[qualityId].push(lot);
-        return;
-      }
-
-      if (m.tipo === "transferencia") {
-        // Un lote nuevo llegó y absorbió lo que quedaba del lote anterior de
-        // la misma categoría. El lote origen queda cerrado (no agotado por
-        // ventas/merma, sino cerrado por transferencia).
-        const source = byId[String(m.loteOrigenId)];
-        const dest = byId[String(m.loteDestinoId)];
-        if (source && dest) {
-          const taken = Math.max(0, source.stockRestante);
-          if (taken > 0) {
-            dest.costoTotal += taken * source.costoUnitario;
-            dest.stockRestante += taken;
-            dest.transferidoDesde += taken;
-            const totalDisponibleLote = dest.huevosIniciales + dest.transferidoDesde;
-            dest.costoUnitario = totalDisponibleLote > 0 ? dest.costoTotal / totalDisponibleLote : dest.costoUnitario;
-          }
-          source.stockRestante = 0;
-          source.estado = "cerrado";
-          source.transferidoA = dest.id;
-        }
-        return;
-      }
-
-      if (!["venta", "merma", "rotos", "trizados", "ajuste_salida"].includes(m.tipo) || units <= 0) return;
-
-      // Regla fija: todo movimiento afecta siempre al ÚLTIMO lote activo de
-      // la categoría (el más reciente con stock > 0) — nunca se busca por
-      // igualdad de fecha ni se reparte entre varios lotes.
-      const lotsForQuality = queues[qualityId] || [];
-      let target = null;
-      for (let i = lotsForQuality.length - 1; i >= 0; i--) {
-        if (lotsForQuality[i].stockRestante > 0) { target = lotsForQuality[i]; break; }
-      }
-      if (!target) target = lotsForQuality[lotsForQuality.length - 1];
-      if (!target) return; // no existe ningún lote todavía para esta categoría
-
-      const taken = units;
-      const saleUnit = m.tipo === "venta" && units > 0 ? Number(m.ingreso || 0) / units : 0;
-      target.stockRestante -= taken;
-      const allocatedCost = taken * target.costoUnitario;
-      if (m.tipo === "venta") {
-        const allocatedIncome = taken * saleUnit;
-        target.vendidos += taken;
-        target.ingreso += allocatedIncome;
-        target.costoVendido += allocatedCost;
-        target.ganancia += allocatedIncome - allocatedCost;
-      } else if (m.tipo === "rotos") {
-        target.rotos += taken;
-      } else if (m.tipo === "trizados") {
-        target.trizados += taken;
-      } else if (m.tipo === "ajuste_salida") {
-        target.ajustes += taken;
-      } else {
-        target.merma += taken;
-      }
-    });
-
-    // Consolidación final: por regla, solo puede haber UN lote activo por
-    // calidad (el más reciente) — el consumo (venta/merma/rotos/trizados)
-    // siempre apunta al último lote con stock, nunca a uno más viejo. Si por
-    // datos antiguos (previos a esta regla) quedó más de un lote "activo"
-    // para la misma calidad, se cierran todos menos el más nuevo y su stock
-    // restante se traspasa, igual que hace una transferencia explícita.
-    const porCalidad = {};
-    lots.forEach(l => {
-      if (!porCalidad[l.calidadId]) porCalidad[l.calidadId] = [];
-      porCalidad[l.calidadId].push(l);
-    });
-    Object.values(porCalidad).forEach(grupo => {
-      const ordenado = [...grupo].sort((a, b) =>
-        String(a.fechaIngreso).localeCompare(String(b.fechaIngreso)) || Number(a.id) - Number(b.id)
-      );
-      const vigente = ordenado[ordenado.length - 1];
-      ordenado.slice(0, -1).forEach(viejo => {
-        // BUG FIX: antes, si un lote viejo ya estaba "cerrado" (por una
-        // transferencia explícita), se saltaba por completo con este return
-        // — y sus estadísticas de consumo (ventas, merma, rotos, trizados,
-        // ajustes) que había acumulado ANTES de cerrarse se perdían para
-        // siempre, porque solo se traspasaba stock y costo. Ahora las
-        // estadísticas de consumo siempre se suman al lote vigente, esté
-        // cerrado o no; solo el traspaso de stock se salta si ya se hizo.
-        vigente.vendidos += viejo.vendidos;
-        vigente.ingreso += viejo.ingreso;
-        vigente.costoVendido += viejo.costoVendido;
-        vigente.ganancia += viejo.ganancia;
-        vigente.merma += viejo.merma;
-        vigente.rotos += viejo.rotos;
-        vigente.trizados += viejo.trizados;
-        vigente.ajustes += viejo.ajustes;
-        // Se dejan en 0 en el lote viejo para que su propia tarjeta (que
-        // sigue mostrándose, marcada como "cerrado") no duplique visualmente
-        // los mismos números que ahora también aparecen en el lote vigente.
-        viejo.vendidos = 0; viejo.ingreso = 0; viejo.costoVendido = 0; viejo.ganancia = 0;
-        viejo.merma = 0; viejo.rotos = 0; viejo.trizados = 0; viejo.ajustes = 0;
-        if (viejo.estado === "cerrado") return;
-        if (viejo.stockRestante > 0) {
-          vigente.costoTotal += viejo.stockRestante * viejo.costoUnitario;
-          vigente.stockRestante += viejo.stockRestante;
-          vigente.transferidoDesde += viejo.stockRestante;
-          const totalDisponibleLote = vigente.huevosIniciales + vigente.transferidoDesde;
-          vigente.costoUnitario = totalDisponibleLote > 0 ? vigente.costoTotal / totalDisponibleLote : vigente.costoUnitario;
-          viejo.stockRestante = 0;
-        }
-        viejo.estado = "cerrado";
-        viejo.transferidoA = vigente.id;
-      });
-    });
-
-    return lots.sort((a, b) => {
-      const aActivo = a.estado !== "cerrado" && a.stockRestante > 0;
-      const bActivo = b.estado !== "cerrado" && b.stockRestante > 0;
-      if (aActivo !== bActivo) return aActivo ? -1 : 1;
-      const byDate = String(b.fechaIngreso).localeCompare(String(a.fechaIngreso));
-      return byDate || Number(b.id) - Number(a.id);
-    });
-  }, [movements, inventory]);
+  const totalEggs = inventory.reduce((s, q) => s + stockDe(q), 0);
+  const totalBreakdown = eggBreakdown(totalEggs);
+  const inventoryCost = inventory.reduce((s, q) => s + (stockDe(q) / EGG_BOX_UNITS) * Number(q.costoCaja || 0), 0);
+  const inventorySaleValue = inventory.reduce((s, q) => s + (stockDe(q) / EGG_BOX_UNITS) * Number(q.precioCaja || 0), 0);
 
   const saleItems = inventory
     .map(q => {
@@ -744,6 +584,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       const precioFormato = Math.max(0, Number(formato === "caja" ? q.precioCaja : q.precioBandeja));
       return {
         ...q,
+        stockHuevos: stockDe(q),
         formato,
         cantidadFormatos,
         unidadesPorFormato,
@@ -986,7 +827,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     URL.revokeObjectURL(url);
   };
 
-  const chartData = inventory.map(q => ({ calidad: q.nombre, stock: q.stockHuevos, ventas: sales.filter(m => m.calidadId === q.id).reduce((s, m) => s + m.huevos, 0), roto: wastes.filter(m => m.calidadId === q.id).reduce((s, m) => s + m.huevos, 0) }));
+  const chartData = inventory.map(q => ({ calidad: q.nombre, stock: stockDe(q), ventas: sales.filter(m => m.calidadId === q.id).reduce((s, m) => s + m.huevos, 0), roto: wastes.filter(m => m.calidadId === q.id).reduce((s, m) => s + m.huevos, 0) }));
   const typeLabels = { entrada: "Entrada", venta: "Venta", merma: "Roto", rotos: "Roto", trizados: "Trizados", ajuste_entrada: "Ajuste +", ajuste_salida: "Ajuste -", transferencia: "Transferencia" };
   const typeColors = { entrada: D?"#4fae93":"#2f6f5e", venta: D?"#63c2a6":"#245a4c", merma: D?"#d97757":"#b3452f", rotos: D?"#d97757":"#b3452f", trizados: D?"#d9a857":"#b9852f", ajuste_entrada: D?"#8fb8ac":"#4a7a6b", ajuste_salida: D?"#d9a857":"#b9852f", transferencia: D?"#93998f":"#5b6660" };
 
@@ -1117,7 +958,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
           {inventory.map(q=>{
             const formato=saleCart[q.id]?.formato === "caja" ? "caja" : "bandeja";
             const qty=Math.max(0,Number(saleCart[q.id]?.cantidadFormatos||0));
-            const stock=Number(q.stockHuevos||0);
+            const stock=stockDe(q);
             const unitsPerFormat=formato === "caja" ? EGG_BOX_UNITS : EGG_TRAY_UNITS;
             const maxQty=Math.floor(stock/unitsPerFormat);
             const price=formato === "caja" ? Number(q.precioCaja||0) : Number(q.precioBandeja||0);
@@ -1171,11 +1012,11 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       </div>
       <div className="dashboard-charts" style={{ display:"grid", gridTemplateColumns:"1.5fr 1fr", gap:16 }}>
         <div style={card}><h3 style={{ margin:"0 0 16px", color:textPrimary, fontSize:14 }}>Stock por calidad (huevos)</h3><ResponsiveContainer width="100%" height={250}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke={borderColor}/><XAxis dataKey="calidad" tick={{ fill:textMuted, fontSize:11 }}/><YAxis tick={{ fill:textMuted, fontSize:11 }}/><Tooltip contentStyle={{ background:D?"#1d211d":"#fff", border:`1px solid ${borderColor}`, borderRadius:10 }}/><Bar dataKey="stock" fill={D?"#4fae93":"#2f6f5e"} radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></div>
-        <div style={card}><h3 style={{ margin:"0 0 14px", color:textPrimary, fontSize:14 }}>Estado por calidad</h3>{inventory.map(q => { const b=eggBreakdown(q.stockHuevos); const low=b.negativo || b.cajas<q.stockMinimoCajas; return <div key={q.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 0", borderBottom:`1px solid ${borderColor}` }}><div><p style={{ margin:0, color:textPrimary, fontWeight:700, fontSize:13 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:b.negativo?"#e03131":textMuted, fontSize:11, fontWeight:b.negativo?700:400 }}>{b.cajas} cajas · {b.bandejas} bandejas · {b.unidades} huevos{b.negativo?" (faltante)":""}</p></div><span className="badge" style={{ background:b.negativo?(D?"rgba(224,49,49,.18)":"#fff1f2"):low?(D?"rgba(217,119,87,.16)":"#fbeae4"):(D?"rgba(79,174,147,.16)":"#e4f0ec"), color:b.negativo?"#e03131":low?(D?"#d97757":"#b3452f"):(D?"#4fae93":"#2f6f5e") }}>{b.negativo?"Stock negativo":low?"Stock bajo":"Disponible"}</span></div>})}</div>
+        <div style={card}><h3 style={{ margin:"0 0 14px", color:textPrimary, fontSize:14 }}>Estado por calidad</h3>{inventory.map(q => { const b=eggBreakdown(stockDe(q)); const low=b.negativo || b.cajas<q.stockMinimoCajas; return <div key={q.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 0", borderBottom:`1px solid ${borderColor}` }}><div><p style={{ margin:0, color:textPrimary, fontWeight:700, fontSize:13 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:b.negativo?"#e03131":textMuted, fontSize:11, fontWeight:b.negativo?700:400 }}>{b.cajas} cajas · {b.bandejas} bandejas · {b.unidades} huevos{b.negativo?" (faltante)":""}</p></div><span className="badge" style={{ background:b.negativo?(D?"rgba(224,49,49,.18)":"#fff1f2"):low?(D?"rgba(217,119,87,.16)":"#fbeae4"):(D?"rgba(79,174,147,.16)":"#e4f0ec"), color:b.negativo?"#e03131":low?(D?"#d97757":"#b3452f"):(D?"#4fae93":"#2f6f5e") }}>{b.negativo?"Stock negativo":low?"Stock bajo":"Disponible"}</span></div>})}</div>
       </div>
     </>}
 
-    {tab === "inventario" && <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:14 }}>{inventory.map(q => { const b=eggBreakdown(q.stockHuevos); return <div key={q.id} style={{...card, borderRadius:20}} className="card-hover"><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}><div><p style={{ margin:0, color:textPrimary, fontSize:17, fontWeight:800 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:textMuted, fontSize:11 }}>Stock mínimo: {q.stockMinimoCajas} cajas</p></div><button onClick={() => openEditQuality(q)} style={{ width:34,height:34,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,cursor:"pointer",color:textSecondary }}><Pencil size={14}/></button></div><div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>{[["Cajas",b.cajas],["Bandejas",b.bandejas],["Sueltos",b.unidades]].map(([l,v])=><div key={l} style={{ background:bgCard2,borderRadius:12,padding:"10px 8px",textAlign:"center" }}><p style={{ margin:0,color:textMuted,fontSize:10 }}>{l}</p><p style={{ margin:"4px 0 0",color:b.negativo?"#e03131":textPrimary,fontWeight:800,fontSize:18 }}>{v}</p></div>)}</div>{b.negativo && <p style={{margin:"-8px 0 12px",color:"#e03131",fontSize:11,fontWeight:700}}>⚠️ Stock negativo: se vendió más de lo disponible.</p>}<div style={{ borderTop:`1px solid ${borderColor}`, paddingTop:12, marginBottom:12 }}><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Costo caja: <strong style={{color:textPrimary}}>{fmt(q.costoCaja)}</strong></p><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Venta caja: <strong style={{color:D?"#4fae93":"#2f6f5e"}}>{fmt(q.precioCaja)}</strong></p><p style={{ margin:0, color:textSecondary,fontSize:12 }}>Venta bandeja: <strong style={{color:D?"#4fae93":"#2f6f5e"}}>{fmt(q.precioBandeja)}</strong></p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><button onClick={()=>openQuickAction("venta",q)} className="btn-primary" style={{padding:"10px",borderRadius:11,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><ShoppingCart size={14}/> Vender</button><button onClick={()=>openQuickAction("entrada",q)} style={{padding:"10px",borderRadius:11,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/> Entrada</button></div><button onClick={() => { setTab("lotes"); setLoteFiltro(q.id); }} style={{ width:"100%", padding:"9px", borderRadius:10, border:`1px solid ${borderColor2}`, background:"transparent", color:textMuted, cursor:"pointer", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Ver detalle <ChevronRight size={13}/></button></div>})}</div>}
+    {tab === "inventario" && <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:14 }}>{inventory.map(q => { const b=eggBreakdown(stockDe(q)); return <div key={q.id} style={{...card, borderRadius:20}} className="card-hover"><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}><div><p style={{ margin:0, color:textPrimary, fontSize:17, fontWeight:800 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:textMuted, fontSize:11 }}>Stock mínimo: {q.stockMinimoCajas} cajas</p></div><button onClick={() => openEditQuality(q)} style={{ width:34,height:34,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,cursor:"pointer",color:textSecondary }}><Pencil size={14}/></button></div><div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>{[["Cajas",b.cajas],["Bandejas",b.bandejas],["Sueltos",b.unidades]].map(([l,v])=><div key={l} style={{ background:bgCard2,borderRadius:12,padding:"10px 8px",textAlign:"center" }}><p style={{ margin:0,color:textMuted,fontSize:10 }}>{l}</p><p style={{ margin:"4px 0 0",color:b.negativo?"#e03131":textPrimary,fontWeight:800,fontSize:18 }}>{v}</p></div>)}</div>{b.negativo && <p style={{margin:"-8px 0 12px",color:"#e03131",fontSize:11,fontWeight:700}}>⚠️ Stock negativo: se vendió más de lo disponible.</p>}<div style={{ borderTop:`1px solid ${borderColor}`, paddingTop:12, marginBottom:12 }}><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Costo caja: <strong style={{color:textPrimary}}>{fmt(q.costoCaja)}</strong></p><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Venta caja: <strong style={{color:D?"#4fae93":"#2f6f5e"}}>{fmt(q.precioCaja)}</strong></p><p style={{ margin:0, color:textSecondary,fontSize:12 }}>Venta bandeja: <strong style={{color:D?"#4fae93":"#2f6f5e"}}>{fmt(q.precioBandeja)}</strong></p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><button onClick={()=>openQuickAction("venta",q)} className="btn-primary" style={{padding:"10px",borderRadius:11,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><ShoppingCart size={14}/> Vender</button><button onClick={()=>openQuickAction("entrada",q)} style={{padding:"10px",borderRadius:11,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/> Entrada</button></div><button onClick={() => { setTab("lotes"); setLoteFiltro(q.id); }} style={{ width:"100%", padding:"9px", borderRadius:10, border:`1px solid ${borderColor2}`, background:"transparent", color:textMuted, cursor:"pointer", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Ver detalle <ChevronRight size={13}/></button></div>})}</div>}
 
     {tab === "lotes" && <div style={{display:"grid",gap:14}}>
       {loteFiltro && <div style={{display:"flex",alignItems:"center",gap:8}}><span className="badge" style={{background:D?"rgba(79,174,147,.16)":"#e4f0ec",color:D?"#4fae93":"#2f6f5e"}}>Filtrando por: {inventory.find(q=>q.id===loteFiltro)?.nombre || loteFiltro}</span><button onClick={()=>setLoteFiltro(null)} style={{background:"none",border:"none",color:textMuted,cursor:"pointer",fontSize:12,fontWeight:700}}>Quitar filtro</button></div>}
@@ -1343,7 +1184,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   const calidadId=e.target.value;
   const calidad=inventory.find(q=>q.id===calidadId);
   setForm(f=>({ ...f, calidadId, precioUnitarioVenta:f.tipo==="venta"?String(calidad?.precioVentaUnitario||""):f.precioUnitarioVenta }));
-}} style={{...inp,marginTop:6}}>{inventory.map(q=><option key={q.id} value={q.id}>{q.nombre}</option>)}</select></label></div>{form.tipo!=="venta"&&<><div style={{marginTop:12}}><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>{isUnitLoss?"Cantidad de huevos unitarios":"Cantidad de huevos"}</label><div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)-quantityStep)} style={{width:40,height:40,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textPrimary,fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>−</button><input type="number" min="0" step={quantityStep} value={form.cantidad} onChange={e=>updateEggQuantity(e.target.value)} style={{...inp,textAlign:"center",padding:"10px 4px",flex:1,minWidth:0,fontSize:18,fontWeight:800}}/><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+quantityStep)} style={{width:40,height:40,borderRadius:10,border:"none",background:D?"#4fae93":"#2f6f5e",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>+</button></div><div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>{[...(isUnitLoss?[["+1 huevo",1]]:[]),["+1 bandeja",30],["+1 caja",180]].map(([l,q])=><button key={l} type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+q)} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div></div><div style={{marginTop:12,padding:12,borderRadius:10,background:bgCard2,color:textSecondary,fontSize:12}}>Total del movimiento: <strong style={{color:textPrimary}}>{formUnits.toLocaleString("es-CL")} huevos</strong> · Stock actual: {selectedQuality?.stockHuevos.toLocaleString("es-CL")}</div></>}{form.tipo==="entrada"&&<div style={{marginTop:12,padding:14,borderRadius:12,background:D?"rgba(79,174,147,.12)":"#e4f0ec",border:`1.5px solid ${D?"#4fae9355":"#bcdccf"}`}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><DollarSign size={16} color={D?"#4fae93":"#2f6f5e"}/><strong style={{color:textPrimary,fontSize:13}}>Costo y venta (según configuración)</strong></div><p style={{margin:"0 0 12px",color:textMuted,fontSize:11}}>El costo y el precio de venta se toman de la configuración de "{selectedQuality?.nombre}" (botón ✎ en Inventario). Si ya hay un lote activo con la misma fecha, se suma a él; si es de otra fecha, ese lote se cierra y su stock pasa al nuevo.</p><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha de ingreso del lote<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label>{purchaseUnitValue<=0||saleUnitValue<=0?<p style={{margin:0,color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>Falta configurar el costo por caja y/o el precio de venta de esta categoría (botón ✎ en Inventario).</p>:formUnits>0&&<div style={{padding:"10px 12px",borderRadius:10,background:D?"#242923":"#fff",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:12,color:textSecondary,fontSize:11}}><div><span>{formUnits.toLocaleString("es-CL")} huevos × {fmt(purchaseUnitValue)}</span><strong style={{display:"block",marginTop:4,color:textPrimary}}>{fmt(purchaseTotal)} (Costo)</strong></div><div><span>{formUnits.toLocaleString("es-CL")} huevos × {fmt(saleUnitValue)}</span><strong style={{display:"block",marginTop:4,color:textPrimary}}>{fmt(expectedSaleTotal)} (Venta esperada)</strong></div><div><span>Ganancia por huevo: <strong>{fmt(saleUnitValue-purchaseUnitValue)}</strong></span><strong style={{display:"block",marginTop:4,color:expectedProfit>=0?(D?"#4fae93":"#2f6f5e"):(D?"#d97757":"#b3452f")}}>Ganancia estimada: {fmt(expectedProfit)}</strong><span style={{display:"block",marginTop:4,color:D?"#63c2a6":"#245a4c"}}>Incremento: {expectedMargin.toFixed(2)}%</span></div></div>}</div>}{form.tipo==="venta"&&<div style={{marginTop:12}}><div style={{padding:14,borderRadius:12,background:D?"rgba(87,150,217,.12)":"#e4eefb",border:`1.5px solid ${D?"#5796d955":"#c7dcf5"}`,display:"flex",gap:10,alignItems:"flex-start",marginBottom:14}}><DollarSign size={16} color={D?"#5796d9":"#2f5f8f"} style={{marginTop:1,flexShrink:0}}/><p style={{margin:0,color:textPrimary,fontSize:12.5,lineHeight:1.5}}>Al crear la venta se descontarán las unidades seleccionadas de tu inventario.</p></div><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha del movimiento<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>Cantidad de huevos (30 o 180) *</label><div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)-30)} style={{width:40,height:40,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textPrimary,fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>−</button><input type="number" min="0" step="30" value={form.cantidad} readOnly style={{...inp,textAlign:"center",padding:"10px 4px",flex:1,minWidth:0,fontSize:18,fontWeight:800,cursor:"default"}}/><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+30)} style={{width:40,height:40,borderRadius:10,border:"none",background:D?"#4fae93":"#2f6f5e",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>+</button></div></div><div><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>Precio unitario *</label><div style={{marginTop:6,display:"flex",alignItems:"center",gap:4,...inp,padding:"4px 10px"}}><span style={{color:textMuted,fontSize:14}}>$</span><input type="number" min="0" value={form.precioUnitarioVenta} onChange={e=>setForm({...form,precioUnitarioVenta:e.target.value})} style={{border:"none",outline:"none",background:"transparent",color:textPrimary,fontSize:16,fontWeight:700,width:"100%",padding:"8px 0",fontFamily:"inherit"}}/></div></div></div><div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>{[["+1 bandeja",30],["+1 caja",180]].map(([l,q])=><button key={q} type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+q)} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>{formUnits>0&&<p style={{margin:"14px 0 0",color:textSecondary,fontSize:13}}>Precio por {formUnits.toLocaleString("es-CL")} unidades: <strong style={{color:textPrimary}}>{fmt(saleGross)}</strong></p>}<div style={{marginTop:14}}><label style={{display:"block",fontSize:12,color:textSecondary,fontWeight:800,marginBottom:8}}>Método de pago</label><div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>{[{id:"efectivo",label:"Efectivo",Icon:Banknote},{id:"tarjeta",label:"Tarjeta",Icon:CreditCard},{id:"transferencia",label:"Transferencia",Icon:Landmark}].map(({id,label,Icon})=>{const active=form.metodoPago===id;return <button key={id} type="button" onClick={()=>setForm({...form,metodoPago:id})} style={{padding:"10px 5px",borderRadius:11,border:`1.5px solid ${active?(D?"#63c2a6":"#245a4c"):borderColor2}`,background:active?(D?"rgba(99,194,166,.14)":"#e3f3ed"):bgCard2,color:active?(D?"#63c2a6":"#245a4c"):textSecondary,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:800,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}><Icon size={18}/>{label}</button>})}</div></div><label style={{display:"block",marginTop:12,fontSize:11,color:textSecondary,fontWeight:700}}>Descuento (opcional)<input type="number" min="0" value={form.descuento} onChange={e=>setForm({...form,descuento:e.target.value})} style={{...inp,marginTop:6}}/></label>{ventaUnitPrice<=0?<p style={{margin:"12px 0 0",color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>Ingresa un precio unitario para continuar.</p>:<div style={{marginTop:12,padding:"12px 14px",borderRadius:10,background:D?"#242923":"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><p style={{margin:0,color:textMuted,fontSize:11}}>{formUnits.toLocaleString("es-CL")} huevos × {fmt(ventaUnitPrice)}{saleDiscount>0?` · Descuento: -${fmt(saleDiscount)}`:""}</p><p style={{margin:"4px 0 0",color:textPrimary,fontSize:13,fontWeight:700}}>Total de la venta</p></div><strong style={{fontSize:22,color:D?"#4fae93":"#2f6f5e"}}>{fmt(saleTotal)}</strong></div>}</div>}{["rotos","trizados"].includes(form.tipo)&&<div style={{marginTop:12,padding:14,borderRadius:12,background:D?"rgba(217,119,87,.12)":"#fbeae4",border:`1.5px solid ${D?"#d9775755":"#f0d3c7"}`}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><TrendingDown size={16} color={D?"#d97757":"#b3452f"}/><strong style={{color:textPrimary,fontSize:13}}>{form.tipo==="trizados"?"Datos de huevos trizados":"Datos de huevos rotos"}</strong></div><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha del movimiento<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label><label style={{display:"block",fontSize:11,color:textSecondary,fontWeight:700,marginBottom:6}}>Motivo rápido</label><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{[form.tipo==="trizados"?"Huevos trizados":"Roto","Otro"].map(op=><button key={op} type="button" onClick={()=>setForm(f=>({...f,motivo:op}))} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${form.motivo===op?(D?"#d97757":"#b3452f"):borderColor2}`,background:form.motivo===op?(D?"rgba(217,119,87,.16)":"#fbeae4"):bgCard2,color:form.motivo===op?(D?"#d97757":"#b3452f"):textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{op}</button>)}</div></div>}<label style={{display:"block",marginTop:12,fontSize:12,color:textSecondary,fontWeight:700}}>Motivo<input value={form.motivo} onChange={e=>setForm({...form,motivo:e.target.value})} style={{...inp,marginTop:6}}/></label><label style={{display:"block",marginTop:12,fontSize:12,color:textSecondary,fontWeight:700}}>Observaciones<textarea value={form.observaciones} onChange={e=>setForm({...form,observaciones:e.target.value})} style={{...inp,marginTop:6,minHeight:70,resize:"vertical"}}/></label>{error&&<p style={{margin:"10px 0 0",color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>{error}</p>}<div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setShowMovement(false)} style={{flex:1,padding:11,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontWeight:700}}>Cancelar</button><button onClick={registerMovement} disabled={guardandoMov} className="btn-primary" style={{flex:1,padding:11,borderRadius:10,opacity:guardandoMov?.6:1,cursor:guardandoMov?"not-allowed":"pointer"}}>{guardandoMov?"Guardando...":(form.tipo==="venta"?"Registrar venta":"Guardar movimiento")}</button></div></div></div>}
+}} style={{...inp,marginTop:6}}>{inventory.map(q=><option key={q.id} value={q.id}>{q.nombre}</option>)}</select></label></div>{form.tipo!=="venta"&&<><div style={{marginTop:12}}><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>{isUnitLoss?"Cantidad de huevos unitarios":"Cantidad de huevos"}</label><div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)-quantityStep)} style={{width:40,height:40,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textPrimary,fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>−</button><input type="number" min="0" step={quantityStep} value={form.cantidad} onChange={e=>updateEggQuantity(e.target.value)} style={{...inp,textAlign:"center",padding:"10px 4px",flex:1,minWidth:0,fontSize:18,fontWeight:800}}/><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+quantityStep)} style={{width:40,height:40,borderRadius:10,border:"none",background:D?"#4fae93":"#2f6f5e",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>+</button></div><div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>{[...(isUnitLoss?[["+1 huevo",1]]:[]),["+1 bandeja",30],["+1 caja",180]].map(([l,q])=><button key={l} type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+q)} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div></div><div style={{marginTop:12,padding:12,borderRadius:10,background:bgCard2,color:textSecondary,fontSize:12}}>Total del movimiento: <strong style={{color:textPrimary}}>{formUnits.toLocaleString("es-CL")} huevos</strong> · Stock actual: {stockDe(selectedQuality).toLocaleString("es-CL")}</div></>}{form.tipo==="entrada"&&<div style={{marginTop:12,padding:14,borderRadius:12,background:D?"rgba(79,174,147,.12)":"#e4f0ec",border:`1.5px solid ${D?"#4fae9355":"#bcdccf"}`}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><DollarSign size={16} color={D?"#4fae93":"#2f6f5e"}/><strong style={{color:textPrimary,fontSize:13}}>Costo y venta (según configuración)</strong></div><p style={{margin:"0 0 12px",color:textMuted,fontSize:11}}>El costo y el precio de venta se toman de la configuración de "{selectedQuality?.nombre}" (botón ✎ en Inventario). Si ya hay un lote activo con la misma fecha, se suma a él; si es de otra fecha, ese lote se cierra y su stock pasa al nuevo.</p><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha de ingreso del lote<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label>{purchaseUnitValue<=0||saleUnitValue<=0?<p style={{margin:0,color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>Falta configurar el costo por caja y/o el precio de venta de esta categoría (botón ✎ en Inventario).</p>:formUnits>0&&<div style={{padding:"10px 12px",borderRadius:10,background:D?"#242923":"#fff",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:12,color:textSecondary,fontSize:11}}><div><span>{formUnits.toLocaleString("es-CL")} huevos × {fmt(purchaseUnitValue)}</span><strong style={{display:"block",marginTop:4,color:textPrimary}}>{fmt(purchaseTotal)} (Costo)</strong></div><div><span>{formUnits.toLocaleString("es-CL")} huevos × {fmt(saleUnitValue)}</span><strong style={{display:"block",marginTop:4,color:textPrimary}}>{fmt(expectedSaleTotal)} (Venta esperada)</strong></div><div><span>Ganancia por huevo: <strong>{fmt(saleUnitValue-purchaseUnitValue)}</strong></span><strong style={{display:"block",marginTop:4,color:expectedProfit>=0?(D?"#4fae93":"#2f6f5e"):(D?"#d97757":"#b3452f")}}>Ganancia estimada: {fmt(expectedProfit)}</strong><span style={{display:"block",marginTop:4,color:D?"#63c2a6":"#245a4c"}}>Incremento: {expectedMargin.toFixed(2)}%</span></div></div>}</div>}{form.tipo==="venta"&&<div style={{marginTop:12}}><div style={{padding:14,borderRadius:12,background:D?"rgba(87,150,217,.12)":"#e4eefb",border:`1.5px solid ${D?"#5796d955":"#c7dcf5"}`,display:"flex",gap:10,alignItems:"flex-start",marginBottom:14}}><DollarSign size={16} color={D?"#5796d9":"#2f5f8f"} style={{marginTop:1,flexShrink:0}}/><p style={{margin:0,color:textPrimary,fontSize:12.5,lineHeight:1.5}}>Al crear la venta se descontarán las unidades seleccionadas de tu inventario.</p></div><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha del movimiento<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>Cantidad de huevos (30 o 180) *</label><div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)-30)} style={{width:40,height:40,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textPrimary,fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>−</button><input type="number" min="0" step="30" value={form.cantidad} readOnly style={{...inp,textAlign:"center",padding:"10px 4px",flex:1,minWidth:0,fontSize:18,fontWeight:800,cursor:"default"}}/><button type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+30)} style={{width:40,height:40,borderRadius:10,border:"none",background:D?"#4fae93":"#2f6f5e",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",flexShrink:0}}>+</button></div></div><div><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>Precio unitario *</label><div style={{marginTop:6,display:"flex",alignItems:"center",gap:4,...inp,padding:"4px 10px"}}><span style={{color:textMuted,fontSize:14}}>$</span><input type="number" min="0" value={form.precioUnitarioVenta} onChange={e=>setForm({...form,precioUnitarioVenta:e.target.value})} style={{border:"none",outline:"none",background:"transparent",color:textPrimary,fontSize:16,fontWeight:700,width:"100%",padding:"8px 0",fontFamily:"inherit"}}/></div></div></div><div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>{[["+1 bandeja",30],["+1 caja",180]].map(([l,q])=><button key={q} type="button" onClick={()=>updateEggQuantity(Number(form.cantidad||0)+q)} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>{formUnits>0&&<p style={{margin:"14px 0 0",color:textSecondary,fontSize:13}}>Precio por {formUnits.toLocaleString("es-CL")} unidades: <strong style={{color:textPrimary}}>{fmt(saleGross)}</strong></p>}<div style={{marginTop:14}}><label style={{display:"block",fontSize:12,color:textSecondary,fontWeight:800,marginBottom:8}}>Método de pago</label><div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>{[{id:"efectivo",label:"Efectivo",Icon:Banknote},{id:"tarjeta",label:"Tarjeta",Icon:CreditCard},{id:"transferencia",label:"Transferencia",Icon:Landmark}].map(({id,label,Icon})=>{const active=form.metodoPago===id;return <button key={id} type="button" onClick={()=>setForm({...form,metodoPago:id})} style={{padding:"10px 5px",borderRadius:11,border:`1.5px solid ${active?(D?"#63c2a6":"#245a4c"):borderColor2}`,background:active?(D?"rgba(99,194,166,.14)":"#e3f3ed"):bgCard2,color:active?(D?"#63c2a6":"#245a4c"):textSecondary,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:800,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}><Icon size={18}/>{label}</button>})}</div></div><label style={{display:"block",marginTop:12,fontSize:11,color:textSecondary,fontWeight:700}}>Descuento (opcional)<input type="number" min="0" value={form.descuento} onChange={e=>setForm({...form,descuento:e.target.value})} style={{...inp,marginTop:6}}/></label>{ventaUnitPrice<=0?<p style={{margin:"12px 0 0",color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>Ingresa un precio unitario para continuar.</p>:<div style={{marginTop:12,padding:"12px 14px",borderRadius:10,background:D?"#242923":"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><p style={{margin:0,color:textMuted,fontSize:11}}>{formUnits.toLocaleString("es-CL")} huevos × {fmt(ventaUnitPrice)}{saleDiscount>0?` · Descuento: -${fmt(saleDiscount)}`:""}</p><p style={{margin:"4px 0 0",color:textPrimary,fontSize:13,fontWeight:700}}>Total de la venta</p></div><strong style={{fontSize:22,color:D?"#4fae93":"#2f6f5e"}}>{fmt(saleTotal)}</strong></div>}</div>}{["rotos","trizados"].includes(form.tipo)&&<div style={{marginTop:12,padding:14,borderRadius:12,background:D?"rgba(217,119,87,.12)":"#fbeae4",border:`1.5px solid ${D?"#d9775755":"#f0d3c7"}`}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><TrendingDown size={16} color={D?"#d97757":"#b3452f"}/><strong style={{color:textPrimary,fontSize:13}}>{form.tipo==="trizados"?"Datos de huevos trizados":"Datos de huevos rotos"}</strong></div><label style={{display:"block",marginBottom:12,fontSize:11,color:textSecondary,fontWeight:700}}>Fecha del movimiento<input type="date" value={form.fechaIngreso} onChange={e=>setForm({...form,fechaIngreso:e.target.value})} style={{...inp,marginTop:6}}/></label><label style={{display:"block",fontSize:11,color:textSecondary,fontWeight:700,marginBottom:6}}>Motivo rápido</label><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{[form.tipo==="trizados"?"Huevos trizados":"Roto","Otro"].map(op=><button key={op} type="button" onClick={()=>setForm(f=>({...f,motivo:op}))} style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${form.motivo===op?(D?"#d97757":"#b3452f"):borderColor2}`,background:form.motivo===op?(D?"rgba(217,119,87,.16)":"#fbeae4"):bgCard2,color:form.motivo===op?(D?"#d97757":"#b3452f"):textSecondary,fontSize:12,fontWeight:700,cursor:"pointer"}}>{op}</button>)}</div></div>}<label style={{display:"block",marginTop:12,fontSize:12,color:textSecondary,fontWeight:700}}>Motivo<input value={form.motivo} onChange={e=>setForm({...form,motivo:e.target.value})} style={{...inp,marginTop:6}}/></label><label style={{display:"block",marginTop:12,fontSize:12,color:textSecondary,fontWeight:700}}>Observaciones<textarea value={form.observaciones} onChange={e=>setForm({...form,observaciones:e.target.value})} style={{...inp,marginTop:6,minHeight:70,resize:"vertical"}}/></label>{error&&<p style={{margin:"10px 0 0",color:D?"#d97757":"#b3452f",fontSize:12,fontWeight:700}}>{error}</p>}<div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setShowMovement(false)} style={{flex:1,padding:11,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontWeight:700}}>Cancelar</button><button onClick={registerMovement} disabled={guardandoMov} className="btn-primary" style={{flex:1,padding:11,borderRadius:10,opacity:guardandoMov?.6:1,cursor:guardandoMov?"not-allowed":"pointer"}}>{guardandoMov?"Guardando...":(form.tipo==="venta"?"Registrar venta":"Guardar movimiento")}</button></div></div></div>}
 
     {showEdit && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250}}><div className="mobile-modal" style={{...card,width:430}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h3 style={{margin:0,color:textPrimary}}>Configurar {editForm.nombre}</h3><button onClick={()=>setShowEdit(null)} style={{border:"none",background:bgCard2,color:textMuted,width:32,height:32,borderRadius:8,cursor:"pointer"}}><X size={15}/></button></div>{[["Costo por caja","costoCaja"],["Precio venta unitario (por huevo)","precioVentaUnitario"],["Incremento sobre costo (%)","incrementoPct"],["Stock mínimo (cajas)","stockMinimoCajas"]].map(([l,k])=><label key={k} style={{display:"block",marginBottom:12,fontSize:12,color:textSecondary,fontWeight:700}}>{l}<input type="number" min="0" value={editForm[k] ?? 0} onChange={e=>setEditForm({...editForm,[k]:e.target.value})} style={{...inp,marginTop:6}}/></label>)}<button onClick={saveQuality} className="btn-primary" style={{width:"100%",padding:11,borderRadius:10}}>Guardar configuración</button></div></div>}
 
