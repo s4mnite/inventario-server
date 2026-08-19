@@ -11,7 +11,7 @@ import {
   Eye, EyeOff, UserPlus, Edit3, Download, Star, TrendingDown, Award, Activity,
   Smile, Calendar, FileText, Ban, CheckCircle, Mail, Clock, Moon, Sun, RefreshCw,
   Receipt, Zap, Send, AlertCircle, ExternalLink, Printer, Building2,
-  TrendingUp, Layers, Scan, Menu, ChevronLeft, Egg,
+  TrendingUp, Layers, Scan, Menu, ChevronLeft, Egg, Split,
 } from "lucide-react";
 
 import EggModule from "./HuevosModule";
@@ -918,6 +918,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
     "Crédito":       "CRÉDITO",
     "Transferencia": "TRANSFERENCIA",
     "MercadoPago":   "MERCADOPAGO",
+    "Mixto":         "EFECTIVO + TRANSFERENCIA",
   }[boleta.metodoPago] || (boleta.metodoPago || "").toUpperCase();
 
   const ticketCSS = `
@@ -1043,10 +1044,23 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
               <span>FORMA DE PAGO:</span>
               <span style={{ fontWeight: 700 }}>{metodoPagoLabel}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-              <span>MONTO PAGADO:</span>
-              <span>${(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
-            </div>
+            {boleta.metodoPago === "Mixto" ? (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span>EFECTIVO:</span>
+                  <span>${Number(boleta.montoEfectivo || 0).toLocaleString("es-CL")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span>TRANSFERENCIA:</span>
+                  <span>${Number(boleta.montoTransferencia || 0).toLocaleString("es-CL")}</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                <span>MONTO PAGADO:</span>
+                <span>${(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
+              </div>
+            )}
             {boleta.vuelto > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span>VUELTO:</span>
@@ -1669,6 +1683,7 @@ export default function App() {
   const [modoManga, setModoManga] = useState(false);
   const [pago, setPago] = useState("Efectivo");
   const [dineroRecibido, setDineroRecibido] = useState("");
+  const [montoEfectivoMixto, setMontoEfectivoMixto] = useState("");
   const [ventaError, setVentaError] = useState("");
   const [ventaExito, setVentaExito] = useState("");
   const [filtroPago, setFiltroPago] = useState("Todos");
@@ -2742,17 +2757,49 @@ export default function App() {
     });
   };
 
+  // Permite sobreescribir el total a cobrar por una calidad de huevos en la
+  // venta actual (igual que el "precio manual" de productos del carrito).
+  const alternarPrecioManualHuevo = (qualityId) => {
+    setFreeEggCart(prev => {
+      const current = prev[qualityId] || { formato: "bandeja", cantidad: 0 };
+      if (current.precioManualActivo) {
+        const { precioManualActivo, precioManualTotal, ...resto } = current;
+        return { ...prev, [qualityId]: resto };
+      }
+      const q = freeEggInventory.find(x => String(x.id) === String(qualityId));
+      const formato = current.formato === "caja" ? "caja" : "bandeja";
+      const cantidad = Math.max(0, Number(current.cantidad || 0));
+      const precioActual = Number(formato === "caja" ? q?.precioCaja : q?.precioBandeja) || 0;
+      return {
+        ...prev,
+        [qualityId]: { ...current, precioManualActivo: true, precioManualTotal: String(Math.round(cantidad * precioActual)) },
+      };
+    });
+  };
+
+  const cambiarPrecioManualHuevo = (qualityId, valor) => {
+    const limpio = String(valor ?? "").replace(/[^0-9]/g, "");
+    setFreeEggCart(prev => {
+      const current = prev[qualityId] || { formato: "bandeja", cantidad: 0 };
+      return { ...prev, [qualityId]: { ...current, precioManualActivo: true, precioManualTotal: limpio } };
+    });
+  };
+
   const freeEggItems = freeEggInventory.map(q => {
     const row = freeEggCart[q.id] || { formato: "bandeja", cantidad: 0 };
     const formato = row.formato === "caja" ? "caja" : "bandeja";
     const cantidad = Math.max(0, Number(row.cantidad || 0));
     const unidadesPorFormato = formato === "caja" ? 180 : 30;
     const precioFormato = Number(formato === "caja" ? q.precioCaja : q.precioBandeja) || 0;
+    const precioManualActivo = Boolean(row.precioManualActivo);
+    const subtotal = precioManualActivo ? Number(row.precioManualTotal || 0) : cantidad * precioFormato;
+    const precioEfectivo = cantidad > 0 ? subtotal / cantidad : precioFormato;
     return {
       tipoItem: "huevo", calidadId: q.id, calidad: q.nombre, nombre: `Huevos ${q.nombre} · ${formato}`,
       formato, cantidadFormatos: cantidad, cantidad, unidadesPorFormato, huevos: cantidad * unidadesPorFormato,
-      precio: precioFormato, subtotal: cantidad * precioFormato, costoCaja: Number(q.costoCaja || 0),
+      precio: precioEfectivo, subtotal, costoCaja: Number(q.costoCaja || 0),
       precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: stockDeHuevo(q),
+      precioManualActivo, precioManualTotal: row.precioManualTotal ?? "",
     };
   }).filter(item => item.cantidadFormatos > 0);
 
@@ -2866,6 +2913,9 @@ export default function App() {
   const totalHuevosLibre = saleFlowType === "free" ? freeEggItems.reduce((s, c) => s + c.subtotal, 0) : 0;
   const totalCarrito = totalProductosCarrito + totalHuevosLibre;
   const vuelto = dineroRecibido !== "" ? (+dineroRecibido - totalCarrito) : null;
+  // Pago mixto: parte en efectivo, el resto por transferencia (se calcula solo).
+  const montoEfectivoMixtoNum = montoEfectivoMixto !== "" ? Math.max(0, +montoEfectivoMixto) : 0;
+  const montoTransferenciaMixto = Math.max(0, totalCarrito - montoEfectivoMixtoNum);
 
   // ── Flujo de pago completo: Efectivo/Transferencia ──
   const handleVentaDirecta = async () => {
@@ -2890,6 +2940,12 @@ export default function App() {
       return;
     }
 
+    const eggManualInvalido = freeEggItems.find(item => item.precioManualActivo && !(Number(item.precioManualTotal) > 0));
+    if (eggManualInvalido) {
+      setVentaError(`Ingresa un precio manual válido para ${eggManualInvalido.calidad}.`);
+      return;
+    }
+
     const clienteSeleccionado = clientes.find(c => String(c.id) === String(clienteVentaId)) || null;
     if (requiereFactura && !clienteSeleccionado) {
       setVentaError("Selecciona un cliente para emitir la factura.");
@@ -2902,6 +2958,11 @@ export default function App() {
 
     if (pago === "Efectivo" && dineroRecibido !== "" && +dineroRecibido < totalCarrito) {
       setVentaError("El dinero recibido es menor al total.");
+      return;
+    }
+
+    if (pago === "Mixto" && montoEfectivoMixtoNum > totalCarrito) {
+      setVentaError("El monto en efectivo no puede superar el total a pagar.");
       return;
     }
 
@@ -2923,6 +2984,8 @@ export default function App() {
       pago,
       dineroRecibido: dineroRecibido !== "" ? +dineroRecibido : totalCarrito,
       vuelto: vuelto !== null && vuelto > 0 ? vuelto : 0,
+      montoEfectivo: pago === "Mixto" ? montoEfectivoMixtoNum : (pago === "Efectivo" ? totalCarrito : 0),
+      montoTransferencia: pago === "Mixto" ? montoTransferenciaMixto : 0,
       fecha: ahora.toLocaleString("es-CL"),
       timestamp: ahora.getTime(),
       usuario: currentUser.nombre,
@@ -2955,6 +3018,8 @@ export default function App() {
       cajaId: cajaData.id,
       dineroRecibido: venta.dineroRecibido,
       vuelto: venta.vuelto,
+      montoEfectivo: venta.montoEfectivo,
+      montoTransferencia: venta.montoTransferencia,
       empresa: empresaCaja,
     };
 
@@ -3033,6 +3098,7 @@ export default function App() {
       if (Array.isArray(data.eggInventory)) setFreeEggInventory(data.eggInventory);
       setDineroRecibido("");
       setPago("Efectivo");
+      setMontoEfectivoMixto("");
       if (clienteSeleccionado) {
         const clientesActualizados = clientes.map(c => String(c.id) === String(clienteSeleccionado.id)
           ? { ...c, compras: Number(c.compras || 0) + 1, totalGastado: Number(c.totalGastado || 0) + totalCarrito, ultimaCompra: ahora.toISOString() }
@@ -3102,32 +3168,46 @@ export default function App() {
   const anioActual = ahora.getFullYear();
   const mesNombre = ahora.toLocaleString("es-CL", { month: "long", year: "numeric" });
 
-  const ventasMes = ventas.filter(v => {
+  const ventasMes = useMemo(() => ventas.filter(v => {
     if (v.timestamp) { const d = new Date(v.timestamp); return d.getMonth() === mesActual && d.getFullYear() === anioActual; }
     return true;
-  });
-  const totalMes = ventasMes.reduce((s, v) => s + v.total, 0);
-  const totalMesEfectivo = ventasMes.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0);
-  const totalMesDebito = ventasMes.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0);
-  const totalMesCredito = ventasMes.filter(v => v.pago === "Crédito").reduce((s, v) => s + v.total, 0);
-  const totalMesTransferencia = ventasMes.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
-  const ticketPromedio = ventasMes.length > 0 ? Math.round(totalMes / ventasMes.length) : 0;
+  }), [ventas, mesActual, anioActual]);
 
-  const productosVendidosMap = {};
-  ventasMes.forEach(v => {
-    (v.items || []).forEach(item => {
-      if (!productosVendidosMap[item.nombre]) productosVendidosMap[item.nombre] = { nombre: item.nombre, img: item.img || "📦", cantidad: 0, ingresos: 0 };
-      productosVendidosMap[item.nombre].cantidad += item.cantidad;
-      productosVendidosMap[item.nombre].ingresos += item.subtotal;
+  const { totalMes, totalMesEfectivo, totalMesDebito, totalMesCredito, totalMesTransferencia, ticketPromedio } = useMemo(() => {
+    const totalMes = ventasMes.reduce((s, v) => s + v.total, 0);
+    const totalMesEfectivo = ventasMes.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
+      + ventasMes.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
+    const totalMesDebito = ventasMes.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0);
+    const totalMesCredito = ventasMes.filter(v => v.pago === "Crédito").reduce((s, v) => s + v.total, 0);
+    const totalMesTransferencia = ventasMes.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
+      + ventasMes.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    const ticketPromedio = ventasMes.length > 0 ? Math.round(totalMes / ventasMes.length) : 0;
+    return { totalMes, totalMesEfectivo, totalMesDebito, totalMesCredito, totalMesTransferencia, ticketPromedio };
+  }, [ventasMes]);
+
+  const { productosVendidosMap, productosMasVendidos } = useMemo(() => {
+    const productosVendidosMap = {};
+    ventasMes.forEach(v => {
+      (v.items || []).forEach(item => {
+        if (!productosVendidosMap[item.nombre]) productosVendidosMap[item.nombre] = { nombre: item.nombre, img: item.img || "📦", cantidad: 0, ingresos: 0 };
+        productosVendidosMap[item.nombre].cantidad += item.cantidad;
+        productosVendidosMap[item.nombre].ingresos += item.subtotal;
+      });
     });
-  });
-  const productosMasVendidos = Object.values(productosVendidosMap).sort((a, b) => b.cantidad - a.cantidad);
+    const productosMasVendidos = Object.values(productosVendidosMap).sort((a, b) => b.cantidad - a.cantidad);
+    return { productosVendidosMap, productosMasVendidos };
+  }, [ventasMes]);
   const barColors = ["#d71920", "#ef2b32", "#748ffc", "#91a7ff", "#ffd966", "#dee2ff"];
 
   const metodoPagoGlobal = (v) => String(v?.pago || v?.metodoPago || v?.formaPago || "Efectivo").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const totalEfectivo = ventas.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalTarjeta = ventas.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalTransferencia = ventas.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
+  const { totalEfectivo, totalTarjeta, totalTransferencia } = useMemo(() => {
+    const totalEfectivo = ventas.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventas.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
+    const totalTarjeta = ventas.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
+    const totalTransferencia = ventas.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventas.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    return { totalEfectivo, totalTarjeta, totalTransferencia };
+  }, [ventas]);
   const totalGeneral = totalEfectivo + totalTarjeta + totalTransferencia;
 
 
@@ -3160,37 +3240,49 @@ export default function App() {
   // El inicio debe reflejar todas las ventas guardadas en MongoDB, tanto de
   // productos como de huevos. Antes solo leía el caché local del módulo Huevos,
   // por eso una venta podía guardarse correctamente y el Inicio seguía en $0.
-  const ventasHoy = ventas.filter(v => fechaVentaClave(v) === hoyClave);
-  const ventasAyer = ventas.filter(v => fechaVentaClave(v) === ayerClave);
+  const {
+    ventasHoy, ventasAyer, movimientosHuevosInicio,
+    pagoEfectivoHoy, pagoTarjetaHoy, pagoTransferenciaHoy,
+    ventasHuevosHoyTotal, ventasHuevosAyerTotal,
+    gananciasHoy, gananciasAyer, huevosVendidosHoy, diferenciaGanancias,
+  } = useMemo(() => {
+    const ventasHoy = ventas.filter(v => fechaVentaClave(v) === hoyClave);
+    const ventasAyer = ventas.filter(v => fechaVentaClave(v) === ayerClave);
 
-  // Lista compatible para las secciones “Últimas ventas de huevos” y
-  // “Movimientos recientes”. Se genera desde las ventas ya cargadas desde
-  // MongoDB, evitando depender de una variable o caché local inexistente.
-  const movimientosHuevosInicio = ventas
-    .flatMap((venta) => (venta.items || [])
-      .filter((item) => item.tipoItem === "huevo" || Number(item.huevos || 0) > 0)
-      .map((item, index) => ({
-        id: `${venta._id || venta.id || venta.timestamp || "venta"}-${index}`,
-        tipo: "venta",
-        calidad: item.calidad || String(item.nombre || "Venta de huevos").replace(/^Huevos\s*/i, ""),
-        huevos: Number(item.huevos || (Number(item.cantidad || item.cantidadFormatos || 0) * Number(item.unidadesPorFormato || 0)) || 0),
-        unidades: Number(item.huevos || 0),
-        metodoPago: venta.pago || venta.metodoPago || "Efectivo",
-        ingreso: Number(item.subtotal ?? (Number(item.precio || 0) * Number(item.cantidad || item.cantidadFormatos || 0))),
-        fecha: venta.timestamp || venta.createdAt || venta.creadoEn || venta.fechaISO || venta.fecha,
-      })))
-    .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
-  // Pagos del día para el Dashboard: se calculan SOLO sobre ventasHoy (ya
-  // filtradas por fecha local), nunca sobre el total histórico de `ventas`.
-  const pagoEfectivoHoy = ventasHoy.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0);
-  const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
-  const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
-  const ventasHuevosHoyTotal = ventasHoy.reduce((sum, v) => sum + Number(v.total || 0), 0);
-  const ventasHuevosAyerTotal = ventasAyer.reduce((sum, v) => sum + Number(v.total || 0), 0);
-  const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
-  const gananciasAyer = ventasAyer.reduce((sum, v) => sum + gananciaVenta(v), 0);
-  const huevosVendidosHoy = ventasHoy.reduce((sum, v) => sum + (v.items || []).reduce((itemSum, item) => itemSum + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
-  const diferenciaGanancias = gananciasHoy - gananciasAyer;
+    const movimientosHuevosInicio = ventas
+      .flatMap((venta) => (venta.items || [])
+        .filter((item) => item.tipoItem === "huevo" || Number(item.huevos || 0) > 0)
+        .map((item, index) => ({
+          id: `${venta._id || venta.id || venta.timestamp || "venta"}-${index}`,
+          tipo: "venta",
+          calidad: item.calidad || String(item.nombre || "Venta de huevos").replace(/^Huevos\s*/i, ""),
+          huevos: Number(item.huevos || (Number(item.cantidad || item.cantidadFormatos || 0) * Number(item.unidadesPorFormato || 0)) || 0),
+          unidades: Number(item.huevos || 0),
+          metodoPago: venta.pago || venta.metodoPago || "Efectivo",
+          ingreso: Number(item.subtotal ?? (Number(item.precio || 0) * Number(item.cantidad || item.cantidadFormatos || 0))),
+          fecha: venta.timestamp || venta.createdAt || venta.creadoEn || venta.fechaISO || venta.fecha,
+        })))
+      .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+
+    const pagoEfectivoHoy = ventasHoy.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventasHoy.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
+    const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
+    const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventasHoy.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    const ventasHuevosHoyTotal = ventasHoy.reduce((sum, v) => sum + Number(v.total || 0), 0);
+    const ventasHuevosAyerTotal = ventasAyer.reduce((sum, v) => sum + Number(v.total || 0), 0);
+    const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
+    const gananciasAyer = ventasAyer.reduce((sum, v) => sum + gananciaVenta(v), 0);
+    const huevosVendidosHoy = ventasHoy.reduce((sum, v) => sum + (v.items || []).reduce((itemSum, item) => itemSum + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
+    const diferenciaGanancias = gananciasHoy - gananciasAyer;
+
+    return {
+      ventasHoy, ventasAyer, movimientosHuevosInicio,
+      pagoEfectivoHoy, pagoTarjetaHoy, pagoTransferenciaHoy,
+      ventasHuevosHoyTotal, ventasHuevosAyerTotal,
+      gananciasHoy, gananciasAyer, huevosVendidosHoy, diferenciaGanancias,
+    };
+  }, [ventas, hoyClave, ayerClave, products]);
   const porcentajeGanancias = gananciasAyer > 0 ? (diferenciaGanancias / gananciasAyer) * 100 : (gananciasHoy > 0 ? 100 : 0);
   const diferenciaVentas = ventasHuevosHoyTotal - ventasHuevosAyerTotal;
   const porcentajeVentas = ventasHuevosAyerTotal > 0 ? (diferenciaVentas / ventasHuevosAyerTotal) * 100 : (ventasHuevosHoyTotal > 0 ? 100 : 0);
@@ -3426,6 +3518,11 @@ export default function App() {
     // Desglose por método de pago del mes (no altera los cálculos existentes de totalMes/ventasMes).
     const pagosMes = ventasMes.reduce((acc, v) => {
       const metodo = normalizarMetodoPago(v);
+      if (metodo === "Mixto") {
+        acc.Efectivo = (acc.Efectivo || 0) + Number(v.montoEfectivo || 0);
+        acc.Transferencia = (acc.Transferencia || 0) + Number(v.montoTransferencia || 0);
+        return acc;
+      }
       acc[metodo] = (acc[metodo] || 0) + Number(v.total || 0);
       return acc;
     }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 });
@@ -3447,6 +3544,10 @@ export default function App() {
       ...ventasMes.map((v,i)=>{
         const metodo = normalizarMetodoPago(v);
         const total = Number(v.total || 0);
+        if (metodo === "Mixto") {
+          return [i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,total,
+            Number(v.montoEfectivo || 0), 0, Number(v.montoTransferencia || 0), total];
+        }
         return [i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,total,
           metodo==="Efectivo"?total:0, (metodo==="Débito"||metodo==="Crédito")?total:0, metodo==="Transferencia"?total:0, total];
       })
@@ -3468,126 +3569,131 @@ export default function App() {
     if (["debito", "tarjeta", "tarjeta debito", "redcompra"].includes(raw)) return "Débito";
     if (["transferencia", "transfer", "transferencia bancaria"].includes(raw)) return "Transferencia";
     if (["credito", "tarjeta credito"].includes(raw)) return "Crédito";
+    if (raw === "mixto") return "Mixto";
     return "Efectivo";
   };
   const fechaVentaReporte = (venta) => venta?.timestamp || venta?.createdAt || venta?.creadoEn || venta?.fechaISO || venta?.fecha;
 
   // ─── CÁLCULOS REPORTES ───────────────────────────────────────────────────────
   const ahora2 = new Date();
-  const ventasPeriodo = ventas.filter(v => {
-    const fecha = fechaVentaReporte(v);
-    if (!fecha) return reportePeriodo === "todo";
-    const d = new Date(fecha);
-    if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
-    if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
-    if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
-    return true;
-  });
-  const totalPeriodo = ventasPeriodo.reduce((s, v) => s + Number(v.total || 0), 0);
-  const ticketProm = ventasPeriodo.length > 0 ? Math.round(totalPeriodo / ventasPeriodo.length) : 0;
-  const huevosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
-  const productosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem !== "huevo" ? Number(item.cantidad || 0) * Number(item.unidadesPorManga || 1) : 0), 0), 0);
-  const ventasPorDia = {};
-  ventas.forEach(v => {
-    if (!v.timestamp) return;
-    const d = new Date(v.timestamp);
-    if ((ahora2 - d) / (1000*60*60*24) > 14) return;
-    const key = d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" });
-    if (!ventasPorDia[key]) ventasPorDia[key] = { dia: key, total: 0, cantidad: 0 };
-    ventasPorDia[key].total += v.total;
-    ventasPorDia[key].cantidad += 1;
-  });
-  const graficoDias = Object.values(ventasPorDia).slice(-14);
-  const repProdMap = {};
-  ventasPeriodo.forEach(v => v.items?.forEach(i => {
-    if (!repProdMap[i.nombre]) repProdMap[i.nombre] = { nombre: i.nombre, cantidad: 0, ingresos: 0 };
-    repProdMap[i.nombre].cantidad += i.cantidad;
-    repProdMap[i.nombre].ingresos += i.subtotal || 0;
-  }));
-  const topProductosRep = Object.values(repProdMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 8);
-
-  // ── Costo/Beneficio del período ──────────────────────────────────────────
-  // BUG FIX: antes solo buscaba el costo en `products`, así que los ítems de
-  // huevos (que no son un "producto" con nombre coincidente) siempre sumaban
-  // costo $0 aquí — el ingreso de la venta de huevos sí se contaba pero su
-  // costo no, inflando el margen cada vez que se vendían huevos. Ahora el
-  // costo de huevos se calcula igual que en el resto de la app: con el costo
-  // de COMPRA guardado en el propio ítem de la venta (costoCaja), nunca con
-  // el precio de venta.
-  const costosPeriodo = (() => {
-    const prodMap = {};
-    products.forEach(p => { prodMap[p.nombre] = p.costo || 0; });
-    let costoTotal = 0;
-    ventasPeriodo.forEach(v => v.items?.forEach(i => {
-      if (i.tipoItem === "huevo") {
-        const huevosVendidos = Number(i.huevos || 0);
-        const costoCajaCompra = Number(i.costoCaja || 0);
-        costoTotal += (huevosVendidos / 180) * costoCajaCompra;
-        return;
-      }
-      const costoUnitario = Number(i.costo ?? i.precioCosto ?? prodMap[i.nombre] ?? 0);
-      const unidades = Number(i.cantidad || i.cantidadFormatos || 1) * Number(i.unidadesPorManga || 1);
-      costoTotal += costoUnitario * unidades;
-    }));
-    return costoTotal;
-  })();
-  const ingresosPeriodo   = ventasPeriodo.reduce((s, v) => s + v.total, 0);
-  const gananciaPeriodo   = ingresosPeriodo - costosPeriodo;
-
-  // ── Pérdidas del período (mermas de inventario general) ──────────────────
-  // Usamos el id (timestamp) de cada merma para filtrar por período, ya que
-  // `fecha` se guarda como texto localizado (es-CL) y no es parseable de forma
-  // confiable con `new Date()`.
-  const mermasPeriodo = mermas.filter(m => {
-    const d = new Date(Number(m.id) || NaN);
-    if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return fechaLocalClave(d) === reporteFecha;
-    if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
-    if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
-    return true;
-  });
-  const mermasPorMotivo = (() => {
-    const prodMap = {}; products.forEach(p => { prodMap[p.id] = p; });
-    const acc = { "Vencido": 0, "Dañado": 0, "Robo": 0, "Error de inventario": 0, "Otro": 0 };
-    let valorTotal = 0, unidadesTotal = 0;
-    mermasPeriodo.forEach(m => {
-      const cant = Number(m.cantidad || 0);
-      const motivo = acc.hasOwnProperty(m.motivo) ? m.motivo : "Otro";
-      acc[motivo] = (acc[motivo] || 0) + cant;
-      unidadesTotal += cant;
-      const costoUnit = Number(prodMap[m.productoId]?.costo || 0);
-      valorTotal += costoUnit * cant;
+  const {
+    ventasPeriodo, totalPeriodo, ticketProm, huevosVendidosPeriodo, productosVendidosPeriodo,
+    graficoDias, repProdMap, topProductosRep, costosPeriodo, ingresosPeriodo, gananciaPeriodo,
+    mermasPeriodo, mermasPorMotivo, gastosPeriodo, egresosPeriodo, balancePeriodo, margenPct,
+    topGananciaProd, resumenPagosPeriodo,
+  } = useMemo(() => {
+    const ventasPeriodo = ventas.filter(v => {
+      const fecha = fechaVentaReporte(v);
+      if (!fecha) return reportePeriodo === "todo";
+      const d = new Date(fecha);
+      if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+      if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
+      if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
+      if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+      return true;
     });
-    return { porMotivo: acc, unidadesTotal, valorTotal };
-  })();
+    const totalPeriodo = ventasPeriodo.reduce((s, v) => s + Number(v.total || 0), 0);
+    const ticketProm = ventasPeriodo.length > 0 ? Math.round(totalPeriodo / ventasPeriodo.length) : 0;
+    const huevosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
+    const productosVendidosPeriodo = ventasPeriodo.reduce((sum, v) => sum + (v.items || []).reduce((s, item) => s + (item.tipoItem !== "huevo" ? Number(item.cantidad || 0) * Number(item.unidadesPorManga || 1) : 0), 0), 0);
+    const ventasPorDia = {};
+    ventas.forEach(v => {
+      if (!v.timestamp) return;
+      const d = new Date(v.timestamp);
+      if ((ahora2 - d) / (1000*60*60*24) > 14) return;
+      const key = d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" });
+      if (!ventasPorDia[key]) ventasPorDia[key] = { dia: key, total: 0, cantidad: 0 };
+      ventasPorDia[key].total += v.total;
+      ventasPorDia[key].cantidad += 1;
+    });
+    const graficoDias = Object.values(ventasPorDia).slice(-14);
+    const repProdMap = {};
+    ventasPeriodo.forEach(v => v.items?.forEach(i => {
+      if (!repProdMap[i.nombre]) repProdMap[i.nombre] = { nombre: i.nombre, cantidad: 0, ingresos: 0 };
+      repProdMap[i.nombre].cantidad += i.cantidad;
+      repProdMap[i.nombre].ingresos += i.subtotal || 0;
+    }));
+    const topProductosRep = Object.values(repProdMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 8);
 
-  // ── Ingresos / Egresos / Balance del período (bloque financiero de Reportes) ──
-  // Egresos = todos los gastos registrados en el módulo Gastos (incluye compras de
-  // inventario, ya que se guardan como gasto: se cuentan una sola vez, no se duplican).
-  const gastosPeriodo = gastosReporte.filter(g => {
-    const fecha = g?.fecha || g?.createdAt || g?.creadoEn;
-    if (!fecha) return reportePeriodo === "todo";
-    const d = new Date(fecha);
-    if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
-    if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
-    if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
-    if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
-    return true;
-  });
-  const egresosPeriodo = gastosPeriodo.reduce((s, g) => s + Number(g.total || 0), 0);
-  const balancePeriodo = ingresosPeriodo - egresosPeriodo;
-  const margenPct         = costosPeriodo > 0 ? Math.round((gananciaPeriodo / costosPeriodo) * 100) : 0;
-  const topGananciaProd   = Object.values(repProdMap).map(p => {
-    const costo = (products.find(pr => pr.nombre === p.nombre)?.costo || 0) * p.cantidad;
-    return { ...p, costo, ganancia: p.ingresos - costo, margen: costo > 0 ? Math.round(((p.ingresos - costo) / costo) * 100) : 0 };
-  }).sort((a, b) => b.ganancia - a.ganancia).slice(0, 8);
-  const resumenPagosPeriodo = ventasPeriodo.reduce((acc, venta) => {
-    const metodo = normalizarMetodoPago(venta);
-    const monto = Number(venta.total || 0);
-    acc[metodo] = (acc[metodo] || 0) + monto;
-    return acc;
-  }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 });
+    const costosPeriodo = (() => {
+      const prodMap = {};
+      products.forEach(p => { prodMap[p.nombre] = p.costo || 0; });
+      let costoTotal = 0;
+      ventasPeriodo.forEach(v => v.items?.forEach(i => {
+        if (i.tipoItem === "huevo") {
+          const huevosVendidos = Number(i.huevos || 0);
+          const costoCajaCompra = Number(i.costoCaja || 0);
+          costoTotal += (huevosVendidos / 180) * costoCajaCompra;
+          return;
+        }
+        const costoUnitario = Number(i.costo ?? i.precioCosto ?? prodMap[i.nombre] ?? 0);
+        const unidades = Number(i.cantidad || i.cantidadFormatos || 1) * Number(i.unidadesPorManga || 1);
+        costoTotal += costoUnitario * unidades;
+      }));
+      return costoTotal;
+    })();
+    const ingresosPeriodo   = ventasPeriodo.reduce((s, v) => s + v.total, 0);
+    const gananciaPeriodo   = ingresosPeriodo - costosPeriodo;
+
+    const mermasPeriodo = mermas.filter(m => {
+      const d = new Date(Number(m.id) || NaN);
+      if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+      if (reportePeriodo === "dia") return fechaLocalClave(d) === reporteFecha;
+      if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
+      if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+      return true;
+    });
+    const mermasPorMotivo = (() => {
+      const prodMap = {}; products.forEach(p => { prodMap[p.id] = p; });
+      const acc = { "Vencido": 0, "Dañado": 0, "Robo": 0, "Error de inventario": 0, "Otro": 0 };
+      let valorTotal = 0, unidadesTotal = 0;
+      mermasPeriodo.forEach(m => {
+        const cant = Number(m.cantidad || 0);
+        const motivo = acc.hasOwnProperty(m.motivo) ? m.motivo : "Otro";
+        acc[motivo] = (acc[motivo] || 0) + cant;
+        unidadesTotal += cant;
+        const costoUnit = Number(prodMap[m.productoId]?.costo || 0);
+        valorTotal += costoUnit * cant;
+      });
+      return { porMotivo: acc, unidadesTotal, valorTotal };
+    })();
+
+    const gastosPeriodo = gastosReporte.filter(g => {
+      const fecha = g?.fecha || g?.createdAt || g?.creadoEn;
+      if (!fecha) return reportePeriodo === "todo";
+      const d = new Date(fecha);
+      if (Number.isNaN(d.getTime())) return reportePeriodo === "todo";
+      if (reportePeriodo === "dia") return fechaLocalClave(fecha) === reporteFecha;
+      if (reportePeriodo === "semana") return (ahora2 - d) / (1000*60*60*24) <= 7;
+      if (reportePeriodo === "mes") return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+      return true;
+    });
+    const egresosPeriodo = gastosPeriodo.reduce((s, g) => s + Number(g.total || 0), 0);
+    const balancePeriodo = ingresosPeriodo - egresosPeriodo;
+    const margenPct         = costosPeriodo > 0 ? Math.round((gananciaPeriodo / costosPeriodo) * 100) : 0;
+    const topGananciaProd   = Object.values(repProdMap).map(p => {
+      const costo = (products.find(pr => pr.nombre === p.nombre)?.costo || 0) * p.cantidad;
+      return { ...p, costo, ganancia: p.ingresos - costo, margen: costo > 0 ? Math.round(((p.ingresos - costo) / costo) * 100) : 0 };
+    }).sort((a, b) => b.ganancia - a.ganancia).slice(0, 8);
+    const resumenPagosPeriodo = ventasPeriodo.reduce((acc, venta) => {
+      const metodo = normalizarMetodoPago(venta);
+      if (metodo === "Mixto") {
+        acc.Efectivo = (acc.Efectivo || 0) + Number(venta.montoEfectivo || 0);
+        acc.Transferencia = (acc.Transferencia || 0) + Number(venta.montoTransferencia || 0);
+        return acc;
+      }
+      const monto = Number(venta.total || 0);
+      acc[metodo] = (acc[metodo] || 0) + monto;
+      return acc;
+    }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 });
+
+    return {
+      ventasPeriodo, totalPeriodo, ticketProm, huevosVendidosPeriodo, productosVendidosPeriodo,
+      graficoDias, repProdMap, topProductosRep, costosPeriodo, ingresosPeriodo, gananciaPeriodo,
+      mermasPeriodo, mermasPorMotivo, gastosPeriodo, egresosPeriodo, balancePeriodo, margenPct,
+      topGananciaProd, resumenPagosPeriodo,
+    };
+  }, [ventas, mermas, gastosReporte, products, reportePeriodo, reporteFecha, mesActual, anioActual]);
   const metodosRep = [
     { label: "Efectivo",      color: "#10b981", val: resumenPagosPeriodo.Efectivo },
     { label: "Débito",        color: "#f59e0b", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"] },
@@ -4735,7 +4841,14 @@ export default function App() {
                   <div className="sales-cart-title"><h3>Cobrar</h3><button onClick={()=>{setCarrito([]);setFreeEggCart({});}}>Vaciar</button></div>
                   {freeEggItems.map(item=><div className="sales-cart-row" key={`egg-${item.calidadId}`}>
                     <div className="sales-cart-thumb"><span>🥚</span></div>
-                    <div className="sales-cart-name"><b>{item.calidad}</b><small>{item.cantidadFormatos} {item.formato}{item.cantidadFormatos===1?"":"s"} · {item.huevos} huevos</small></div>
+                    <div className="sales-cart-name">
+                      <b>{item.calidad}</b>
+                      <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}</small>
+                      <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#d71920":"#2563eb",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                        {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
+                      </button>
+                      {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualHuevo(item.calidadId,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:8,background:bgCard,color:textPrimary,fontWeight:800}} />}
+                    </div>
                     <strong className="mono">{fmt(item.subtotal)}</strong>
                     <button className="trash" onClick={()=>setFreeEggCart(prev=>({...prev,[item.calidadId]:{...(prev[item.calidadId]||{}),cantidad:0}}))}><Trash2 size={15}/></button>
                   </div>)}
@@ -4781,9 +4894,17 @@ export default function App() {
                   </div>
                   <h4 className="sales-pay-title">Método de pago</h4>
                   <div className="sales-pay-v2">
-                    {[{val:"Efectivo",icon:Banknote},{val:"Tarjeta",icon:CreditCard},{val:"Transferencia",icon:CreditCard}].map(({val,icon:Icon})=><button key={val} className={pago===val?"active":""} onClick={()=>setPago(val)}><Icon size={22}/><span>{val}</span></button>)}
+                    {[{val:"Efectivo",icon:Banknote,label:"Efectivo"},{val:"Tarjeta",icon:CreditCard,label:"Tarjeta"},{val:"Mixto",icon:Split,label:"Mitad y mitad"}].map(({val,icon:Icon,label})=><button key={val} className={pago===val?"active":""} onClick={()=>setPago(val)}><Icon size={22}/><span>{label}</span></button>)}
                   </div>
                   {pago==="Efectivo" && <div className="sales-cash-v2"><label>Dinero recibido</label><input type="number" min={totalCarrito} value={dineroRecibido} onChange={e=>setDineroRecibido(e.target.value)} placeholder={String(totalCarrito)}/>{vuelto!==null&&vuelto>=0&&<span>Vuelto: {fmt(vuelto)}</span>}</div>}
+                  {pago==="Mixto" && (
+                    <div className="sales-cash-v2">
+                      <label>Monto en efectivo</label>
+                      <input type="number" min="0" max={totalCarrito} inputMode="numeric" value={montoEfectivoMixto} onChange={e=>setMontoEfectivoMixto(e.target.value)} placeholder="0"/>
+                      <span>Resto por transferencia: {fmt(montoTransferenciaMixto)}</span>
+                      {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#d71920"}}>El efectivo supera el total.</span>}
+                    </div>
+                  )}
                   <button className="sales-finish-v2" disabled={boletaGenerando || (carrito.length===0 && freeEggItems.length===0)} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
                 </div>}
               </section>
@@ -5289,8 +5410,10 @@ export default function App() {
                       const inicio = new Date(cajaData.apertura).getTime();
                       const vt = ventas.filter(v => v.timestamp >= inicio);
                       const total = vt.reduce((s, v) => s + v.total, 0);
-                      const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0);
-                      const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
+                      const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
+                        + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
+                      const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
+                        + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
                       return (
                         <div>
                           <div style={{ background: D ? "#1e2235" : "#f8f9ff", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
@@ -5380,8 +5503,10 @@ export default function App() {
                     const inicio = new Date(cajaData.apertura).getTime();
                     const vt = ventas.filter(v => v.timestamp >= inicio);
                     const total = vt.reduce((s, v) => s + v.total, 0);
-                    const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0);
-                    const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
+                    const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
+                      + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
+                    const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
+                      + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
                     const deb   = vt.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0);
                     const cred  = vt.filter(v => v.pago === "Crédito").reduce((s, v) => s + v.total, 0);
                     const duracion = Math.floor((Date.now() - inicio) / 60000);
