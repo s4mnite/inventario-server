@@ -918,7 +918,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
     "Crédito":       "CRÉDITO",
     "Transferencia": "TRANSFERENCIA",
     "MercadoPago":   "MERCADOPAGO",
-    "Mixto":         "EFECTIVO + TRANSFERENCIA",
+    "Mixto":         "EFECTIVO + TARJETA",
   }[boleta.metodoPago] || (boleta.metodoPago || "").toUpperCase();
 
   const ticketCSS = `
@@ -1051,8 +1051,8 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
                   <span>${Number(boleta.montoEfectivo || 0).toLocaleString("es-CL")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                  <span>TRANSFERENCIA:</span>
-                  <span>${Number(boleta.montoTransferencia || 0).toLocaleString("es-CL")}</span>
+                  <span>TARJETA:</span>
+                  <span>${Number(boleta.montoTarjeta || 0).toLocaleString("es-CL")}</span>
                 </div>
               </>
             ) : (
@@ -2915,7 +2915,7 @@ export default function App() {
   const vuelto = dineroRecibido !== "" ? (+dineroRecibido - totalCarrito) : null;
   // Pago mixto: parte en efectivo, el resto por transferencia (se calcula solo).
   const montoEfectivoMixtoNum = montoEfectivoMixto !== "" ? Math.max(0, +montoEfectivoMixto) : 0;
-  const montoTransferenciaMixto = Math.max(0, totalCarrito - montoEfectivoMixtoNum);
+  const montoTarjetaMixto = Math.max(0, totalCarrito - montoEfectivoMixtoNum);
 
   // ── Flujo de pago completo: Efectivo/Transferencia ──
   const handleVentaDirecta = async () => {
@@ -2985,7 +2985,7 @@ export default function App() {
       dineroRecibido: dineroRecibido !== "" ? +dineroRecibido : totalCarrito,
       vuelto: vuelto !== null && vuelto > 0 ? vuelto : 0,
       montoEfectivo: pago === "Mixto" ? montoEfectivoMixtoNum : (pago === "Efectivo" ? totalCarrito : 0),
-      montoTransferencia: pago === "Mixto" ? montoTransferenciaMixto : 0,
+      montoTarjeta: pago === "Mixto" ? montoTarjetaMixto : 0,
       fecha: ahora.toLocaleString("es-CL"),
       timestamp: ahora.getTime(),
       usuario: currentUser.nombre,
@@ -3019,7 +3019,7 @@ export default function App() {
       dineroRecibido: venta.dineroRecibido,
       vuelto: venta.vuelto,
       montoEfectivo: venta.montoEfectivo,
-      montoTransferencia: venta.montoTransferencia,
+      montoTarjeta: venta.montoTarjeta,
       empresa: empresaCaja,
     };
 
@@ -3177,10 +3177,10 @@ export default function App() {
     const totalMes = ventasMes.reduce((s, v) => s + v.total, 0);
     const totalMesEfectivo = ventasMes.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
       + ventasMes.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
-    const totalMesDebito = ventasMes.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0);
+    const totalMesDebito = ventasMes.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0)
+      + ventasMes.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
     const totalMesCredito = ventasMes.filter(v => v.pago === "Crédito").reduce((s, v) => s + v.total, 0);
-    const totalMesTransferencia = ventasMes.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
-      + ventasMes.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    const totalMesTransferencia = ventasMes.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
     const ticketPromedio = ventasMes.length > 0 ? Math.round(totalMes / ventasMes.length) : 0;
     return { totalMes, totalMesEfectivo, totalMesDebito, totalMesCredito, totalMesTransferencia, ticketPromedio };
   }, [ventasMes]);
@@ -3203,9 +3203,9 @@ export default function App() {
   const { totalEfectivo, totalTarjeta, totalTransferencia } = useMemo(() => {
     const totalEfectivo = ventas.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0)
       + ventas.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
-    const totalTarjeta = ventas.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
-    const totalTransferencia = ventas.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
-      + ventas.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    const totalTarjeta = ventas.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventas.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
+    const totalTransferencia = ventas.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
     return { totalEfectivo, totalTarjeta, totalTransferencia };
   }, [ventas]);
   const totalGeneral = totalEfectivo + totalTarjeta + totalTransferencia;
@@ -3266,9 +3266,9 @@ export default function App() {
 
     const pagoEfectivoHoy = ventasHoy.filter(v => metodoPagoGlobal(v) === "efectivo").reduce((s, v) => s + Number(v.total || 0), 0)
       + ventasHoy.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
-    const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
-    const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
-      + ventasHoy.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+    const pagoTarjetaHoy = ventasHoy.filter(v => ["tarjeta", "debito", "credito", "redcompra", "tarjeta debito", "tarjeta credito"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0)
+      + ventasHoy.filter(v => metodoPagoGlobal(v) === "mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
+    const pagoTransferenciaHoy = ventasHoy.filter(v => ["transferencia", "transfer", "transferencia bancaria"].includes(metodoPagoGlobal(v))).reduce((s, v) => s + Number(v.total || 0), 0);
     const ventasHuevosHoyTotal = ventasHoy.reduce((sum, v) => sum + Number(v.total || 0), 0);
     const ventasHuevosAyerTotal = ventasAyer.reduce((sum, v) => sum + Number(v.total || 0), 0);
     const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
@@ -3520,7 +3520,7 @@ export default function App() {
       const metodo = normalizarMetodoPago(v);
       if (metodo === "Mixto") {
         acc.Efectivo = (acc.Efectivo || 0) + Number(v.montoEfectivo || 0);
-        acc.Transferencia = (acc.Transferencia || 0) + Number(v.montoTransferencia || 0);
+        acc["Débito"] = (acc["Débito"] || 0) + Number(v.montoTarjeta || 0);
         return acc;
       }
       acc[metodo] = (acc[metodo] || 0) + Number(v.total || 0);
@@ -3546,7 +3546,7 @@ export default function App() {
         const total = Number(v.total || 0);
         if (metodo === "Mixto") {
           return [i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,total,
-            Number(v.montoEfectivo || 0), 0, Number(v.montoTransferencia || 0), total];
+            Number(v.montoEfectivo || 0), Number(v.montoTarjeta || 0), 0, total];
         }
         return [i+1,v.fecha,v.usuario,(v.items||[]).map(it=>`${it.nombre}×${it.cantidad}`).join("|"),v.pago,total,
           metodo==="Efectivo"?total:0, (metodo==="Débito"||metodo==="Crédito")?total:0, metodo==="Transferencia"?total:0, total];
@@ -3679,7 +3679,7 @@ export default function App() {
       const metodo = normalizarMetodoPago(venta);
       if (metodo === "Mixto") {
         acc.Efectivo = (acc.Efectivo || 0) + Number(venta.montoEfectivo || 0);
-        acc.Transferencia = (acc.Transferencia || 0) + Number(venta.montoTransferencia || 0);
+        acc["Débito"] = (acc["Débito"] || 0) + Number(venta.montoTarjeta || 0);
         return acc;
       }
       const monto = Number(venta.total || 0);
@@ -4901,7 +4901,7 @@ export default function App() {
                     <div className="sales-cash-v2">
                       <label>Monto en efectivo</label>
                       <input type="number" min="0" max={totalCarrito} inputMode="numeric" value={montoEfectivoMixto} onChange={e=>setMontoEfectivoMixto(e.target.value)} placeholder="0"/>
-                      <span>Resto por transferencia: {fmt(montoTransferenciaMixto)}</span>
+                      <span>Resto por tarjeta: {fmt(montoTarjetaMixto)}</span>
                       {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#d71920"}}>El efectivo supera el total.</span>}
                     </div>
                   )}
@@ -5412,8 +5412,9 @@ export default function App() {
                       const total = vt.reduce((s, v) => s + v.total, 0);
                       const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
                         + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
-                      const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
-                        + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
+                      const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
+                      const deb   = vt.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0)
+                        + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
                       return (
                         <div>
                           <div style={{ background: D ? "#1e2235" : "#f8f9ff", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
@@ -5423,6 +5424,7 @@ export default function App() {
                               { label: "Ventas totales", val: fmt(total), color: "#10b981" },
                               { label: "— Efectivo", val: fmt(ef), color: textSecondary },
                               { label: "— Transferencia", val: fmt(tr), color: textSecondary },
+                              { label: "— Tarjeta", val: fmt(deb), color: textSecondary },
                               { label: "N° de ventas", val: vt.length, color: textSecondary },
                             ].map(({ label, val, color }) => (
                               <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color, marginBottom: 4 }}>
@@ -5505,9 +5507,9 @@ export default function App() {
                     const total = vt.reduce((s, v) => s + v.total, 0);
                     const ef    = vt.filter(v => v.pago === "Efectivo").reduce((s, v) => s + v.total, 0)
                       + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoEfectivo || 0), 0);
-                    const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0)
-                      + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTransferencia || 0), 0);
-                    const deb   = vt.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0);
+                    const tr    = vt.filter(v => v.pago === "Transferencia").reduce((s, v) => s + v.total, 0);
+                    const deb   = vt.filter(v => ["Tarjeta", "Débito"].includes(v.pago)).reduce((s, v) => s + v.total, 0)
+                      + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
                     const cred  = vt.filter(v => v.pago === "Crédito").reduce((s, v) => s + v.total, 0);
                     const duracion = Math.floor((Date.now() - inicio) / 60000);
                     const horas = Math.floor(duracion / 60);
