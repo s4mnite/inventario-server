@@ -1426,5 +1426,7 @@ try {
 // ─── START ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 conectarDB().then(() => {
-  app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
+  app.get('/health', (req, res) => res.status(200).json({status: 'ok'}));
+
+app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
 });
