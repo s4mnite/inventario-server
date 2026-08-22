@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { DollarSign, Pencil, Plus, Trash2, TrendingDown, ChevronRight, Filter, ShoppingCart, Check, X, ArrowLeft, Info, Minus, Banknote, CreditCard, Landmark } from "lucide-react";
+import { DollarSign, Pencil, Plus, Trash2, TrendingDown, ChevronRight, Filter, ShoppingCart, Check, X, ArrowLeft, Info, Minus, Banknote, CreditCard, Landmark, Zap } from "lucide-react";
 import { API, fmt, todayLocalISO, calcIncrementPct, priceFromIncrement, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes } from "./lib/utils";
 
 // ─── Módulo independiente: Huevos ────────────────────────────────────────────
 const EGG_BOX_UNITS = 180;
 const EGG_TRAY_UNITS = 30;
+const PAYMENT_LABELS = { efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia" };
+const paymentLabel = id => PAYMENT_LABELS[id] || id || "Efectivo";
 const EGG_STORAGE_KEY = "inv_huevos_v1";
 const EGG_MOVEMENTS_KEY = "inv_huevos_movimientos_v1";
 
@@ -611,7 +613,14 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       const formato = saleCart[q.id]?.formato === "caja" ? "caja" : "bandeja";
       const cantidadFormatos = Math.max(0, Number(saleCart[q.id]?.cantidadFormatos || 0));
       const unidadesPorFormato = formato === "caja" ? EGG_BOX_UNITS : EGG_TRAY_UNITS;
-      const precioFormato = Math.max(0, Number(formato === "caja" ? q.precioCaja : q.precioBandeja));
+      const precioNormal = Math.max(0, Number(formato === "caja" ? q.precioCaja : q.precioBandeja));
+      // Precio flash: precio manual de una sola vez para esta venta puntual,
+      // pisa el precio configurado en Inventario pero NO lo modifica. Se
+      // guarda en saleCart[q.id].precioFlash (string tal como lo escribe el
+      // usuario) y se limpia solo cuando se saca el ítem del carrito.
+      const precioFlashRaw = saleCart[q.id]?.precioFlash;
+      const esFlash = precioFlashRaw !== undefined && precioFlashRaw !== "" && Number(precioFlashRaw) > 0;
+      const precioFormato = esFlash ? Number(precioFlashRaw) : precioNormal;
       return {
         ...q,
         stockHuevos: stockDe(q),
@@ -620,6 +629,8 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         unidadesPorFormato,
         cantidadVenta: cantidadFormatos * unidadesPorFormato,
         precioFormato,
+        precioNormal,
+        esFlash,
         precioVenta: unidadesPorFormato > 0 ? precioFormato / unidadesPorFormato : 0,
       };
     })
@@ -637,7 +648,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       const formato = prev[quality.id]?.formato === "caja" ? "caja" : "bandeja";
       const current = Math.max(0, Number(prev[quality.id]?.cantidadFormatos || 0));
       const next = Math.max(0, current + delta);
-      return { ...prev, [quality.id]: { formato, cantidadFormatos: next } };
+      return { ...prev, [quality.id]: { ...prev[quality.id], formato, cantidadFormatos: next } };
     });
   };
 
@@ -645,8 +656,16 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     setSaleFlowError("");
     setSaleCart(prev => {
       const current = Math.max(0, Number(prev[quality.id]?.cantidadFormatos || 0));
-      return { ...prev, [quality.id]: { formato, cantidadFormatos: current } };
+      return { ...prev, [quality.id]: { ...prev[quality.id], formato, cantidadFormatos: current } };
     });
+  };
+
+  // Guarda el precio flash tal como lo escribe el usuario (string, puede
+  // quedar vacío mientras escribe). Solo se activa como precio real de la
+  // venta si al confirmar queda un número > 0 (ver saleItems más arriba).
+  const updateSaleFlashPrice = (quality, value) => {
+    setSaleFlowError("");
+    setSaleCart(prev => ({ ...prev, [quality.id]: { ...prev[quality.id], precioFlash: value } }));
   };
 
   const confirmSaleFlow = async () => {
@@ -697,7 +716,8 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         unidades: item.cantidadVenta,
         huevos: item.cantidadVenta,
         motivo: "Venta",
-        observaciones: `Venta de ${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos === 1 ? "" : "s"} (${item.cantidadVenta} huevos)`,
+        observaciones: `Venta de ${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos === 1 ? "" : "s"} (${item.cantidadVenta} huevos)`
+          + (item.esFlash ? ` — Precio flash ${fmt(item.precioFormato)} x ${item.formato} (normal ${fmt(item.precioNormal)}), pagado con ${paymentLabel(salePaymentMethod)}` : ""),
         usuario: currentUser?.nombre || "Usuario",
         ingreso,
         costo,
@@ -707,6 +727,13 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         precioUnidad: item.precioVenta,
         descuento: 0,
         metodoPago: salePaymentMethod,
+        // Trazabilidad del precio flash: si esFlash es true, precioFlash
+        // guarda el valor manual usado y metodoPagoFlash el método de pago
+        // con el que se activó esa venta puntual (para reportes/auditoría).
+        esVentaFlash: !!item.esFlash,
+        precioFlash: item.esFlash ? item.precioFormato : 0,
+        precioNormalAlVender: item.precioNormal,
+        metodoPagoFlash: item.esFlash ? salePaymentMethod : "",
       };
     });
 
@@ -956,7 +983,15 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
                 <div><label style={{display:"block",fontSize:12,fontWeight:800,color:textSecondary,marginBottom:7}}>Cantidad de {item.formato}s</label><div style={{height:52,border:`2px solid ${borderColor2}`,borderRadius:15,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 8px",background:bgCard2}}><button onClick={()=>changeSaleQuantity(item,-1)} style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${textSecondary}`,background:"transparent",color:textPrimary,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Minus size={18}/></button><strong style={{fontSize:18}}>{item.cantidadFormatos}</strong><button onClick={()=>changeSaleQuantity(item,1)} style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${textSecondary}`,background:"transparent",color:textPrimary,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Plus size={18}/></button></div></div>
                 <div><label style={{display:"block",fontSize:12,fontWeight:800,color:textSecondary,marginBottom:7}}>Formato</label><div style={{height:52,border:`2px solid ${borderColor2}`,borderRadius:15,display:"flex",alignItems:"center",padding:"0 13px",background:bgCard2}}><strong style={{fontSize:15,color:textPrimary,textTransform:"capitalize"}}>{item.formato} · {item.unidadesPorFormato} huevos</strong></div></div>
               </div>
-              <div style={{marginTop:13,color:textSecondary,fontSize:13}}>{item.cantidadFormatos} {item.formato}{item.cantidadFormatos===1?"":"s"} · {item.cantidadVenta.toLocaleString("es-CL")} huevos: <strong style={{color:textPrimary}}>{fmt(item.cantidadFormatos*item.precioFormato)}</strong></div>
+              <div style={{marginTop:12}}>
+                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:800,color:item.esFlash?(D?"#ffcf4d":"#a86a00"):textSecondary,marginBottom:7}}><Zap size={14}/> Precio flash (opcional) · normal {fmt(item.precioNormal)} x {item.formato}</label>
+                <div style={{height:48,border:`2px solid ${item.esFlash?(D?"#ffcf4d":"#e0a300"):borderColor2}`,borderRadius:14,display:"flex",alignItems:"center",padding:"0 12px",background:item.esFlash?(D?"rgba(255,207,77,.12)":"#fff7e0"):bgCard2}}>
+                  <span style={{color:textMuted,fontSize:14,marginRight:4}}>$</span>
+                  <input type="number" min="0" placeholder={`Ej: ${item.precioNormal}`} value={saleCart[item.id]?.precioFlash ?? ""} onChange={e=>updateSaleFlashPrice(item,e.target.value)} style={{border:"none",outline:"none",background:"transparent",color:textPrimary,fontSize:15,fontWeight:800,width:"100%",fontFamily:"inherit"}}/>
+                  {item.esFlash && <span style={{fontSize:10,fontWeight:900,color:D?"#ffcf4d":"#a86a00",background:D?"rgba(255,207,77,.18)":"#ffe8ab",padding:"4px 8px",borderRadius:20,flexShrink:0}}>FLASH</span>}
+                </div>
+              </div>
+              <div style={{marginTop:13,color:textSecondary,fontSize:13}}>{item.cantidadFormatos} {item.formato}{item.cantidadFormatos===1?"":"s"} · {item.cantidadVenta.toLocaleString("es-CL")} huevos: <strong style={{color:textPrimary}}>{fmt(item.cantidadFormatos*item.precioFormato)}</strong>{item.esFlash && <span style={{marginLeft:8,color:D?"#ffcf4d":"#a86a00",fontWeight:800}}>⚡ precio flash aplicado</span>}</div>
             </div>)}
           </div>
           <div className="egg-payment-card" style={{...card,borderRadius:20,padding:16,marginTop:14}}>
