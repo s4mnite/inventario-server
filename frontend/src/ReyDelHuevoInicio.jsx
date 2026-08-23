@@ -25,7 +25,7 @@ export default function ReyDelHuevoInicio({
   gananciaHoy = 0, deltaVentas = 0, deltaBandejas = 0, deltaHuevos = 0, deltaGanancia = 0,
   egresosHoy = 0, efectivoHoy = 0, debitoHoy = 0, transferenciaHoy = 0,
   movimientos = [], stockBajo = 0, notificaciones = [],
-  dark = false, onToggleDark, onNotifications, onNavigate, onVentaHuevos, onMenu,
+  dark = false, onToggleDark, onNotifications, onNavigate, onVentaHuevos, onMenu, onVerAlertaStock,
   meta = 600000, onMetaChange, onRefresh,
 }) {
   useBrandFonts();
@@ -202,7 +202,7 @@ export default function ReyDelHuevoInicio({
       {stockBajo > 0 && (
         <section style={{ padding: "22px 18px 0" }}>
           <SectionTitle display={display} c={c}>ALERTAS IMPORTANTES</SectionTitle>
-          <button onClick={() => onNavigate?.("Productos")} style={{ width: "100%", border: `2px solid ${red}`, background: dark ? "#241315" : "#FDEEEF", padding: 15, display: "flex", alignItems: "center", gap: 12, textAlign: "left", color: c.text, cursor: "pointer" }}>
+          <button onClick={() => (onVerAlertaStock ? onVerAlertaStock() : onNavigate?.("Productos"))} style={{ width: "100%", border: `2px solid ${red}`, background: dark ? "#241315" : "#FDEEEF", padding: 15, display: "flex", alignItems: "center", gap: 12, textAlign: "left", color: c.text, cursor: "pointer" }}>
             <AlertTriangle color={red} size={20} />
             <span><b style={{ display: "block", fontSize: 13.5, fontFamily: display }}>BAJO STOCK</b><small style={{ color: c.sub }}>{stockBajo} productos requieren atención</small></span>
             <ChevronRight style={{ marginLeft: "auto" }} size={18} />
