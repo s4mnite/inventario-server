@@ -3258,7 +3258,7 @@ export default function App() {
     ventasHoy, ventasAyer, movimientosHuevosInicio,
     pagoEfectivoHoy, pagoTarjetaHoy, pagoTransferenciaHoy,
     ventasHuevosHoyTotal, ventasHuevosAyerTotal,
-    gananciasHoy, gananciasAyer, huevosVendidosHoy, diferenciaGanancias,
+    gananciasHoy, gananciasAyer, huevosVendidosHoy, huevosVendidosAyer, diferenciaGanancias,
   } = useMemo(() => {
     const ventasHoy = ventas.filter(v => fechaVentaClave(v) === hoyClave);
     const ventasAyer = ventas.filter(v => fechaVentaClave(v) === ayerClave);
