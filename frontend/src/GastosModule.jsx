@@ -92,11 +92,11 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
   const authHeaders = { "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" };
   const jsonHeaders = { "Content-Type": "application/json", ...authHeaders };
 
-  const bg = darkMode ? "#121522" : "#f7f7f5";
-  const card = darkMode ? "#1c2030" : "#fff";
-  const text = darkMode ? "#f4f4f5" : "#171717";
-  const muted = darkMode ? "#9ca3af" : "#71717a";
-  const border = darkMode ? "#303548" : "#ececec";
+  const bg = darkMode ? "#121110" : "#F2F1EC";
+  const card = darkMode ? "#1C1A17" : "#fff";
+  const text = darkMode ? "#E9E6DB" : "#1C1A17";
+  const muted = darkMode ? "#8C8678" : "#8C8678";
+  const border = darkMode ? "#2A2723" : "#E9E6DB";
   const categoriasGasto = useMemo(() => {
     const nombres = [
       ...categoriasProductos.map(c => typeof c === "string" ? c : (c?.nombre || c?.label || c?.categoria || "")),
@@ -453,34 +453,34 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:18, flexWrap:"wrap" }}>
       <div><h2 style={{ margin:0, fontSize:24 }}>Gastos</h2><p style={{ margin:"4px 0 0", color:muted, fontSize:13 }}>Compras y egresos del local</p></div>
       <div style={{ display:"flex", gap:8 }}>
-        <button onClick={() => { setForm(emptyForm()); setEditingId(null); setModal(true); }} style={{ border:0, background:"#d71920", color:"#fff", borderRadius:12, padding:"10px 16px", fontWeight:800, display:"flex", gap:7, alignItems:"center" }}><Plus size={17}/> Nuevo gasto</button>
+        <button onClick={() => { setForm(emptyForm()); setEditingId(null); setModal(true); }} style={{ border:0, background:"#E63946", color:"#fff", borderRadius:0, padding:"10px 16px", fontWeight:800, display:"flex", gap:7, alignItems:"center" }}><Plus size={17}/> Nuevo gasto</button>
       </div>
     </div>
 
     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))", gap:10, marginBottom:18 }}>
-      {[["Hoy",resumen.hoy,"#fff3bf","#d97706"],["Este mes",resumen.mes,"#fee2e2","#d71920"],["Mercadería",resumen.mercaderia,"#dcfce7","#15803d"],["Operacionales",resumen.operaciones,"#e0e7ff","#4338ca"]].map(([l,v,b,c]) => <div key={l} style={{ background:card, border:`1px solid ${border}`, borderRadius:16, padding:15, boxShadow:"0 5px 18px rgba(0,0,0,.05)" }}><p style={{ margin:0,color:muted,fontSize:12,fontWeight:700 }}>{l}</p><p style={{ margin:"7px 0 0",fontSize:22,fontWeight:900,color:c }}>{fmt(v)}</p></div>)}
+      {[["Hoy",resumen.hoy,"rgba(255,159,28,0.15)","#FF9F1C"],["Este mes",resumen.mes,"rgba(230,57,70,0.10)","#E63946"],["Mercadería",resumen.mercaderia,"rgba(46,196,182,0.12)","#2EC4B6"],["Operacionales",resumen.operaciones,"rgba(142,124,195,0.10)","#8E7CC3"]].map(([l,v,b,c]) => <div key={l} style={{ background:card, border:`1px solid ${border}`, borderRadius:0, padding:15, boxShadow:"0 5px 18px rgba(0,0,0,.05)" }}><p style={{ margin:0,color:muted,fontSize:12,fontWeight:700 }}>{l}</p><p style={{ margin:"7px 0 0",fontSize:22,fontWeight:900,color:c }}>{fmt(v)}</p></div>)}
     </div>
 
-    <div style={{ background:card, border:`1px solid ${border}`, borderRadius:16, padding:14, marginBottom:14 }}>
-      <div style={{ position:"relative" }}><Search size={17} color={muted} style={{ position:"absolute",left:12,top:12 }}/><input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar gasto, comercio o boleta..." style={{ width:"100%",boxSizing:"border-box",padding:"11px 12px 11px 38px",border:`1px solid ${border}`,borderRadius:12,background:bg,color:text,outline:"none" }}/></div>
+    <div style={{ background:card, border:`1px solid ${border}`, borderRadius:0, padding:14, marginBottom:14 }}>
+      <div style={{ position:"relative" }}><Search size={17} color={muted} style={{ position:"absolute",left:12,top:12 }}/><input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar gasto, comercio o boleta..." style={{ width:"100%",boxSizing:"border-box",padding:"11px 12px 11px 38px",border:`1px solid ${border}`,borderRadius:0,background:bg,color:text,outline:"none" }}/></div>
     </div>
 
-    {error && !modal && <div style={{ background:"#fff1f2",border:"1px solid #fecdd3",color:"#be123c",padding:12,borderRadius:12,marginBottom:12 }}><AlertCircle size={15}/> {error}</div>}
-    <div style={{ background:card, border:`1px solid ${border}`, borderRadius:16, overflow:"hidden" }}>
+    {error && !modal && <div style={{ background:"rgba(230,57,70,0.10)",border:"1px solid rgba(230,57,70,0.12)",color:"#E63946",padding:12,borderRadius:0,marginBottom:12 }}><AlertCircle size={15}/> {error}</div>}
+    <div style={{ background:card, border:`1px solid ${border}`, borderRadius:0, overflow:"hidden" }}>
       {loading ? <p style={{ padding:24,color:muted }}>Cargando gastos...</p> : filtrados.length === 0 ? <div style={{ padding:40,textAlign:"center",color:muted }}><Receipt size={38}/><p>No hay gastos registrados.</p></div> : gruposPorDia.map((grupo, gi) => (
         <div key={grupo.fecha}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:darkMode?"#181c2a":"#f7f7f5",borderBottom:`1px solid ${border}`,borderTop:gi>0?`1px solid ${border}`:"none",position:"sticky",top:0 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:darkMode?"#1C1A17":"#F2F1EC",borderBottom:`1px solid ${border}`,borderTop:gi>0?`1px solid ${border}`:"none",position:"sticky",top:0 }}>
             <p style={{ margin:0,fontSize:12,fontWeight:850,color:muted,textTransform:"capitalize" }}>{etiquetaDia(grupo.fecha)}</p>
-            <p style={{ margin:0,fontSize:12,fontWeight:900,color:"#d71920" }}>-{fmt(grupo.total)}</p>
+            <p style={{ margin:0,fontSize:12,fontWeight:900,color:"#E63946" }}>-{fmt(grupo.total)}</p>
           </div>
           {grupo.items.map((g,i) => {
             const cat = categoriasGasto.find(x=>x.id===g.categoria) || categoriasGasto.at(-1); const Icon=cat.icon;
             return <div key={g.id||g._id} style={{ display:"flex",alignItems:"center",gap:12,padding:14,borderBottom:(i<grupo.items.length-1||gi<gruposPorDia.length-1)?`1px solid ${border}`:"none" }}>
-              <div style={{ width:42,height:42,borderRadius:12,background:"#fff3bf",display:"flex",alignItems:"center",justifyContent:"center",color:"#d97706" }}><Icon size={19}/></div>
+              <div style={{ width:42,height:42,borderRadius:0,background:"rgba(255,159,28,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#FF9F1C" }}><Icon size={19}/></div>
               <div style={{ flex:1,minWidth:0 }}><p style={{ margin:0,fontWeight:850,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{g.comercio}</p><p style={{ margin:"3px 0 0",color:muted,fontSize:11 }}>{g.fecha} · {cat.label}{g.numeroDocumento?` · N° ${g.numeroDocumento}`:""}</p></div>
-              <div style={{ textAlign:"right" }}><p style={{ margin:0,fontWeight:900,color:"#d71920" }}>-{fmt(g.total)}</p>{g.imagenUrl&&<a href={`${API}${g.imagenUrl}`} target="_blank" rel="noreferrer" style={{ color:muted,fontSize:10 }}>Ver boleta</a>}</div>
-              <button onClick={()=>abrirEditar(g)} style={{ border:0,background:"transparent",color:"#2563eb",padding:7 }}><Pencil size={16}/></button>
-              <button onClick={()=>eliminar(g.id||g._id)} style={{ border:0,background:"transparent",color:"#dc2626",padding:7 }}><Trash2 size={16}/></button>
+              <div style={{ textAlign:"right" }}><p style={{ margin:0,fontWeight:900,color:"#E63946" }}>-{fmt(g.total)}</p>{g.imagenUrl&&<a href={`${API}${g.imagenUrl}`} target="_blank" rel="noreferrer" style={{ color:muted,fontSize:10 }}>Ver boleta</a>}</div>
+              <button onClick={()=>abrirEditar(g)} style={{ border:0,background:"transparent",color:"#8E7CC3",padding:7 }}><Pencil size={16}/></button>
+              <button onClick={()=>eliminar(g.id||g._id)} style={{ border:0,background:"transparent",color:"#E63946",padding:7 }}><Trash2 size={16}/></button>
             </div>;
           })}
         </div>
@@ -489,10 +489,10 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
     {modal && <div style={{ position:"fixed",inset:0,height:"100dvh",zIndex:12000,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
       <div style={{ width:"100%",maxWidth:700,maxHeight:"92dvh",display:"flex",flexDirection:"column",background:card,borderRadius:"22px 22px 0 0",color:text,overflow:"hidden" }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>{editingId?"Editar gasto":"Registrar gasto"}</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>{editingId?"Modifica los datos del gasto":"Ingresa los datos del gasto"}</p></div><button onClick={()=>{setModal(false);setEditingId(null);}} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:10,flexShrink:0 }}><X size={18}/></button></div>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 18px 14px" }}><div><h3 style={{ margin:0,fontSize:19 }}>{editingId?"Editar gasto":"Registrar gasto"}</h3><p style={{ margin:"3px 0 0",fontSize:12,color:muted }}>{editingId?"Modifica los datos del gasto":"Ingresa los datos del gasto"}</p></div><button onClick={()=>{setModal(false);setEditingId(null);}} style={{ border:0,background:bg,color:text,width:34,height:34,borderRadius:0,flexShrink:0 }}><X size={18}/></button></div>
 
         <div style={{ flex:"1 1 auto",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px",paddingBottom:24 }}>
-          {error&&<div style={{ background:"#fff1f2",color:"#be123c",padding:10,borderRadius:10,fontSize:12,marginBottom:12 }}>{error}</div>}
+          {error&&<div style={{ background:"rgba(230,57,70,0.10)",color:"#E63946",padding:10,borderRadius:0,fontSize:12,marginBottom:12 }}>{error}</div>}
           <div style={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10 }}>
             {form.itemsInventario.length===0 && <label style={{ gridColumn:"1/-1",fontSize:12,fontWeight:750 }}>Comercio / descripción<input value={form.comercio} onChange={e=>setForm({...form,comercio:e.target.value})} style={inputStyle(card,text,border)} /></label>}
             <label style={{ fontSize:12,fontWeight:750 }}>Fecha<input type="date" value={form.fecha} onChange={e=>setForm({...form,fecha:e.target.value})} style={inputStyle(card,text,border)} /></label>
@@ -504,14 +504,14 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
               <button type="button" onClick={()=>setCategoryOpen(v=>!v)} style={{...inputStyle(card,text,border),display:"flex",alignItems:"center",justifyContent:"space-between",textAlign:"left",cursor:"pointer"}}>
                 <span>{categoriasGasto.find(c=>c.id===form.categoria)?.label || "Seleccionar categoría"}</span><ChevronDown size={16}/>
               </button>
-              {categoryOpen && <div style={{position:"absolute",zIndex:20,left:0,right:0,top:"calc(100% + 5px)",background:card,border:`1px solid ${border}`,borderRadius:12,boxShadow:"0 12px 30px rgba(0,0,0,.18)",padding:8,maxHeight:260,overflowY:"auto"}}>
+              {categoryOpen && <div style={{position:"absolute",zIndex:20,left:0,right:0,top:"calc(100% + 5px)",background:card,border:`1px solid ${border}`,borderRadius:0,boxShadow:"0 12px 30px rgba(0,0,0,.18)",padding:8,maxHeight:260,overflowY:"auto"}}>
                 {["huevos", "productos", "otros"].map(grupo => {
                   const items = categoriasGasto.filter(c => c.grupo === grupo);
                   if (!items.length) return null;
                   const titulo = grupo === "huevos" ? "HUEVOS" : grupo === "productos" ? "CATEGORÍAS DE PRODUCTOS" : "OTROS GASTOS";
                   return <div key={grupo}>
                     <div style={{padding:"7px 10px 5px",fontSize:10,fontWeight:900,letterSpacing:.6,color:muted}}>{titulo}</div>
-                    {items.map(c=>{const Icon=c.icon;const selected=c.id===form.categoria;return <button type="button" key={c.id} onClick={()=>{setForm({...form,categoria:c.id});setCategoryOpen(false)}} style={{width:"100%",border:0,borderRadius:9,padding:"10px 11px",marginBottom:4,background:selected?(darkMode?"#27334a":"#fff3bf"):"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:selected?850:650,textAlign:"left",cursor:"pointer"}}><Icon size={16} color={selected?"#d97706":muted}/><span style={{flex:1}}>{c.label}</span>{selected&&<CheckCircle size={15} color="#15803d"/>}</button>})}
+                    {items.map(c=>{const Icon=c.icon;const selected=c.id===form.categoria;return <button type="button" key={c.id} onClick={()=>{setForm({...form,categoria:c.id});setCategoryOpen(false)}} style={{width:"100%",border:0,borderRadius:0,padding:"10px 11px",marginBottom:4,background:selected?(darkMode?"#2A2723":"rgba(255,159,28,0.15)"):"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:selected?850:650,textAlign:"left",cursor:"pointer"}}><Icon size={16} color={selected?"#FF9F1C":muted}/><span style={{flex:1}}>{c.label}</span>{selected&&<CheckCircle size={15} color="#2EC4B6"/>}</button>})}
                   </div>;
                 })}
               </div>}
@@ -523,7 +523,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
           <div style={{ marginTop:16,paddingTop:14,borderTop:`1px solid ${border}` }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
               <div><p style={{ margin:0,fontWeight:850 }}>Compra de inventario</p><p style={{ margin:"2px 0 0",fontSize:11,color:muted }}>Opcional: aumenta stock y actualiza costo promedio.{editingId?" Los huevos solo se pueden agregar al crear un gasto nuevo, no al editar.":""}</p></div>
-              <button onClick={agregarItemInventario} style={{ border:0,background:"#15803d",color:"#fff",borderRadius:10,padding:"8px 10px",fontWeight:800,display:"flex",alignItems:"center",gap:6 }}><Plus size={14}/> Producto</button>
+              <button onClick={agregarItemInventario} style={{ border:0,background:"#2EC4B6",color:"#fff",borderRadius:0,padding:"8px 10px",fontWeight:800,display:"flex",alignItems:"center",gap:6 }}><Plus size={14}/> Producto</button>
             </div>
 
             {form.itemsInventario.map((it,i)=>{
@@ -531,7 +531,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
               const tieneManga = Boolean(producto?.mangaActiva && Number(it.unidadesPorManga)>0 && Number(producto?.mangaPrecio)>0);
               const unidades = unidadesItem(it);
               const costoCalc = costoUnitarioItem(it);
-              return <div key={i} style={{ border:`1px solid ${border}`,borderRadius:12,padding:10,marginBottom:10,background:bg }}>
+              return <div key={i} style={{ border:`1px solid ${border}`,borderRadius:0,padding:10,marginBottom:10,background:bg }}>
                 <div style={{ display:"flex",gap:7,marginBottom:8,position:"relative" }}>
                   <button
                     type="button"
@@ -546,7 +546,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                     <ChevronDown size={16}/>
                   </button>
 
-                  {productoBuscadorOpen===i && <div style={{position:"absolute",zIndex:30,left:0,right:0,top:"calc(100% + 5px)",background:card,border:`1px solid ${border}`,borderRadius:12,boxShadow:"0 12px 30px rgba(0,0,0,.18)",maxHeight:320,display:"flex",flexDirection:"column"}}>
+                  {productoBuscadorOpen===i && <div style={{position:"absolute",zIndex:30,left:0,right:0,top:"calc(100% + 5px)",background:card,border:`1px solid ${border}`,borderRadius:0,boxShadow:"0 12px 30px rgba(0,0,0,.18)",maxHeight:320,display:"flex",flexDirection:"column"}}>
                     <input
                       autoFocus
                       value={productoBusqueda}
@@ -565,18 +565,18 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                         return <>
                           {huevosFiltrados.length>0 && <>
                             <div style={{padding:"7px 10px 5px",fontSize:10,fontWeight:900,letterSpacing:.6,color:muted}}>HUEVOS</div>
-                            {huevosFiltrados.map(hv => <button type="button" key={`huevo:${hv.id}`} onClick={()=>{seleccionarProductoItem(i,`huevo:${hv.id}`);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:9,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>🥚 Huevos - {hv.nombre}</button>)}
+                            {huevosFiltrados.map(hv => <button type="button" key={`huevo:${hv.id}`} onClick={()=>{seleccionarProductoItem(i,`huevo:${hv.id}`);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:0,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>🥚 Huevos - {hv.nombre}</button>)}
                           </>}
                           {productosFiltrados.length>0 && <>
                             <div style={{padding:"7px 10px 5px",fontSize:10,fontWeight:900,letterSpacing:.6,color:muted}}>PRODUCTOS</div>
-                            {productosFiltrados.map(p => <button type="button" key={p.id||p._id} onClick={()=>{seleccionarProductoItem(i,p.id||p._id);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:9,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>{p.nombre}</button>)}
+                            {productosFiltrados.map(p => <button type="button" key={p.id||p._id} onClick={()=>{seleccionarProductoItem(i,p.id||p._id);setProductoBuscadorOpen(null);}} style={{width:"100%",border:0,borderRadius:0,padding:"10px 11px",marginBottom:4,background:"transparent",color:text,display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650,textAlign:"left",cursor:"pointer"}}>{p.nombre}</button>)}
                           </>}
                         </>;
                       })()}
                     </div>
                   </div>}
 
-                  <button onClick={()=>quitarItem(i)} style={{ border:0,background:"#fee2e2",color:"#dc2626",borderRadius:9,padding:"0 11px",flexShrink:0 }}><X size={15}/></button>
+                  <button onClick={()=>quitarItem(i)} style={{ border:0,background:"rgba(230,57,70,0.10)",color:"#E63946",borderRadius:0,padding:"0 11px",flexShrink:0 }}><X size={15}/></button>
                 </div>
 
                 {it.productoId && it.tipo==="huevo" && <>
@@ -587,14 +587,14 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                     onClick={()=>cambiarItem(i,"actualizarStock",!(it.actualizarStock!==false))}
                     style={{
                       display:"flex",alignItems:"center",gap:8,width:"100%",
-                      border:`1.5px solid ${it.actualizarStock!==false?"#15803d":border}`,
-                      background:it.actualizarStock!==false?(darkMode?"rgba(21,128,61,0.15)":"#f0fdf4"):card,
-                      borderRadius:9,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
+                      border:`1.5px solid ${it.actualizarStock!==false?"#2EC4B6":border}`,
+                      background:it.actualizarStock!==false?(darkMode?"rgba(46,196,182,0.15)":"rgba(46,196,182,0.12)"):card,
+                      borderRadius:0,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
                     }}
                   >
                     <span style={{
-                      width:32,height:18,borderRadius:999,flexShrink:0,position:"relative",
-                      background:it.actualizarStock!==false?"#15803d":(darkMode?"#3f3f46":"#d4d4d8"),
+                      width:32,height:18,borderRadius:0,flexShrink:0,position:"relative",
+                      background:it.actualizarStock!==false?"#2EC4B6":(darkMode?"#6B6558":"#D6D2C4"),
                       transition:"background .15s",
                     }}>
                       <span style={{
@@ -617,7 +617,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                   <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
                     {it.actualizarStock===false
                       ? <>No se sumará stock · costo por huevo {fmt(costoCalc)}</>
-                      : (unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades.toLocaleString("es-CL")}</strong> huevos al stock · costo por huevo {fmt(costoCalc)}</> : "Ingresa cajas o bandejas para calcular")}
+                      : (unidades>0 ? <>Suma <strong style={{color:"#2EC4B6"}}>{unidades.toLocaleString("es-CL")}</strong> huevos al stock · costo por huevo {fmt(costoCalc)}</> : "Ingresa cajas o bandejas para calcular")}
                     {" · "}Subtotal: <strong style={{color:text}}>{fmt(subtotalItem(it))}</strong>
                   </p>
                 </>}
@@ -630,14 +630,14 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                     onClick={()=>cambiarItem(i,"actualizarStock",!(it.actualizarStock!==false))}
                     style={{
                       display:"flex",alignItems:"center",gap:8,width:"100%",
-                      border:`1.5px solid ${it.actualizarStock!==false?"#15803d":border}`,
-                      background:it.actualizarStock!==false?(darkMode?"rgba(21,128,61,0.15)":"#f0fdf4"):card,
-                      borderRadius:9,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
+                      border:`1.5px solid ${it.actualizarStock!==false?"#2EC4B6":border}`,
+                      background:it.actualizarStock!==false?(darkMode?"rgba(46,196,182,0.15)":"rgba(46,196,182,0.12)"):card,
+                      borderRadius:0,padding:"8px 10px",marginBottom:8,cursor:"pointer",textAlign:"left",
                     }}
                   >
                     <span style={{
-                      width:32,height:18,borderRadius:999,flexShrink:0,position:"relative",
-                      background:it.actualizarStock!==false?"#15803d":(darkMode?"#3f3f46":"#d4d4d8"),
+                      width:32,height:18,borderRadius:0,flexShrink:0,position:"relative",
+                      background:it.actualizarStock!==false?"#2EC4B6":(darkMode?"#6B6558":"#D6D2C4"),
                       transition:"background .15s",
                     }}>
                       <span style={{
@@ -651,8 +651,8 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                   </button>
 
                   <div style={{ display:"flex",gap:7,marginBottom:8 }}>
-                    <button type="button" onClick={()=>cambiarModoItem(i,"unitario")} style={{ flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${it.modo==="unitario"?"#d71920":border}`,background:it.modo==="unitario"?(darkMode?"rgba(215,25,32,0.15)":"#fff3bf"):card,color:it.modo==="unitario"?"#d71920":muted,fontSize:12,fontWeight:750,cursor:"pointer" }}>○ Unitario</button>
-                    <button type="button" disabled={!tieneManga} onClick={()=>cambiarModoItem(i,"manga")} title={tieneManga?"":"Este producto no tiene manga/bulto configurado"} style={{ flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${it.modo==="manga"?"#f59e0b":border}`,background:it.modo==="manga"?(darkMode?"rgba(245,158,11,0.2)":"#fffbeb"):card,color:it.modo==="manga"?"#d97706":muted,fontSize:12,fontWeight:750,cursor:tieneManga?"pointer":"not-allowed",opacity:tieneManga?1:.5 }}>○ Manga / Bulto</button>
+                    <button type="button" onClick={()=>cambiarModoItem(i,"unitario")} style={{ flex:1,padding:"8px",borderRadius:0,border:`1.5px solid ${it.modo==="unitario"?"#E63946":border}`,background:it.modo==="unitario"?(darkMode?"rgba(230,57,70,0.15)":"rgba(255,159,28,0.15)"):card,color:it.modo==="unitario"?"#E63946":muted,fontSize:12,fontWeight:750,cursor:"pointer" }}>○ Unitario</button>
+                    <button type="button" disabled={!tieneManga} onClick={()=>cambiarModoItem(i,"manga")} title={tieneManga?"":"Este producto no tiene manga/bulto configurado"} style={{ flex:1,padding:"8px",borderRadius:0,border:`1.5px solid ${it.modo==="manga"?"#FF9F1C":border}`,background:it.modo==="manga"?(darkMode?"rgba(255,159,28,0.2)":"rgba(255,159,28,0.12)"):card,color:it.modo==="manga"?"#FF9F1C":muted,fontSize:12,fontWeight:750,cursor:tieneManga?"pointer":"not-allowed",opacity:tieneManga?1:.5 }}>○ Manga / Bulto</button>
                   </div>
 
                   {it.modo==="unitario" ? (
@@ -672,7 +672,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
                   <p style={{ margin:"8px 0 0",fontSize:11,color:muted }}>
                     {it.actualizarStock===false
                       ? <>No se sumará stock · costo unitario {fmt(costoCalc)}</>
-                      : (unidades>0 ? <>Suma <strong style={{color:"#15803d"}}>{unidades}</strong> unidades al stock · costo unitario {fmt(costoCalc)}</> : "Ingresa cantidad para calcular")}
+                      : (unidades>0 ? <>Suma <strong style={{color:"#2EC4B6"}}>{unidades}</strong> unidades al stock · costo unitario {fmt(costoCalc)}</> : "Ingresa cantidad para calcular")}
                     {" · "}Subtotal: <strong style={{color:text}}>{fmt(subtotalItem(it))}</strong>
                   </p>
                 </>}
@@ -682,17 +682,17 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
             {form.itemsInventario.length>0 && <div style={{ display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8,padding:"10px 2px 2px",fontSize:12 }}>
               <span style={{color:muted}}>Subtotal productos: <strong style={{color:text}}>{fmt(subtotalInventario)}</strong></span>
               <span style={{color:muted}}>IVA: <strong style={{color:text}}>{fmt(Number(form.iva||0))}</strong></span>
-              <span style={{color:muted}}>Total: <strong style={{color:"#d71920"}}>{fmt(totalCalculado)}</strong></span>
+              <span style={{color:muted}}>Total: <strong style={{color:"#E63946"}}>{fmt(totalCalculado)}</strong></span>
             </div>}
           </div>
         </div>
 
         <div style={{ padding:"14px 18px",paddingBottom:"calc(14px + env(safe-area-inset-bottom))",borderTop:`1px solid ${border}`,background:card,flexShrink:0 }}>
-          <button onClick={guardar} disabled={guardando} style={{ width:"100%",padding:14,border:0,borderRadius:14,background:"#d71920",color:"#fff",fontWeight:900,fontSize:15,opacity:guardando?.6:1,cursor:guardando?"not-allowed":"pointer" }}>{guardando?"Guardando...":(editingId?"Guardar cambios":"Guardar gasto")}</button>
+          <button onClick={guardar} disabled={guardando} style={{ width:"100%",padding:14,border:0,borderRadius:0,background:"#E63946",color:"#fff",fontWeight:900,fontSize:15,opacity:guardando?.6:1,cursor:guardando?"not-allowed":"pointer" }}>{guardando?"Guardando...":(editingId?"Guardar cambios":"Guardar gasto")}</button>
         </div>
       </div>
     </div>}
   </div>;
 }
 
-function inputStyle(bg,color,border){return{width:"100%",boxSizing:"border-box",marginTop:5,padding:"10px 11px",border:`1px solid ${border}`,borderRadius:10,background:bg,color,outline:"none",fontSize:13}}
+function inputStyle(bg,color,border){return{width:"100%",boxSizing:"border-box",marginTop:5,padding:"10px 11px",border:`1px solid ${border}`,borderRadius:0,background:bg,color,outline:"none",fontSize:13}}

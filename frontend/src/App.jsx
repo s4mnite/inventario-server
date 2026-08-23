@@ -126,6 +126,8 @@ const getDarkMode = () => localStorage.getItem("inv_dark") === "true";
 const saveDarkMode= (v) => localStorage.setItem("inv_dark", String(v));
 const getClientes = () => JSON.parse(localStorage.getItem("inv_clientes") || "[]");
 const saveClientes = (c) => localStorage.setItem("inv_clientes", JSON.stringify(c));
+const getProveedores = () => JSON.parse(localStorage.getItem("inv_proveedores") || "[]");
+const saveProveedores = (p) => localStorage.setItem("inv_proveedores", JSON.stringify(p));
 // Papelera de productos eliminados: se borran del backend pero se guardan localmente
 // para poder restaurarlos (vuelven a crearse en el backend al restaurar).
 const getPapelera = () => JSON.parse(localStorage.getItem("inv_papelera") || "[]");
@@ -253,16 +255,16 @@ function BarcodeScanner({ onScan, onClose, darkMode }) {
     return () => { cancelled = true; stopCamera(); };
   }, [onScan, stopCamera]);
 
-  const bg = darkMode ? "#1a1d2e" : "#fff";
-  const textPrimary = darkMode ? "#e8eaf6" : "#1a1a2e";
-  const textMuted   = darkMode ? "#9ca3af" : "#6b7280";
+  const bg = darkMode ? "#1C1A17" : "#fff";
+  const textPrimary = darkMode ? "#FAF8F3" : "#121110";
+  const textMuted   = darkMode ? "#B5A791" : "#8C8678";
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, backdropFilter:"blur(6px)" }}>
-      <div className="fade-in" style={{ background:bg, borderRadius:20, padding:28, width:"92%", maxWidth:380, boxShadow:"0 30px 80px rgba(0,0,0,0.4)" }}>
+      <div className="fade-in" style={{ background:bg, borderRadius:0, padding:28, width:"92%", maxWidth:380, boxShadow:"0 30px 80px rgba(0,0,0,0.4)" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#d71920,#ef2b32)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:40, height:40, borderRadius:0, background:"#E63946", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <span style={{ fontSize:20 }}>📷</span>
             </div>
             <div>
@@ -272,19 +274,19 @@ function BarcodeScanner({ onScan, onClose, darkMode }) {
               </p>
             </div>
           </div>
-          <button onClick={() => { stopCamera(); onClose(); }} style={{ background:darkMode?"#252840":"#f3f4f6", border:"none", cursor:"pointer", width:32, height:32, borderRadius:8, fontSize:16 }}>✕</button>
+          <button onClick={() => { stopCamera(); onClose(); }} style={{ background:darkMode?"#241F1A":"#E9E6DB", border:"none", cursor:"pointer", width:32, height:32, borderRadius:0, fontSize:16 }}>✕</button>
         </div>
 
         {error ? (
-          <div style={{ background:"#fff1f2", border:"1.5px solid #fca5a5", borderRadius:12, padding:16, color:"#e03131", fontSize:13 }}>
+          <div style={{ background:"rgba(230,57,70,0.10)", border:"1.5px solid #E63946", borderRadius:0, padding:16, color:"#E63946", fontSize:13 }}>
             {error}
           </div>
         ) : (
-          <div style={{ position:"relative", borderRadius:14, overflow:"hidden", background:"#000", aspectRatio:"4/3" }}>
+          <div style={{ position:"relative", borderRadius:0, overflow:"hidden", background:"#000", aspectRatio:"4/3" }}>
             {loading && (
               <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"#000", zIndex:2 }}>
                 <div style={{ textAlign:"center", color:"#fff" }}>
-                  <div className="spin" style={{ width:32, height:32, border:"3px solid rgba(255,255,255,0.2)", borderTop:"3px solid #ef2b32", borderRadius:"50%", margin:"0 auto 10px" }} />
+                  <div className="spin" style={{ width:32, height:32, border:"3px solid rgba(255,255,255,0.2)", borderTop:"3px solid #E63946", borderRadius:"50%", margin:"0 auto 10px" }} />
                   <p style={{ margin:0, fontSize:12, color:"rgba(255,255,255,0.6)" }}>Iniciando cámara...</p>
                 </div>
               </div>
@@ -293,13 +295,13 @@ function BarcodeScanner({ onScan, onClose, darkMode }) {
             {/* Marco de escaneo */}
             {scanning && (
               <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <div style={{ width:200, height:120, border:"3px solid #d71920", borderRadius:12, boxShadow:"0 0 0 1000px rgba(0,0,0,0.4)", position:"relative" }}>
-                  <div style={{ position:"absolute", top:-2, left:-2, width:20, height:20, borderTop:"4px solid #ef2b32", borderLeft:"4px solid #ef2b32", borderRadius:"4px 0 0 0" }} />
-                  <div style={{ position:"absolute", top:-2, right:-2, width:20, height:20, borderTop:"4px solid #ef2b32", borderRight:"4px solid #ef2b32", borderRadius:"0 4px 0 0" }} />
-                  <div style={{ position:"absolute", bottom:-2, left:-2, width:20, height:20, borderBottom:"4px solid #ef2b32", borderLeft:"4px solid #ef2b32", borderRadius:"0 0 0 4px" }} />
-                  <div style={{ position:"absolute", bottom:-2, right:-2, width:20, height:20, borderBottom:"4px solid #ef2b32", borderRight:"4px solid #ef2b32", borderRadius:"0 0 4px 0" }} />
+                <div style={{ width:200, height:120, border:"3px solid #E63946", borderRadius:0, boxShadow:"0 0 0 1000px rgba(0,0,0,0.4)", position:"relative" }}>
+                  <div style={{ position:"absolute", top:-2, left:-2, width:20, height:20, borderTop:"4px solid #E63946", borderLeft:"4px solid #E63946", borderRadius:"4px 0 0 0" }} />
+                  <div style={{ position:"absolute", top:-2, right:-2, width:20, height:20, borderTop:"4px solid #E63946", borderRight:"4px solid #E63946", borderRadius:"0 4px 0 0" }} />
+                  <div style={{ position:"absolute", bottom:-2, left:-2, width:20, height:20, borderBottom:"4px solid #E63946", borderLeft:"4px solid #E63946", borderRadius:"0 0 0 4px" }} />
+                  <div style={{ position:"absolute", bottom:-2, right:-2, width:20, height:20, borderBottom:"4px solid #E63946", borderRight:"4px solid #E63946", borderRadius:"0 0 4px 0" }} />
                   {/* Línea animada de escaneo */}
-                  <div className="scan-line" style={{ position:"absolute", left:4, right:4, height:2, background:"linear-gradient(90deg, transparent, #ef2b32, transparent)", borderRadius:2 }} />
+                  <div className="scan-line" style={{ position:"absolute", left:4, right:4, height:2, background:"linear-gradient(90deg, transparent, #E63946, transparent)", borderRadius:0 }} />
                 </div>
               </div>
             )}
@@ -347,82 +349,82 @@ const generarNumeroBoleta = (boletasActuales) => {
 // ─── Dark Mode CSS ──────────────────────────────────────────────────────────── 
 const getDarkVars = () => `
   :root {
-    --bg-main: #151815;
-    --bg-card: #1d211d;
-    --bg-card2: #242923;
-    --bg-hover: #293630;
-    --bg-input: #1d211d;
-    --border: #2a2e28;
-    --border2: #343a32;
-    --text-primary: #edefea;
-    --text-secondary: #9ca39b;
-    --text-muted: #6b716a;
-    --sidebar-bg: #191d19;
-    --header-bg: #191d19;
+    --bg-main: #121110;
+    --bg-card: #1C1A17;
+    --bg-card2: #241F1A;
+    --bg-hover: #2A2723;
+    --bg-input: #1C1A17;
+    --border: #2A2723;
+    --border2: #3A342D;
+    --text-primary: #FAF8F3;
+    --text-secondary: #B5A791;
+    --text-muted: #8C8678;
+    --sidebar-bg: #1C1A17;
+    --header-bg: #1C1A17;
     --shadow: rgba(0,0,0,0.4);
-    --accent: #ffc400;
-    --accent-strong: #63c2a6;
-    --accent-bg: rgba(79,174,147,0.15);
+    --accent: #FF9F1C;
+    --accent-strong: #2EC4B6;
+    --accent-bg: rgba(255,159,28,0.15);
   }
 `;
 const getLightVars = () => `
   :root {
-    --bg-main: #f7f6f3;
+    --bg-main: #F2F1EC;
     --bg-card: #ffffff;
-    --bg-card2: #f2f1ec;
-    --bg-hover: #ecf4f0;
-    --bg-input: #fafaf8;
-    --border: #e9e7e0;
-    --border2: #dedcd3;
-    --text-primary: #20241f;
-    --text-secondary: #5b6660;
-    --text-muted: #93998f;
+    --bg-card2: #E9E6DB;
+    --bg-hover: #F2F1EC;
+    --bg-input: #ffffff;
+    --border: #E4E1D6;
+    --border2: #D6D2C4;
+    --text-primary: #14120E;
+    --text-secondary: #6B6558;
+    --text-muted: #948E7E;
     --sidebar-bg: #ffffff;
     --header-bg: #ffffff;
-    --shadow: rgba(32,36,31,0.05);
-    --accent: #d71920;
-    --accent-strong: #245a4c;
-    --accent-bg: #e4f0ec;
+    --shadow: rgba(20,18,14,0.06);
+    --accent: #E63946;
+    --accent-strong: #2EC4B6;
+    --accent-bg: rgba(230,57,70,0.10);
   }
 `;
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Sora', sans-serif; }
+  body { font-family: 'Manrope', sans-serif; }
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg-main); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
-  input, select, button, textarea { font-family: 'Sora', sans-serif; }
-  .nav-btn { transition: all 0.15s ease; color: var(--text-secondary); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius:0; }
+  input, select, button, textarea { font-family: 'Manrope', sans-serif; }
+  .nav-btn { transition: all 0.15s ease; color: var(--text-secondary); border-radius: 0 !important; }
   .nav-btn:hover { background: var(--bg-hover) !important; color: var(--accent) !important; }
-  .nav-btn.active { background: var(--accent) !important; color: #fff !important; box-shadow: 0 3px 10px var(--accent-bg); }
+  .nav-btn.active { background: var(--accent) !important; color: #14120E !important; box-shadow: none; font-weight: 800; }
   .card-hover { transition: box-shadow 0.2s, transform 0.2s; }
   .card-hover:hover { box-shadow: 0 10px 28px var(--shadow); transform: translateY(-2px); }
-  .btn-primary { background: var(--accent); color: #fff; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #14120E; border: none; border-radius: 0 !important; cursor: pointer; font-weight: 800; transition: all 0.15s; }
   .btn-primary:hover { background: var(--accent-strong); transform: translateY(-1px); }
-  .btn-danger { background: #fbeae4; color: #b3452f; border: 1px solid #f0d3c7; cursor: pointer; transition: all 0.15s; }
-  .btn-danger:hover { background: #b3452f; color: #fff; }
-  .btn-success { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-bg); cursor: pointer; transition: all 0.15s; font-weight: 600; }
-  .btn-success:hover { background: var(--accent); color: #fff; }
-  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; border-radius: 20px; background: var(--bg-card); border: 1.5px dashed var(--border2); }
-  .toggle-switch { width: 46px; height: 26px; border-radius: 99px; border: none; cursor: pointer; position: relative; transition: background 0.2s; }
+  .btn-danger { background: #E63946; color: #fff; border: none; border-radius: 0 !important; cursor: pointer; transition: all 0.15s; font-weight: 800; }
+  .btn-danger:hover { background: #E63946; color: #fff; }
+  .btn-success { background: var(--accent-bg); color: var(--accent-strong); border: 2px solid var(--accent-strong); border-radius: 0 !important; cursor: pointer; transition: all 0.15s; font-weight: 800; }
+  .btn-success:hover { background: var(--accent-strong); color: #14120E; }
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; border-radius: 0; background: var(--bg-card); border: 2px dashed var(--border2); }
+  .toggle-switch { width: 46px; height: 26px; border-radius:0; border: none; cursor: pointer; position: relative; transition: background 0.2s; }
   .toggle-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; position: absolute; top: 3px; transition: left 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
   .fade-in { animation: fadeIn 0.25s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 0; font-size: 11px; font-weight: 800; }
   .mono { font-family: 'JetBrains Mono', monospace; }
-  .config-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: all 0.15s; font-size: 14px; font-weight: 500; color: var(--text-secondary); border: none; background: transparent; width: 100%; text-align: left; }
+  .config-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 0; cursor: pointer; transition: all 0.15s; font-size: 14px; font-weight: 600; color: var(--text-secondary); border: none; background: transparent; width: 100%; text-align: left; }
   .config-nav-item:hover { background: var(--bg-hover); color: var(--accent); }
-  .config-nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
-  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1.5px solid var(--border2); border-radius: 12px; box-shadow: 0 8px 24px var(--shadow); z-index: 50; overflow: hidden; margin-top: 4px; }
+  .config-nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 800; }
+  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--text-primary); border-radius: 0; box-shadow: 0 8px 24px var(--shadow); z-index: 50; overflow: hidden; margin-top: 4px; }
   .search-dropdown-item { padding: 10px 14px; cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
   .search-dropdown-item:hover { background: var(--bg-hover); }
   .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-height: 240px; overflow-y: auto; padding: 4px; }
-  .emoji-btn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid transparent; background: var(--bg-card2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
-  .emoji-btn:hover { background: var(--accent-bg); border-color: var(--accent); transform: scale(1.1); }
+  .emoji-btn { width: 36px; height: 36px; border-radius: 0; border: 2px solid transparent; background: var(--bg-card2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+  .emoji-btn:hover { background: var(--accent-bg); border-color: var(--accent); transform: scale(1.05); }
   .emoji-btn.selected { background: var(--accent-bg); border-color: var(--accent); }
-  .stat-card { background: var(--bg-card); border-radius: 20px; padding: 22px 24px; border: 1px solid var(--border); box-shadow: 0 2px 10px var(--shadow); }
+  .stat-card { background: var(--bg-card); border-radius: 0; padding: 22px 24px; border: 2px solid var(--border); box-shadow: none; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
   .pulse { animation: pulse 1.5s infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -437,52 +439,9 @@ const css = `
   /* ── INICIO MÓVIL REY DEL HUEVO ── */
   .rey-mobile-home { display: none; }
   .rey-home-shell { max-width: 520px; margin: 0 auto; }
-  .rey-home-hero { position:relative; overflow:hidden; border-radius:0 0 28px 28px; padding:22px 18px 25px; color:#351800; background:linear-gradient(135deg,#ffc400 0%,#ffda52 100%); box-shadow:0 10px 28px rgba(226,164,0,.20); }
-  .rey-home-hero::after { content:''; position:absolute; width:150px; height:150px; border-radius:50%; right:-48px; top:-62px; background:rgba(255,255,255,.25); }
-  .rey-home-brand { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
-  
-  .rey-home-logo img { width:100%; height:100%; object-fit:contain; display:block; border-radius:22px; }
-.rey-home-logo { width:55px; height:55px; border-radius:18px; background:rgba(255,255,255,.80); display:flex; align-items:center; justify-content:center; font-size:31px; box-shadow:0 5px 14px rgba(120,60,0,.12); }
-  .rey-home-greeting { font-size:21px; line-height:1.15; font-weight:800; color:#c9141e; margin:0; }
-  .rey-home-date { margin:5px 0 0; font-size:12px; font-weight:600; color:rgba(53,24,0,.68); text-transform:capitalize; }
-  .rey-mobile-body { padding:14px 14px 22px; }
-  .rey-section-title { font-size:17px; font-weight:800; color:var(--text-primary); margin:5px 2px 11px; }
-  .rey-profit-card { border-radius:24px; padding:19px; background:linear-gradient(145deg,#fff9dd,#fff1ac); border:1px solid #ffe376; box-shadow:0 8px 24px rgba(113,75,0,.10); }
-  .rey-profit-top { display:flex; align-items:center; gap:12px; }
-  .rey-profit-icon { width:50px; height:50px; border-radius:16px; background:#ffc400; display:flex; align-items:center; justify-content:center; color:#a20c15; }
-  .rey-profit-label { font-size:12px; font-weight:700; color:#795b00; margin:0 0 3px; }
-  .rey-profit-value { font-size:32px; letter-spacing:-1px; line-height:1.05; font-weight:800; color:#c9141e; margin:0; }
-  .rey-profit-compare { display:flex; align-items:center; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid rgba(124,87,0,.15); }
-  .rey-profit-badge { padding:7px 10px; border-radius:11px; font-size:12px; font-weight:800; white-space:nowrap; }
-  .rey-profit-badge.up { background:#e7f8ec; color:#138a3d; }
-  .rey-profit-badge.down { background:#ffe8e8; color:#d01b27; }
-  .rey-yesterday { font-size:12px; color:#765f19; line-height:1.45; }
-  .rey-yesterday strong { color:#3a2b00; }
-  .rey-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .rey-summary-card { border-radius:18px; background:var(--bg-card); border:1px solid var(--border); padding:14px; box-shadow:0 3px 13px var(--shadow); min-width:0; }
-  .rey-summary-card.wide { grid-column:1 / -1; }
-  .rey-summary-icon { font-size:23px; margin-bottom:7px; }
-  .rey-summary-label { font-size:11px; color:var(--text-secondary); margin:0 0 4px; }
-  .rey-summary-value { font-size:18px; color:var(--text-primary); font-weight:800; margin:0; overflow-wrap:anywhere; }
-  .rey-summary-sub { font-size:10px; color:var(--text-muted); margin-top:3px; }
-  .rey-actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .rey-action-card { border:0; border-radius:20px; min-height:104px; padding:14px 10px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-weight:800; }
-  .rey-action-card.yellow { background:#ffc400; color:#301b00; }
-  .rey-action-card.red { background:linear-gradient(145deg,#e30613,#bd0010); color:white; }
-  .rey-action-card span:first-child { font-size:29px; }
-  .rey-action-card small { opacity:.77; font-size:10px; font-weight:600; }
-  .rey-sale-button { width:100%; margin-top:10px; min-height:53px; border:0; border-radius:16px; background:linear-gradient(135deg,#e30613,#bd0010); color:#fff; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 8px 18px rgba(227,6,19,.22); }
-  .rey-activity-card { background:var(--bg-card); border:1px solid var(--border); border-radius:20px; overflow:hidden; box-shadow:0 3px 13px var(--shadow); }
-  .rey-activity-row { display:flex; gap:11px; align-items:center; padding:13px 14px; border-bottom:1px solid var(--border); }
-  .rey-activity-row:last-child { border-bottom:0; }
-  .rey-activity-dot { width:39px; height:39px; flex:0 0 39px; border-radius:13px; background:#e9f8ee; color:#138a3d; display:flex; align-items:center; justify-content:center; }
-  .rey-activity-main { flex:1; min-width:0; }
-  .rey-activity-name { margin:0; font-size:12px; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rey-activity-meta { margin:3px 0 0; font-size:10px; color:var(--text-muted); }
-  .rey-activity-total { font-size:12px; font-weight:800; color:#138a3d; white-space:nowrap; }
 
   /* ── RESPONSIVE MÓVIL ── */
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     .rey-mobile-home { display: block !important; }
     .rey-desktop-dashboard { display: none !important; }
     .sidebar-desktop { display: none !important; }
@@ -498,9 +457,9 @@ const css = `
     .dashboard-mobile-topbar { display: none !important; }
     .mobile-topbar h1 { font-size: 16px !important; }
     .mobile-main { padding: 12px !important; padding-bottom: 80px !important; }
-    .mobile-modal { width: calc(100vw - 24px) !important; max-width: 100% !important; max-height: 85vh !important; overflow-y: auto !important; border-radius: 20px 20px 16px 16px !important; }
+    .mobile-modal { width: calc(100vw - 24px) !important; max-width: 100% !important; max-height: 85vh !important; overflow-y: auto !important; border-radius:0 20px 16px 16px !important; }
     .mobile-modal-full { width: 100vw !important; height: 100vh !important; border-radius: 0 !important; }
-    .mobile-bottom-sheet { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; overflow-y: auto !important; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important; }
+    .mobile-bottom-sheet { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; border-radius:0 20px 0 0 !important; max-height: 92vh !important; overflow-y: auto !important; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important; }
 
     /* ── Productos ── */
     .products-grid { display: none !important; }
@@ -531,7 +490,7 @@ const css = `
 
     /* ── Ventas / Caja ── */
     .caja-layout { grid-template-columns: 1fr !important; }
-    .caja-carrito { position: fixed !important; bottom: 68px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; border-radius: 20px 20px 0 0 !important; max-height: 55vh !important; overflow-y: auto !important; padding: 16px !important; box-shadow: 0 -8px 30px rgba(0,0,0,0.3) !important; }
+    .caja-carrito { position: fixed !important; bottom: 68px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; border-radius:0 20px 0 0 !important; max-height: 55vh !important; overflow-y: auto !important; padding: 16px !important; box-shadow: 0 -8px 30px rgba(0,0,0,0.3) !important; }
     .caja-carrito-toggle { display: flex !important; }
 
     input, select, textarea { font-size: 16px !important; }
@@ -544,7 +503,7 @@ const css = `
   @media (max-width: 480px) {
     .grid-3-mobile-sm { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
   }
-  @media (min-width: 769px) {
+  @media (min-width: 1025px) {
     .bottom-nav { display: none !important; }
     .sidebar-desktop { display: flex !important; }
     .mobile-only { display: none !important; }
@@ -561,28 +520,28 @@ const css = `
     flex: 1; height: 100%; border: none; background: none; cursor: pointer;
     color: var(--text-secondary); font-size: 9px; font-weight: 600; gap: 3px;
     font-family: 'Sora', sans-serif; transition: all 0.15s; padding: 0 2px;
-    position: relative; border-radius: 12px; margin: 6px 2px;
+    position: relative; border-radius:0; margin: 6px 2px;
   }
   .bottom-nav-btn:active { transform: scale(0.92); }
   .bottom-nav-btn.active { color: var(--accent); }
-  .bottom-nav-btn.active .bottom-nav-icon { background: var(--accent-bg); border-radius: 10px; }
-  .bottom-nav-btn.active svg { filter: drop-shadow(0 2px 4px rgba(215,25,32,0.38)); }
-  .bottom-nav-icon { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.15s; }
+  .bottom-nav-btn.active .bottom-nav-icon { background: var(--accent-bg); border-radius:0; }
+  .bottom-nav-btn.active svg { filter: drop-shadow(0 2px 4px rgba(230,57,70,0.38)); }
+  .bottom-nav-icon { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius:0; transition: background 0.15s; }
   .more-menu-overlay { position: fixed; inset: 0; z-index: 190; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
-  .more-menu-panel { position: fixed; bottom: 76px; left: 8px; right: 8px; z-index: 195; border-radius: 18px; padding: 14px; box-shadow: 0 -8px 40px rgba(0,0,0,0.2); display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .more-menu-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 8px; border-radius: 14px; border: none; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 600; transition: all 0.15s; }
+  .more-menu-panel { position: fixed; bottom: 76px; left: 8px; right: 8px; z-index: 195; border-radius:0; padding: 14px; box-shadow: 0 -8px 40px rgba(0,0,0,0.2); display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .more-menu-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 8px; border-radius:0; border: none; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 600; transition: all 0.15s; }
   .more-menu-btn:active { transform: scale(0.94); }
   /* Rey del Huevo — sistema visual móvil completo */
-  :root { --brand-red:#d71920; --brand-red-2:#ef2b32; --brand-yellow:#ffc400; --brand-cream:#fff8df; }
-  body { background:#f7f7f5; }
-  .main-content { background:linear-gradient(180deg,#fff8d8 0,#f7f7f5 180px) !important; }
-  .mobile-topbar { background:linear-gradient(135deg,#ffc400,#ffd84d) !important; border-bottom:none !important; box-shadow:0 8px 24px rgba(112,76,0,.12) !important; }
-  .mobile-topbar h1 { color:#1f1f24 !important; font-weight:900 !important; letter-spacing:-.4px; }
-  .bottom-nav { border-top:1px solid #eee !important; box-shadow:0 -10px 30px rgba(30,30,30,.10) !important; border-radius:22px 22px 0 0 !important; padding-top:8px !important; }
-  .bottom-nav-btn { border-radius:14px !important; min-height:54px !important; }
-  .bottom-nav-btn.active { color:var(--brand-red) !important; background:#fff1f1 !important; }
-  .bottom-nav-btn.active .bottom-nav-icon { background:var(--brand-red) !important; color:white !important; border-radius:12px !important; padding:6px !important; width:32px !important; height:32px !important; }
-  @media (max-width: 768px) {
+  :root { --brand-red:#E63946; --brand-red-2:#E63946; --brand-yellow:#FF9F1C; --brand-cream:#fff8df; }
+  body { background:#F2F1EC; }
+  .main-content { background:var(--bg-main) !important; }
+  .mobile-topbar { background:#FF9F1C !important; border-bottom:none !important; box-shadow:0 8px 24px rgba(112,76,0,.12) !important; }
+  .mobile-topbar h1 { color:#1C1A17 !important; font-weight:900 !important; letter-spacing:-.4px; }
+  .bottom-nav { border-top:1px solid #eee !important; box-shadow:0 -10px 30px rgba(30,30,30,.10) !important; border-radius:0 22px 0 0 !important; padding-top:8px !important; }
+  .bottom-nav-btn { border-radius:0 !important; min-height:54px !important; }
+  .bottom-nav-btn.active { color:var(--brand-red) !important; background:rgba(230,57,70,0.10) !important; }
+  .bottom-nav-btn.active .bottom-nav-icon { background:var(--brand-red) !important; color:white !important; border-radius:0 !important; padding:6px !important; width:32px !important; height:32px !important; }
+  @media (max-width: 1024px) {
     .bottom-nav {
       height: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
       padding: 6px 5px env(safe-area-inset-bottom, 0px) !important;
@@ -598,7 +557,7 @@ const css = `
       margin: 0 !important;
       padding: 4px 1px 3px !important;
       gap: 2px !important;
-      border-radius: 13px !important;
+      border-radius:0 !important;
       overflow: hidden !important;
     }
     .bottom-nav-btn > span:last-child {
@@ -678,9 +637,9 @@ const css = `
       font-size:11px !important; overflow-wrap:anywhere !important;
     }
     .mobile-product-card {
-      gap:11px !important; padding:12px !important; border-radius:17px !important; align-items:flex-start !important;
+      gap:11px !important; padding:12px !important; border-radius:0 !important; align-items:flex-start !important;
     }
-    .mobile-product-card > div:first-child > div:first-child { width:72px !important; height:72px !important; border-radius:13px !important; }
+    .mobile-product-card > div:first-child > div:first-child { width:72px !important; height:72px !important; border-radius:0 !important; }
     .mobile-product-card p { max-width:100% !important; }
     .mobile-product-card button { min-height:34px; }
   }
@@ -691,42 +650,42 @@ const css = `
 
   /* Venta móvil: selector claro para huevos o inventario */
   .sale-choice-overlay { position:fixed; inset:0; z-index:290; background:rgba(16,18,25,.52); backdrop-filter:blur(3px); }
-  .sale-choice-sheet { position:fixed; left:0; right:0; bottom:0; z-index:300; background:#fff; border-radius:26px 26px 0 0; padding:20px 18px calc(22px + env(safe-area-inset-bottom,0px)); box-shadow:0 -14px 44px rgba(0,0,0,.2); }
+  .sale-choice-sheet { position:fixed; left:0; right:0; bottom:0; z-index:300; background:#fff; border-radius:0 26px 0 0; padding:20px 18px calc(22px + env(safe-area-inset-bottom,0px)); box-shadow:0 -14px 44px rgba(0,0,0,.2); }
   .sale-choice-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px; }
-  .sale-choice-head h2 { margin:0; color:#171923; font-size:23px; font-weight:900; }
-  .sale-choice-head p { margin:4px 0 0; color:#737987; font-size:13px; }
-  .sale-choice-head button { width:38px; height:38px; border:0; border-radius:50%; background:#eef1f5; color:#566273; display:grid; place-items:center; }
-  .sale-choice-card { width:100%; display:flex; align-items:center; gap:14px; padding:15px; margin-top:11px; border:1px solid #e7e9ee; border-radius:18px; background:#fff; color:#1c2330; text-align:left; font-family:inherit; box-shadow:0 5px 16px rgba(22,28,38,.06); }
-  .sale-choice-card.egg { border-color:#ffd85c; background:#fffaf0; }
-  .sale-choice-card.products { border-color:#ffd8db; background:#fff7f7; }
-  .sale-choice-icon { width:55px; height:55px; flex:0 0 55px; border-radius:16px; background:#ffc400; display:grid; place-items:center; font-size:29px; color:#d71920; }
-  .sale-choice-card.products .sale-choice-icon { background:#ffe3e5; }
+  .sale-choice-head h2 { margin:0; color:#1C1A17; font-size:23px; font-weight:900; }
+  .sale-choice-head p { margin:4px 0 0; color:#8C8678; font-size:13px; }
+  .sale-choice-head button { width:38px; height:38px; border:0; border-radius:50%; background:#E9E6DB; color:#8C8678; display:grid; place-items:center; }
+  .sale-choice-card { width:100%; display:flex; align-items:center; gap:14px; padding:15px; margin-top:11px; border:1px solid #E4E1D6; border-radius:0; background:#fff; color:#1C1A17; text-align:left; font-family:inherit; box-shadow:0 5px 16px rgba(22,28,38,.06); }
+  .sale-choice-card.egg { border-color:#FF9F1C; background:rgba(255,159,28,0.08); }
+  .sale-choice-card.products { border-color:rgba(230,57,70,0.15); background:rgba(230,57,70,0.06); }
+  .sale-choice-icon { width:55px; height:55px; flex:0 0 55px; border-radius:0; background:#FF9F1C; display:grid; place-items:center; font-size:29px; color:#E63946; }
+  .sale-choice-card.products .sale-choice-icon { background:rgba(230,57,70,0.12); }
   .sale-choice-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
   .sale-choice-copy strong { font-size:16px; font-weight:900; }
-  .sale-choice-copy small { color:#747b88; font-size:11px; line-height:1.35; }
+  .sale-choice-copy small { color:#8C8678; font-size:11px; line-height:1.35; }
 
-  .btn-primary { background:linear-gradient(135deg,var(--brand-red),var(--brand-red-2)) !important; box-shadow:0 7px 18px rgba(215,25,32,.22) !important; border-radius:14px !important; }
+  .btn-primary { background:linear-gradient(135deg,var(--brand-red),var(--brand-red-2)) !important; box-shadow:0 7px 18px rgba(230,57,70,.22) !important; border-radius:0 !important; }
   .stat-card,.card-hover { border:1px solid rgba(20,20,20,.055) !important; box-shadow:0 8px 24px rgba(36,31,18,.075) !important; }
-  .dashboard-grid > div:first-child { background:linear-gradient(135deg,var(--brand-red),#b80f16) !important; color:#fff !important; }
+  .dashboard-grid > div:first-child { background:var(--brand-red) !important; color:#fff !important; }
   .dashboard-grid > div:first-child p,.dashboard-grid > div:first-child svg { color:#fff !important; stroke:#fff !important; }
   .products-grid { gap:12px !important; }
-  .product-card-desktop { border-radius:20px !important; overflow:hidden !important; }
+  .product-card-desktop { border-radius:0 !important; overflow:hidden !important; }
   .cat-filters { overflow-x:auto; padding-bottom:5px; scrollbar-width:none; }
   .cat-filters::-webkit-scrollbar { display:none; }
-  .cat-filters button { border-radius:999px !important; }
+  .cat-filters button { border-radius:0 !important; }
   table { border-collapse:separate !important; border-spacing:0 7px !important; }
   tbody tr { background:var(--bg-card2); }
-  input,select,textarea { border-radius:13px !important; min-height:44px; }
-  .mobile-bottom-sheet { border-radius:26px 26px 0 0 !important; }
-  .more-menu-panel { border-radius:24px 24px 0 0 !important; }
-  @media (max-width:768px) {
+  input,select,textarea { border-radius:0 !important; min-height:44px; }
+  .mobile-bottom-sheet { border-radius:0 26px 0 0 !important; }
+  .more-menu-panel { border-radius:0 24px 0 0 !important; }
+  @media (max-width:1024px) {
     .main-content { padding:0 !important; overflow-y:auto !important; }
     .mobile-main { padding:16px 14px 110px !important; }
-    .page-header { margin:0 -14px 16px !important; padding:22px 18px 20px !important; background:linear-gradient(135deg,#ffc400,#ffdd62) !important; border-radius:0 0 24px 24px !important; box-shadow:0 10px 25px rgba(126,88,0,.13); }
-    .page-header h2,.page-header h1 { font-size:24px !important; font-weight:900 !important; color:#1b1b1f !important; }
-    .page-header p { color:#6f5710 !important; }
+    .page-header { margin:0 -14px 16px !important; padding:22px 18px 20px !important; background:#FF9F1C !important; border-radius:0 !important; box-shadow:none; }
+    .page-header h2,.page-header h1 { font-size:24px !important; font-weight:900 !important; color:#1C1A17 !important; }
+    .page-header p { color:#5C4B12 !important; }
     .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px !important; }
-    .stats-grid > div,.dashboard-grid > div { border-radius:20px !important; padding:17px 15px !important; min-height:132px; }
+    .stats-grid > div,.dashboard-grid > div { border-radius:0 !important; padding:17px 15px !important; min-height:132px; }
     .dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px !important; }
     .dashboard-grid > div:first-child { grid-column:1/-1; min-height:150px; }
     .dashboard-stat-value { font-size:24px !important; letter-spacing:-.7px; }
@@ -736,13 +695,13 @@ const css = `
     .product-card-desktop > div:first-child { height:100px !important; }
     .mobile-products-search { display:flex !important; position:sticky; top:0; z-index:8; padding:8px 0; backdrop-filter:blur(10px); }
     .btn-nuevo-desktop { display:none !important; }
-    .chart-section { overflow:hidden; border-radius:20px !important; }
+    .chart-section { overflow:hidden; border-radius:0 !important; }
     .notif-panel { width:calc(100vw - 24px) !important; right:12px !important; }
-    .empty-state { padding:36px 18px !important; border-radius:20px !important; }
+    .empty-state { padding:36px 18px !important; border-radius:0 !important; }
   }
 
   /* ── Auditoría móvil final 2026-07-28 ── */
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important; }
     .mobile-menu-trigger { display: none !important; }
     .mobile-topbar { justify-content: center !important; padding: 0 12px !important; }
@@ -770,7 +729,7 @@ const css = `
     .main-content, .mobile-main { padding-bottom: calc(94px + env(safe-area-inset-bottom,0px)) !important; }
   }
   /* Corrección definitiva: selector Nueva venta siempre visible sobre navegación móvil */
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     .sale-choice-overlay {
       z-index: 11990 !important;
       bottom: 0 !important;
@@ -788,7 +747,7 @@ const css = `
       overscroll-behavior: contain !important;
       box-sizing: border-box !important;
       padding: 18px 16px 22px !important;
-      border-radius: 26px !important;
+      border-radius:0 !important;
       -webkit-overflow-scrolling: touch;
     }
     .sale-choice-head {
@@ -798,7 +757,7 @@ const css = `
       margin: -18px -16px 12px !important;
       padding: 18px 16px 12px !important;
       background: #fff !important;
-      border-bottom: 1px solid #eef0f3 !important;
+      border-bottom: 1px solid #E9E6DB !important;
     }
     .sale-choice-card {
       min-height: 104px !important;
@@ -820,49 +779,49 @@ const css = `
   }
 
   .sales-mobile-v2 { display:none; }
-  @media (max-width:768px){
+  @media (max-width:1024px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
-    .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:22px;background:linear-gradient(135deg,#c90f1b,#e71928);color:#fff;box-shadow:0 10px 26px rgba(201,15,27,.22);margin-bottom:12px}
-    .sales-total-icon{width:52px;height:52px;border-radius:16px;background:#fff2b7;color:#d08a00;display:grid;place-items:center;flex:none}
-    .sales-total-hero span{display:block;font-size:12px;opacity:.85}.sales-total-hero strong{display:block;font-size:27px;line-height:1.1;margin-top:3px;overflow-wrap:anywhere}
-    .sales-method-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
-    .sales-summary-mini{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:11px 7px;text-align:center;min-width:0;box-shadow:0 3px 12px var(--shadow)}
-    .sales-summary-mini svg{display:block;margin:0 auto 5px}.sales-summary-mini span{font-size:10px;display:block;color:var(--text-secondary)}.sales-summary-mini strong{display:block;font-size:12px;margin-top:3px;overflow-wrap:anywhere}.sales-summary-mini.cash svg{color:#0aaa78}.sales-summary-mini.card svg{color:#7c3aed}.sales-summary-mini.transfer svg{color:#2563eb}
-    .sales-choice-v2,.sales-products-v2,.sales-cart-v2{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:14px;box-shadow:0 4px 16px var(--shadow);margin-bottom:14px}
-    .sales-choice-v2 h3,.sales-products-v2 h3,.sales-cart-v2 h3{font-size:15px;margin:0 0 11px;color:var(--text-primary)}.sales-choice-v2>div{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-choice-v2 button{border:1.5px solid var(--border);background:var(--bg-card-2);border-radius:16px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-primary);font-family:inherit}.sales-choice-v2 button.active{border-color:#e71928;background:rgba(231,25,40,.05);color:#d71920}.sales-choice-v2 .egg{font-size:28px}.sales-choice-v2 small{font-size:9px;color:var(--text-muted)}
-    .sales-products-head,.sales-cart-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.sales-products-head span{font-size:10px;color:#d71920;font-weight:700}.sales-cart-title button{border:0;background:none;color:#d71920;font-weight:700}
-    .sales-search-v2{height:46px;border:1.5px solid var(--border);border-radius:13px;display:flex;align-items:center;gap:8px;padding:0 5px 0 12px;background:var(--bg-card-2)}.sales-search-v2 input{border:0;outline:0;background:transparent;color:var(--text-primary);font:inherit;width:100%;min-width:0}.sales-scan-v2{width:38px;height:36px;flex:0 0 38px;border:0;border-radius:10px;background:#ffc400;color:#241400;display:grid;place-items:center;font-size:18px;cursor:pointer}.sales-scan-v2:active{transform:scale(.95)}
-    .sales-search-sticky-v2{position:sticky;top:-1px;z-index:8;background:var(--bg-card);margin:0 -14px;padding:0 14px 10px;border-radius:20px 20px 0 0}
-    .sales-cats-v2{display:flex;overflow-x:auto;gap:7px;padding:10px 0 12px;scrollbar-width:none}.sales-cats-v2 button{flex:none;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);border-radius:999px;padding:7px 11px;font:600 10px inherit}.sales-cats-v2 button.active{background:#ffc400;color:#351800;border-color:#ffc400}
-    .sales-floating-cart-v2{position:fixed;left:14px;right:14px;bottom:calc(72px + env(safe-area-inset-bottom,0px) + 12px);z-index:150;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#d71920,#ef2b32);color:#fff;border:0;border-radius:16px;padding:13px 16px;box-shadow:0 10px 30px rgba(215,25,32,.35);font-family:inherit;cursor:pointer}
+    .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:0;background:#FF9F1C;color:#14120E;box-shadow:none;margin-bottom:3px}
+    .sales-total-icon{width:52px;height:52px;border-radius:0;background:rgba(20,18,14,.1);color:#14120E;display:grid;place-items:center;flex:none}
+    .sales-total-hero span{display:block;font-size:12px;font-weight:800;opacity:.75}.sales-total-hero strong{display:block;font-family:'Archivo Black',sans-serif;font-size:24px;line-height:1.1;margin-top:5px;overflow-wrap:anywhere}
+    .sales-method-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-bottom:14px}
+    .sales-summary-mini{background:var(--bg-card);border:2px solid var(--border);border-radius:0;padding:11px 7px;text-align:center;min-width:0;box-shadow:none}
+    .sales-summary-mini svg{display:block;margin:0 auto 5px}.sales-summary-mini span{font-size:10px;display:block;color:var(--text-secondary);font-weight:700}.sales-summary-mini strong{display:block;font-size:12px;margin-top:3px;overflow-wrap:anywhere}.sales-summary-mini.cash svg{color:#2EC4B6}.sales-summary-mini.card svg{color:#8E7CC3}.sales-summary-mini.transfer svg{color:#8E7CC3}
+    .sales-choice-v2,.sales-products-v2,.sales-cart-v2{background:var(--bg-card);border:2px solid var(--border);border-radius:0;padding:14px;box-shadow:none;margin-bottom:14px}
+    .sales-choice-v2 h3,.sales-products-v2 h3,.sales-cart-v2 h3{font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:.3px;margin:0 0 11px;color:var(--text-primary)}.sales-choice-v2>div{display:grid;grid-template-columns:1fr 1fr;gap:3px}.sales-choice-v2 button{border:2px solid var(--border);background:var(--bg-card-2);border-radius:0;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-primary);font-family:inherit}.sales-choice-v2 button.active{border-color:#E63946;background:#E63946;color:#fff}.sales-choice-v2 .egg{font-size:28px}.sales-choice-v2 small{font-size:9px;color:var(--text-muted)}
+    .sales-products-head,.sales-cart-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.sales-products-head span{font-size:10px;color:#E63946;font-weight:800}.sales-cart-title button{border:0;background:none;color:#E63946;font-weight:800}
+    .sales-search-v2{height:46px;border:2px solid var(--border);border-radius:0;display:flex;align-items:center;gap:8px;padding:0 5px 0 12px;background:var(--bg-card-2)}.sales-search-v2 input{border:0;outline:0;background:transparent;color:var(--text-primary);font:inherit;width:100%;min-width:0}.sales-scan-v2{width:38px;height:36px;flex:0 0 38px;border:0;border-radius:0;background:#FF9F1C;color:#14120E;display:grid;place-items:center;font-size:18px;cursor:pointer}.sales-scan-v2:active{transform:scale(.95)}
+    .sales-search-sticky-v2{position:sticky;top:-1px;z-index:8;background:var(--bg-card);margin:0 -14px;padding:0 14px 10px;border-radius:0}
+    .sales-cats-v2{display:flex;overflow-x:auto;gap:3px;padding:10px 0 12px;scrollbar-width:none}.sales-cats-v2 button{flex:none;border:2px solid var(--border);background:var(--bg-card);color:var(--text-secondary);border-radius:0;padding:7px 11px;font:800 10px inherit}.sales-cats-v2 button.active{background:#FF9F1C;color:#14120E;border-color:#FF9F1C}
+    .sales-floating-cart-v2{position:fixed;left:14px;right:14px;bottom:calc(72px + env(safe-area-inset-bottom,0px) + 12px);z-index:150;display:flex;align-items:center;gap:10px;background:#E63946;color:#fff;border:0;border-radius:0;padding:13px 16px;box-shadow:0 8px 20px rgba(0,0,0,.35);font-family:inherit;cursor:pointer}
     .sales-floating-cart-v2:active{transform:scale(.97)}
-    .sales-floating-cart-count{background:rgba(255,255,255,.25);border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;padding:0 6px}
+    .sales-floating-cart-count{background:rgba(255,255,255,.25);border-radius:0;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;padding:0 6px}
     .sales-floating-cart-label{flex:1;text-align:left;font-weight:800;font-size:13px}
-    .sales-floating-cart-v2 strong{font-size:15px;font-weight:900}
-    .sales-venta-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-    .sales-venta-tabs button{border:1.5px solid var(--border);border-radius:12px;background:var(--bg-card-2);color:var(--text-secondary);font:700 12px inherit;padding:10px 6px}
-    .sales-venta-tabs button.active{border-color:#d71920;background:rgba(215,25,32,.08);color:#d71920}
+    .sales-floating-cart-v2 strong{font-family:'Archivo Black',sans-serif;font-size:15px}
+    .sales-venta-tabs{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:11px}
+    .sales-venta-tabs button{border:2px solid var(--border);border-radius:0;background:var(--bg-card-2);color:var(--text-secondary);font:800 12px inherit;padding:10px 6px}
+    .sales-venta-tabs button.active{border-color:#E63946;background:#E63946;color:#fff}
     .sales-back-v2{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--accent);font-weight:800;font-size:13px;padding:0 0 12px;cursor:pointer;font-family:inherit}
     .sales-checkout-v2{padding-top:14px}
-    .free-eggs-grid{display:flex;flex-direction:column;gap:10px}
-    .free-egg-card{border:1px solid var(--border);border-radius:16px;padding:13px;background:var(--bg-card)}
+    .free-eggs-grid{display:flex;flex-direction:column;gap:3px}
+    .free-egg-card{border:2px solid var(--border);border-radius:0;padding:13px;background:var(--bg-card)}
     .free-egg-card>div:first-child{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-    .free-egg-icon{width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:#fff3cd;display:grid;place-items:center;font-size:21px}
-    .free-egg-card h4{margin:0 0 2px;font-size:13px;font-weight:800;color:var(--text-primary)}
+    .free-egg-icon{width:42px;height:42px;flex:0 0 42px;border-radius:0;background:#FF9F1C;color:#14120E;display:grid;place-items:center;font-size:21px}
+    .free-egg-card h4{margin:0 0 2px;font-family:'Archivo Black',sans-serif;font-size:12px;color:var(--text-primary)}
     .free-egg-card small{font-size:11px;color:var(--text-secondary)}
-    .free-egg-format{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-    .free-egg-format button{border:1.5px solid var(--border);border-radius:11px;background:var(--bg-card-2);color:var(--text-secondary);font:700 12px inherit;padding:9px 6px}
-    .free-egg-format button.active{border-color:#0aaa78;background:rgba(10,170,120,.1);color:#0aaa78}
+    .free-egg-format{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:11px}
+    .free-egg-format button{border:2px solid var(--border);border-radius:0;background:var(--bg-card-2);color:var(--text-secondary);font:800 12px inherit;padding:9px 6px}
+    .free-egg-format button.active{border-color:#2EC4B6;background:#2EC4B6;color:#14120E}
     .free-egg-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .free-egg-bottom strong{color:#d71920;font-size:16px;font-weight:900}
+    .free-egg-bottom strong{color:#E63946;font-family:'Archivo Black',sans-serif;font-size:15px}
     .free-egg-bottom .sales-prod-controls{grid-template-columns:28px 40px 28px;margin-top:0}
-    .sales-error-v2{font-size:11px;color:#c81e1e;background:#fff1f2;padding:8px 10px;border-radius:10px;margin-bottom:9px}
-    .sales-product-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sales-product-grid-v2 article{border:1px solid var(--border);border-radius:15px;padding:9px;min-width:0;background:var(--bg-card)}.sales-prod-img{height:86px;border-radius:11px;background:var(--bg-card-2);display:grid;place-items:center;position:relative;overflow:hidden}.sales-prod-img img{width:100%;height:100%;object-fit:contain}.sales-prod-img span{font-size:38px}.sales-prod-img em{position:absolute;left:5px;bottom:5px;background:#0aaa78;color:#fff;border-radius:7px;padding:3px 6px;font:700 8px inherit;font-style:normal}.sales-product-grid-v2 h4{font-size:11px;line-height:1.2;height:27px;margin:8px 0 3px;color:var(--text-primary);overflow:hidden}.sales-product-grid-v2>article>strong{color:#d71920;font-size:14px}.sales-prod-controls{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:4px;margin-top:8px}.sales-prod-controls button,.sales-cart-step button{border:0;border-radius:8px;background:#f1f2f5;color:#1f2937;height:28px;font-size:17px}.sales-prod-controls button:last-child{background:#d71920;color:#fff}.sales-prod-controls span{text-align:center;font-weight:800;font-size:12px}
-    .sales-cart-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto 22px;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border)}.sales-cart-thumb{width:38px;height:38px;border-radius:9px;background:var(--bg-card-2);display:grid;place-items:center;overflow:hidden}.sales-cart-thumb img{width:100%;height:100%;object-fit:contain}.sales-cart-name{min-width:0}.sales-cart-name b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}.sales-cart-name small{font-size:9px;color:#d71920}.sales-cart-step{display:flex;align-items:center;gap:4px}.sales-cart-step button{width:24px;height:24px;font-size:14px}.sales-cart-step span{font-size:11px;font-weight:800;min-width:15px;text-align:center}.sales-cart-row>strong{font-size:10px;color:var(--text-primary)}.sales-cart-row .trash{border:0;background:none;color:#d71920;padding:0}
-    .sales-cart-total{display:flex;justify-content:space-between;align-items:center;padding:13px 0 5px;color:var(--text-primary);font-size:13px}.sales-cart-total strong{font-size:22px;color:#d71920}.sales-pay-title{font-size:12px;margin:13px 0 8px;color:var(--text-primary)}.sales-pay-v2{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.sales-pay-v2 button{border:1.5px solid var(--border);border-radius:13px;padding:10px 3px;background:var(--bg-card-2);color:var(--text-secondary);display:flex;flex-direction:column;align-items:center;gap:5px;font:700 9px inherit}.sales-pay-v2 button.active{border-color:#0aaa78;color:#07815d;background:rgba(10,170,120,.08)}
-    .sales-cash-v2{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-top:10px}.sales-cash-v2 label{grid-column:1/-1;font-size:10px;font-weight:700}.sales-cash-v2 input{height:39px;border:1.5px solid var(--border);border-radius:11px;padding:0 10px;background:var(--bg-card-2);color:var(--text-primary);min-width:0}.sales-cash-v2 span{font-size:10px;color:#07815d;font-weight:800}.sales-finish-v2{width:100%;border:0;border-radius:13px;background:linear-gradient(135deg,#d71920,#ef2331);color:#fff;padding:13px;margin-top:12px;font:800 13px inherit;box-shadow:0 7px 18px rgba(215,25,32,.22)}
-    .mobile-product-card{align-items:flex-start!important;padding:12px!important;gap:10px!important}.mobile-product-card>div:nth-child(2)>p:first-child{padding-right:25px!important}.mobile-product-card>div:nth-child(2)>p:nth-child(3){color:#d71920!important}.mobile-product-card button{white-space:nowrap}
+    .sales-error-v2{font-size:11px;font-weight:700;color:#E63946;background:rgba(230,57,70,.1);border:2px solid #E63946;padding:8px 10px;border-radius:0;margin-bottom:9px}
+    .sales-product-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:3px}.sales-product-grid-v2 article{border:2px solid var(--border);border-radius:0;padding:9px;min-width:0;background:var(--bg-card)}.sales-prod-img{height:86px;border-radius:0;background:var(--bg-card-2);display:grid;place-items:center;position:relative;overflow:hidden}.sales-prod-img img{width:100%;height:100%;object-fit:contain}.sales-prod-img span{font-size:38px}.sales-prod-img em{position:absolute;left:5px;bottom:5px;background:#2EC4B6;color:#14120E;border-radius:0;padding:3px 6px;font:800 8px inherit;font-style:normal}.sales-product-grid-v2 h4{font-size:11px;line-height:1.2;height:27px;margin:8px 0 3px;color:var(--text-primary);overflow:hidden}.sales-product-grid-v2>article>strong{color:#E63946;font-family:'Archivo Black',sans-serif;font-size:13px}.sales-prod-controls{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:4px;margin-top:8px}.sales-prod-controls button,.sales-cart-step button{border:0;border-radius:0;background:var(--bg-card-2);color:var(--text-primary);height:28px;font-size:17px}.sales-prod-controls button:last-child{background:#E63946;color:#fff}.sales-prod-controls span{text-align:center;font-weight:800;font-size:12px}
+    .sales-cart-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto 22px;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border)}.sales-cart-thumb{width:38px;height:38px;border-radius:0;background:var(--bg-card-2);display:grid;place-items:center;overflow:hidden}.sales-cart-thumb img{width:100%;height:100%;object-fit:contain}.sales-cart-name{min-width:0}.sales-cart-name b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}.sales-cart-name small{font-size:9px;color:#E63946}.sales-cart-step{display:flex;align-items:center;gap:4px}.sales-cart-step button{width:24px;height:24px;font-size:14px}.sales-cart-step span{font-size:11px;font-weight:800;min-width:15px;text-align:center}.sales-cart-row>strong{font-size:10px;color:var(--text-primary)}.sales-cart-row .trash{border:0;background:none;color:#E63946;padding:0}
+    .sales-cart-total{display:flex;justify-content:space-between;align-items:center;padding:13px 0 5px;color:var(--text-primary);font-size:13px;font-weight:700}.sales-cart-total strong{font-family:'Archivo Black',sans-serif;font-size:20px;color:#E63946}.sales-pay-title{font-family:'Archivo Black',sans-serif;font-size:12px;margin:13px 0 8px;color:var(--text-primary)}.sales-pay-v2{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}.sales-pay-v2 button{border:2px solid var(--border);border-radius:0;padding:10px 3px;background:var(--bg-card-2);color:var(--text-secondary);display:flex;flex-direction:column;align-items:center;gap:5px;font:800 9px inherit}.sales-pay-v2 button.active{border-color:#2EC4B6;background:#2EC4B6;color:#14120E}
+    .sales-cash-v2{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-top:10px}.sales-cash-v2 label{grid-column:1/-1;font-size:10px;font-weight:800}.sales-cash-v2 input{height:39px;border:2px solid var(--border);border-radius:0;padding:0 10px;background:var(--bg-card-2);color:var(--text-primary);min-width:0}.sales-cash-v2 span{font-size:10px;color:#2EC4B6;font-weight:800}.sales-finish-v2{width:100%;border:0;border-radius:0;background:#E63946;color:#fff;padding:14px;margin-top:12px;font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:.3px;box-shadow:none}
+    .mobile-product-card{align-items:flex-start!important;padding:12px!important;gap:10px!important}.mobile-product-card>div:nth-child(2)>p:first-child{padding-right:25px!important}.mobile-product-card>div:nth-child(2)>p:nth-child(3){color:#E63946!important}.mobile-product-card button{white-space:nowrap}
   }
 
 `;
@@ -943,26 +902,26 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, backdropFilter: "blur(6px)" }}>
       <style>{ticketCSS}</style>
-      <div className="fade-in" style={{ background: D ? "#1a1d2e" : "#f0f0f0", borderRadius: 20, width: "92%", maxWidth: 420, maxHeight: "92vh", overflow: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column" }}>
+      <div className="fade-in" style={{ background: D ? "#1C1A17" : "#E9E6DB", borderRadius:0, width: "92%", maxWidth: 420, maxHeight: "92vh", overflow: "auto", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column" }}>
 
         {/* ── Barra superior ── */}
-        <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${D ? "#2d3158" : "#d1d5db"}` }}>
+        <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${D ? "#2A2723" : "#D6D2C4"}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Receipt size={16} color="#d71920" />
-            <span style={{ fontWeight: 800, fontSize: 14, color: D ? "#e8eaf6" : "#1a1a2e" }}>Recibo N° {numStr}</span>
+            <Receipt size={16} color="#E63946" />
+            <span style={{ fontWeight: 800, fontSize: 14, color: D ? "#FAF8F3" : "#121110" }}>Recibo N° {numStr}</span>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => window.print()} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${D ? "#2d3158" : "#d1d5db"}`, background: D ? "#252840" : "#fff", cursor: "pointer", fontSize: 12, color: D ? "#e8eaf6" : "#374151", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontWeight: 600 }}>
+            <button onClick={() => window.print()} style={{ padding: "7px 14px", borderRadius:0, border: `1px solid ${D ? "#2A2723" : "#D6D2C4"}`, background: D ? "#241F1A" : "#fff", cursor: "pointer", fontSize: 12, color: D ? "#FAF8F3" : "#8C8678", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontWeight: 600 }}>
               <Printer size={13} /> Imprimir
             </button>
-            <button onClick={onClose} style={{ background: D ? "#252840" : "#e5e7eb", border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <X size={16} color={D ? "#9ca3af" : "#6b7280"} />
+            <button onClick={onClose} style={{ background: D ? "#241F1A" : "#E4E1D6", border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={16} color={D ? "#B5A791" : "#8C8678"} />
             </button>
           </div>
         </div>
 
         {/* ── Ticket ── */}
-        <div id="ticket-print" style={{ padding: "24px 32px 28px", fontFamily: "'Courier New', Courier, monospace", fontSize: 12, color: D ? "#e8eaf6" : "#111", background: D ? "#13152a" : "#fff", lineHeight: 1.7 }}>
+        <div id="ticket-print" style={{ padding: "24px 32px 28px", fontFamily: "'Courier New', Courier, monospace", fontSize: 12, color: D ? "#FAF8F3" : "#111", background: D ? "#1C1A17" : "#fff", lineHeight: 1.7 }}>
 
           {/* Encabezado negocio */}
           <div style={{ textAlign: "center", marginBottom: 10 }}>
@@ -974,7 +933,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             {config.telefono && <div style={{ fontSize: 11 }}>TELÉFONO: {config.telefono}</div>}
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Tipo doc + número */}
           <div style={{ textAlign: "center", margin: "10px 0 6px" }}>
@@ -982,7 +941,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>Nº {numStr.slice(0,4)} {numStr.slice(4)}</div>
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Fecha / hora / cajero */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginTop: 6, marginBottom: 2 }}>
@@ -991,7 +950,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
           </div>
           <div style={{ fontSize: 11, marginBottom: 6 }}>CAJERO: {(boleta.vendedor || "").toUpperCase()}</div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Cabecera columnas */}
           <div style={{ display: "flex", fontWeight: 900, fontSize: 11, margin: "6px 0 4px", letterSpacing: 0.5 }}>
@@ -1000,7 +959,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             <span style={{ width: "10ch", textAlign: "right" }}>TOTAL</span>
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Items */}
           <div style={{ margin: "4px 0 8px" }}>
@@ -1016,7 +975,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             })}
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Totales */}
           <div style={{ margin: "8px 0" }}>
@@ -1036,7 +995,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             </div>
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Pago */}
           <div style={{ margin: "8px 0", fontSize: 11 }}>
@@ -1083,18 +1042,18 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
             )}
           </div>
 
-          <div style={{ color: D ? "#4b5563" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
+          <div style={{ color: D ? "#6B6558" : "#999", fontSize: 11, letterSpacing: 1 }}>{dashes}</div>
 
           {/* Pie */}
           <div style={{ textAlign: "center", marginTop: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Gracias por su compra</div>
-            <div style={{ fontSize: 10, color: D ? "#6b7280" : "#555", marginBottom: 2 }}>Este documento es un comprobante de venta</div>
-            <div style={{ fontSize: 10, color: D ? "#6b7280" : "#555", marginBottom: 14 }}>y no constituye boleta ni factura.</div>
+            <div style={{ fontSize: 10, color: D ? "#8C8678" : "#555", marginBottom: 2 }}>Este documento es un comprobante de venta</div>
+            <div style={{ fontSize: 10, color: D ? "#8C8678" : "#555", marginBottom: 14 }}>y no constituye boleta ni factura.</div>
             {/* Código de barras simulado */}
-            <div style={{ fontFamily: "monospace", fontSize: 28, letterSpacing: -2, color: D ? "#e8eaf6" : "#000", lineHeight: 1, marginBottom: 4 }}>
+            <div style={{ fontFamily: "monospace", fontSize: 28, letterSpacing: -2, color: D ? "#FAF8F3" : "#000", lineHeight: 1, marginBottom: 4 }}>
               {"█▌▐█▌▐▌█▌▐▐█▌▐█▌▐▌█▌▐▐█▌█▌▐█▌▐▌"}
             </div>
-            <div style={{ fontSize: 11, color: D ? "#9ca3af" : "#555", letterSpacing: 1 }}>{transaccion}</div>
+            <div style={{ fontSize: 11, color: D ? "#B5A791" : "#555", letterSpacing: 1 }}>{transaccion}</div>
           </div>
         </div>
       </div>
@@ -1156,7 +1115,7 @@ function RenombrarEmpresa({ empresaActual, products, currentUser, setCurrentUser
 
   return (
     <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1.5px solid ${borderColor}` }}>
-      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 8 }}>
+      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 8 }}>
         🏢 Renombrar empresa
       </label>
       <p style={{ margin: "0 0 10px", fontSize: 12, color: textMuted }}>
@@ -1172,13 +1131,13 @@ function RenombrarEmpresa({ empresaActual, products, currentUser, setCurrentUser
         <button
           onClick={handleRenombrar}
           disabled={loading || nuevoNombre.trim() === empresaActual || !nuevoNombre.trim()}
-          style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#d71920,#ef2b32)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1, whiteSpace: "nowrap" }}
+          style={{ padding: "10px 16px", borderRadius:0, border: "none", background: "#E63946", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1, whiteSpace: "nowrap" }}
         >
           {loading ? "Guardando..." : "Renombrar"}
         </button>
       </div>
-      {msg && <p style={{ margin: "8px 0 0", fontSize: 12, color: msg.startsWith("✅") ? "#10b981" : "#f59e0b", fontWeight: 600 }}>{msg}</p>}
-      {error && <p style={{ margin: "8px 0 0", fontSize: 12, color: "#e03131" }}>{error}</p>}
+      {msg && <p style={{ margin: "8px 0 0", fontSize: 12, color: msg.startsWith("✅") ? "#2EC4B6" : "#FF9F1C", fontWeight: 600 }}>{msg}</p>}
+      {error && <p style={{ margin: "8px 0 0", fontSize: 12, color: "#E63946" }}>{error}</p>}
     </div>
   );
 }
@@ -1201,8 +1160,8 @@ function AdminPanel({ onBack, darkMode }) {
   const [empresas, setEmpresas] = useState([]);
 
   const inp = {
-    width: "100%", padding: "10px 13px", borderRadius: 10, border: "1.5px solid #2d3458",
-    fontSize: 13, outline: "none", background: "#1a1f35", color: "#e5e7eb", fontFamily: "Sora, sans-serif",
+    width: "100%", padding: "10px 13px", borderRadius:0, border: "1.5px solid #2A2723",
+    fontSize: 13, outline: "none", background: "#1C1A17", color: "#E4E1D6", fontFamily: "Manrope, sans-serif",
   };
 
   const handleLogin = async () => {
@@ -1271,45 +1230,45 @@ function AdminPanel({ onBack, darkMode }) {
   ];
 
   return (
-    <div style={{ width: "100vw", minHeight: "100vh", background: "linear-gradient(135deg, #0f1117, #1a1a2e)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div style={{ width: "100vw", minHeight: "100vh", background: "#121110", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <style>{getLightVars()}{css}</style>
-      <div style={{ width: "100%", maxWidth: esProg && adminUser ? 720 : 460, background: "#13152a", borderRadius: 24, padding: 36, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 13, marginBottom: 20, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>← Volver</button>
+      <div style={{ width: "100%", maxWidth: esProg && adminUser ? 720 : 460, background: "#1C1A17", borderRadius:0, padding: 36, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#8C8678", cursor: "pointer", fontSize: 13, marginBottom: 20, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>← Volver</button>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "linear-gradient(135deg, #7c3aed, #ef2b32)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <div style={{ width: 56, height: 56, borderRadius:0, background: "linear-gradient(135deg, #8E7CC3, #E63946)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <Shield size={26} color="#fff" />
           </div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#e8eaf6" }}>Panel de Administración</h2>
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>Acceso para gerentes y programadores</p>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#FAF8F3" }}>Panel de Administración</h2>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#8C8678" }}>Acceso para gerentes y programadores</p>
         </div>
 
         {!adminUser ? (
           <>
             {[{ label: "Usuario", val: usuario, set: setUsuario, type: "text" }, { label: "Contraseña", val: clave, set: setClave, type: "password" }].map(({ label, val, set, type }) => (
               <div key={label} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#9ca3af", display: "block", marginBottom: 6 }}>{label}</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#B5A791", display: "block", marginBottom: 6 }}>{label}</label>
                 <input type={type} value={val} onChange={e => set(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} style={inp} />
               </div>
             ))}
-            {error && <div style={{ background: "#450a0a", color: "#fca5a5", fontSize: 13, padding: "10px 14px", borderRadius: 8, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleLogin} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.15)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleLogin} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700 }}>
               {loading ? "Verificando..." : "Acceder"}
             </button>
           </>
         ) : (
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <p style={{ color: "#e8eaf6", fontWeight: 700, margin: 0 }}>
+              <p style={{ color: "#FAF8F3", fontWeight: 700, margin: 0 }}>
                 {esProg ? "🛠️" : "👑"} {adminUser.nombre}
-                <span style={{ marginLeft: 8, fontSize: 11, padding: "3px 8px", borderRadius: 6, background: esProg ? "rgba(124,58,237,0.3)" : "rgba(215,25,32,0.28)", color: esProg ? "#a78bfa" : "#748ffc" }}>{adminUser.rol}</span>
+                <span style={{ marginLeft: 8, fontSize: 11, padding: "3px 8px", borderRadius:0, background: esProg ? "rgba(142,124,195,0.3)" : "rgba(230,57,70,0.28)", color: esProg ? "#8E7CC3" : "#8E7CC3" }}>{adminUser.rol}</span>
               </p>
-              {accionMsg && <span style={{ fontSize: 12, color: "#34d399" }}>{accionMsg}</span>}
+              {accionMsg && <span style={{ fontSize: 12, color: "#2EC4B6" }}>{accionMsg}</span>}
             </div>
 
             {/* Tabs */}
             <div style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto" }}>
               {tabs.map(t => (
-                <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: tab === t.id ? "#d71920" : "#1e2235", color: tab === t.id ? "#fff" : "#9ca3af", transition: "all 0.15s" }}>{t.label}</button>
+                <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "8px 14px", borderRadius:0, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: tab === t.id ? "#E63946" : "#1C1A17", color: tab === t.id ? "#fff" : "#B5A791", transition: "all 0.15s" }}>{t.label}</button>
               ))}
             </div>
 
@@ -1317,16 +1276,16 @@ function AdminPanel({ onBack, darkMode }) {
             {tab === "usuarios" && (
               <div style={{ maxHeight: 400, overflowY: "auto" }}>
                 {usuarios.map(u => (
-                  <div key={u.usuario} style={{ padding: "12px 16px", background: "#1e2235", borderRadius: 12, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div key={u.usuario} style={{ padding: "12px 16px", background: "#1C1A17", borderRadius:0, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ color: "#e8eaf6", fontSize: 14, fontWeight: 700 }}>@{u.usuario}</span>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: u.rol === "programador" ? "rgba(124,58,237,0.3)" : u.rol === "gerente" ? "rgba(215,25,32,0.28)" : "rgba(16,185,129,0.2)", color: u.rol === "programador" ? "#a78bfa" : u.rol === "gerente" ? "#748ffc" : "#34d399" }}>
+                        <span style={{ color: "#FAF8F3", fontSize: 14, fontWeight: 700 }}>@{u.usuario}</span>
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius:0, background: u.rol === "programador" ? "rgba(142,124,195,0.3)" : u.rol === "gerente" ? "rgba(230,57,70,0.28)" : "rgba(46,196,182,0.2)", color: u.rol === "programador" ? "#8E7CC3" : u.rol === "gerente" ? "#8E7CC3" : "#2EC4B6" }}>
                           {u.rol === "programador" ? "🛠️" : u.rol === "gerente" ? "👑" : "👤"} {u.rol}
                         </span>
-                        {u.blocked && <span style={{ fontSize: 11, color: "#f87171" }}>🚫 bloqueado</span>}
+                        {u.blocked && <span style={{ fontSize: 11, color: "#E63946" }}>🚫 bloqueado</span>}
                       </div>
-                      <p style={{ margin: "3px 0 0", fontSize: 12, color: "#6b7280" }}>{u.nombre}{u.empresa ? ` · 🏢 ${u.empresa}` : ""}</p>
+                      <p style={{ margin: "3px 0 0", fontSize: 12, color: "#8C8678" }}>{u.nombre}{u.empresa ? ` · 🏢 ${u.empresa}` : ""}</p>
                     </div>
                   </div>
                 ))}
@@ -1336,18 +1295,18 @@ function AdminPanel({ onBack, darkMode }) {
             {/* Tab: Empresas (solo programador) */}
             {tab === "empresas" && esProg && (
               <div>
-                <p style={{ color: "#9ca3af", fontSize: 13, marginBottom: 16 }}>Empresas registradas en el sistema:</p>
-                {empresas.length === 0 && <p style={{ color: "#6b7280", fontSize: 13 }}>No hay empresas registradas.</p>}
+                <p style={{ color: "#B5A791", fontSize: 13, marginBottom: 16 }}>Empresas registradas en el sistema:</p>
+                {empresas.length === 0 && <p style={{ color: "#8C8678", fontSize: 13 }}>No hay empresas registradas.</p>}
                 {empresas.map(emp => {
                   const usersEmp = usuarios.filter(u => u.empresa === emp);
                   return (
-                    <div key={emp} style={{ padding: "14px 16px", background: "#1e2235", borderRadius: 12, marginBottom: 10 }}>
+                    <div key={emp} style={{ padding: "14px 16px", background: "#1C1A17", borderRadius:0, marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div>
-                          <p style={{ margin: 0, fontWeight: 700, color: "#e8eaf6", fontSize: 14 }}>🏢 {emp}</p>
-                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>{usersEmp.length} usuario{usersEmp.length !== 1 ? "s" : ""}</p>
+                          <p style={{ margin: 0, fontWeight: 700, color: "#FAF8F3", fontSize: 14 }}>🏢 {emp}</p>
+                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8C8678" }}>{usersEmp.length} usuario{usersEmp.length !== 1 ? "s" : ""}</p>
                         </div>
-                        <button onClick={() => handleResetEmpresa(emp)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "rgba(224,49,49,0.2)", color: "#f87171", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>🗑️ Reset</button>
+                        <button onClick={() => handleResetEmpresa(emp)} style={{ padding: "6px 12px", borderRadius:0, border: "none", cursor: "pointer", background: "rgba(230,57,70,0.2)", color: "#E63946", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>🗑️ Reset</button>
                       </div>
                     </div>
                   );
@@ -1358,14 +1317,14 @@ function AdminPanel({ onBack, darkMode }) {
             {/* Tab: Base de Datos (solo programador) */}
             {tab === "db" && esProg && (
               <div>
-                <p style={{ color: "#9ca3af", fontSize: 13, marginBottom: 12 }}>Consultar colección (ej: <code style={{ color: "#a78bfa" }}>productos</code>, <code style={{ color: "#a78bfa" }}>ventas</code>, <code style={{ color: "#a78bfa" }}>recibos</code>)</p>
+                <p style={{ color: "#B5A791", fontSize: 13, marginBottom: 12 }}>Consultar colección (ej: <code style={{ color: "#8E7CC3" }}>productos</code>, <code style={{ color: "#8E7CC3" }}>ventas</code>, <code style={{ color: "#8E7CC3" }}>recibos</code>)</p>
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                   <input value={dbQuery} onChange={e => setDbQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleDbQuery()} placeholder="productos" style={{ ...inp, flex: 1 }} />
-                  <button onClick={handleDbQuery} disabled={dbLoading} style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: "#d71920", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>{dbLoading ? "..." : "GET"}</button>
+                  <button onClick={handleDbQuery} disabled={dbLoading} style={{ padding: "10px 16px", borderRadius:0, border: "none", background: "#E63946", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>{dbLoading ? "..." : "GET"}</button>
                 </div>
                 {dbResult && (
-                  <div style={{ background: "#0f1117", borderRadius: 10, padding: 14, maxHeight: 300, overflowY: "auto" }}>
-                    <pre style={{ margin: 0, fontSize: 11, color: "#34d399", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{JSON.stringify(dbResult, null, 2)}</pre>
+                  <div style={{ background: "#121110", borderRadius:0, padding: 14, maxHeight: 300, overflowY: "auto" }}>
+                    <pre style={{ margin: 0, fontSize: 11, color: "#2EC4B6", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{JSON.stringify(dbResult, null, 2)}</pre>
                   </div>
                 )}
               </div>
@@ -1373,12 +1332,12 @@ function AdminPanel({ onBack, darkMode }) {
 
             {/* Tab: Logs (solo programador) */}
             {tab === "logs" && esProg && (
-              <div style={{ background: "#0f1117", borderRadius: 12, padding: 16, maxHeight: 360, overflowY: "auto" }}>
-                {logs.length === 0 && <p style={{ color: "#6b7280", fontSize: 13, margin: 0 }}>Sin logs.</p>}
+              <div style={{ background: "#121110", borderRadius:0, padding: 16, maxHeight: 360, overflowY: "auto" }}>
+                {logs.length === 0 && <p style={{ color: "#8C8678", fontSize: 13, margin: 0 }}>Sin logs.</p>}
                 {[...logs].reverse().map((l, i) => (
                   <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, fontFamily: "monospace", fontSize: 12 }}>
-                    <span style={{ color: "#4b5563", flexShrink: 0 }}>{l.time}</span>
-                    <span style={{ color: l.type === "ok" ? "#34d399" : l.type === "warn" ? "#fbbf24" : "#a78bfa" }}>{l.msg}</span>
+                    <span style={{ color: "#6B6558", flexShrink: 0 }}>{l.time}</span>
+                    <span style={{ color: l.type === "ok" ? "#2EC4B6" : l.type === "warn" ? "#FF9F1C" : "#8E7CC3" }}>{l.msg}</span>
                   </div>
                 ))}
               </div>
@@ -1408,11 +1367,11 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
   const [loading, setLoading] = useState(false);
 
   const inp = {
-    width: "100%", padding: "11px 14px", borderRadius: 12,
-    border: `1.5px solid ${darkMode ? "#2d3158" : "#e5e7eb"}`,
+    width: "100%", padding: "11px 14px", borderRadius:0,
+    border: `1.5px solid ${darkMode ? "#2A2723" : "#E4E1D6"}`,
     fontSize: 14, outline: "none",
-    background: darkMode ? "#1e2235" : "#fafafa",
-    color: darkMode ? "#e8eaf6" : "#1a1a2e",
+    background: darkMode ? "#1C1A17" : "#fafaf8",
+    color: darkMode ? "#FAF8F3" : "#121110",
     transition: "border 0.15s",
   };
 
@@ -1482,17 +1441,17 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
     setLoading(false);
   };
 
-  const bg = darkMode ? "linear-gradient(135deg, #0f1117, #1a1a2e, #13152a)" : "linear-gradient(135deg, #f0f2ff 0%, #e8ecff 50%, #f5f0ff 100%)";
-  const cardBg = darkMode ? "#1a1d2e" : "#fff";
-  const textPrimary = darkMode ? "#e8eaf6" : "#1a1a2e";
-  const textMuted = darkMode ? "#9ca3af" : "#9ca3af";
+  const bg = darkMode ? "#121110" : "#F2F1EC";
+  const cardBg = darkMode ? "#1C1A17" : "#fff";
+  const textPrimary = darkMode ? "#FAF8F3" : "#121110";
+  const textMuted = darkMode ? "#B5A791" : "#B5A791";
 
   return (
     <div style={{ width: "100vw", height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <style>{darkMode ? getDarkVars() : getLightVars()}{css}</style>
-      <div style={{ width: "92%", maxWidth: 430, background: cardBg, borderRadius: 24, padding: "40px 24px", boxShadow: darkMode ? "0 20px 60px rgba(0,0,0,0.5)" : "0 20px 60px rgba(59,91,219,0.15)" }} className="fade-in">
+      <div style={{ width: "92%", maxWidth: 430, background: cardBg, borderRadius:0, padding: "40px 24px", boxShadow: darkMode ? "0 20px 60px rgba(0,0,0,0.5)" : "0 20px 60px rgba(255,159,28,0.15)" }} className="fade-in">
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 18, background: "linear-gradient(135deg, #d71920, #ef2b32)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", boxShadow: "0 8px 20px rgba(215,25,32,0.28)", overflow: "hidden" }}>
+          <div style={{ width: 60, height: 60, borderRadius:0, background: "#E63946", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", boxShadow: "0 8px 20px rgba(230,57,70,0.28)", overflow: "hidden" }}>
             {config?.logoNegocio
               ? <img src={config.logoNegocio} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <Package size={28} color="#fff" strokeWidth={1.8} />
@@ -1509,18 +1468,18 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
           </p>
         </div>
 
-        {exito && <div style={{ background: "#ecfdf5", color: "#059669", fontSize: 13, padding: "11px 14px", borderRadius: 10, marginBottom: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}><CheckCircle size={15} /> {exito}</div>}
+        {exito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}><CheckCircle size={15} /> {exito}</div>}
 
         {/* ── Verificar registro ── */}
         {modo === "verificar" && (
           <>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Código de 6 dígitos</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Código de 6 dígitos</label>
               <input value={codigoIngresado} onChange={e => setCodigoIngresado(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000" maxLength={6} style={{ ...inp, textAlign: "center", fontSize: 26, fontWeight: 800, letterSpacing: "0.4em" }} />
             </div>
-            {error && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleVerificar} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleVerificar} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700 }}>
               {loading ? "Verificando..." : "Verificar cuenta"}
             </button>
           </>
@@ -1529,19 +1488,19 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
         {/* ── Recuperar: ingresar correo ── */}
         {modo === "recuperar" && (
           <>
-            <div style={{ background: darkMode ? "#1e2235" : "#f0f2ff", borderRadius: 12, padding: "12px 16px", marginBottom: 18, fontSize: 13, color: darkMode ? "#9ca3af" : "#d71920" }}>
+            <div style={{ background: darkMode ? "#1C1A17" : "rgba(142,124,195,0.10)", borderRadius:0, padding: "12px 16px", marginBottom: 18, fontSize: 13, color: darkMode ? "#B5A791" : "#E63946" }}>
               📧 Te enviaremos un código de recuperación a tu correo electrónico.
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Correo electrónico</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Correo electrónico</label>
               <input type="email" value={correoRecuperacion} onChange={e => setCorreoRecuperacion(e.target.value)} placeholder="tu@correo.com" style={inp} />
             </div>
-            {error && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleEnviarCodigoRecuperacion} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleEnviarCodigoRecuperacion} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
               {loading ? "Enviando..." : "Enviar código"}
             </button>
             <div style={{ textAlign: "center" }}>
-              <button onClick={() => { setModo("login"); setError(""); }} style={{ background: "none", border: "none", color: "#d71920", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
+              <button onClick={() => { setModo("login"); setError(""); }} style={{ background: "none", border: "none", color: "#E63946", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
                 ← Volver al login
               </button>
             </div>
@@ -1551,20 +1510,20 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
         {/* ── Recuperar: ingresar código ── */}
         {modo === "recuperar-codigo" && (
           <>
-            <div style={{ background: darkMode ? "#1e2235" : "#f0f2ff", borderRadius: 12, padding: "12px 16px", marginBottom: 18, fontSize: 13, color: darkMode ? "#9ca3af" : "#d71920" }}>
+            <div style={{ background: darkMode ? "#1C1A17" : "rgba(142,124,195,0.10)", borderRadius:0, padding: "12px 16px", marginBottom: 18, fontSize: 13, color: darkMode ? "#B5A791" : "#E63946" }}>
               📬 Código enviado a <strong>{correoRecuperacion}</strong>
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Código de 6 dígitos</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Código de 6 dígitos</label>
               <input value={codigoIngresado} onChange={e => setCodigoIngresado(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000" maxLength={6} style={{ ...inp, textAlign: "center", fontSize: 26, fontWeight: 800, letterSpacing: "0.4em" }} />
             </div>
-            {error && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleVerificarCodigoRecuperacion} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleVerificarCodigoRecuperacion} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
               {loading ? "Verificando..." : "Verificar código"}
             </button>
             <div style={{ textAlign: "center" }}>
-              <button onClick={() => { setModo("recuperar"); setError(""); setCodigoIngresado(""); }} style={{ background: "none", border: "none", color: "#d71920", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
+              <button onClick={() => { setModo("recuperar"); setError(""); setCodigoIngresado(""); }} style={{ background: "none", border: "none", color: "#E63946", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
                 ← Volver
               </button>
             </div>
@@ -1575,16 +1534,16 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
         {modo === "recuperar-nueva" && (
           <>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Nueva contraseña</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Nueva contraseña</label>
               <div style={{ position: "relative" }}>
                 <input type={showPass ? "text" : "password"} value={nuevaClave} onChange={e => setNuevaClave(e.target.value)} placeholder="Mínimo 4 caracteres" style={inp} />
-                <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: darkMode ? "#6b7280" : "#9ca3af" }}>
+                <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: darkMode ? "#8C8678" : "#B5A791" }}>
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
-            {error && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleCambiarContrasena} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleCambiarContrasena} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700 }}>
               {loading ? "Cambiando..." : "Cambiar contraseña"}
             </button>
           </>
@@ -1595,23 +1554,23 @@ function AuthScreen({ onLogin, onAdmin, darkMode, config }) {
           <>
             {[{ label: "Usuario", val: usuario, set: setUsuario }, { label: "Contraseña", val: clave, set: setClave, type: "password" }].map(({ label, val, set, type }) => (
               <div key={label} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>{label}</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: darkMode ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>{label}</label>
                 <div style={{ position: "relative" }}>
                   <input type={type === "password" ? (showPass ? "text" : "password") : "text"} value={val} onChange={e => set(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleLogin()} style={inp} />
                   {type === "password" && (
-                    <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: darkMode ? "#6b7280" : "#9ca3af" }}>
+                    <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: darkMode ? "#8C8678" : "#B5A791" }}>
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   )}
                 </div>
               </div>
             ))}
-            {error && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 14 }}>⚠ {error}</div>}
-            <button onClick={handleLogin} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
+            {error && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {error}</div>}
+            <button onClick={handleLogin} disabled={loading} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>
               {loading ? "Cargando..." : "Iniciar sesión"}
             </button>
-            <div style={{ padding: "12px 16px", background: darkMode ? "#1e2235" : "#f0f2ff", borderRadius: 10, fontSize: 13, color: darkMode ? "#9ca3af" : "#d71920", textAlign: "center", marginBottom: 12 }}>
+            <div style={{ padding: "12px 16px", background: darkMode ? "#1C1A17" : "rgba(142,124,195,0.10)", borderRadius:0, fontSize: 13, color: darkMode ? "#B5A791" : "#E63946", textAlign: "center", marginBottom: 12 }}>
               👤 Para crear una cuenta, contacta al administrador
             </div>
           </>
@@ -1632,7 +1591,7 @@ export default function App() {
 
   // Aplicar clase al body
   useEffect(() => {
-    document.body.style.background = darkMode ? "#0f1117" : "#f4f5fb";
+    document.body.style.background = darkMode ? "#121110" : "#F2F1EC";
   }, [darkMode]);
 
   const [currentUser, setCurrentUserRaw] = useState(() => {
@@ -1684,6 +1643,15 @@ export default function App() {
   const [pago, setPago] = useState("Efectivo");
   const [dineroRecibido, setDineroRecibido] = useState("");
   const [montoEfectivoMixto, setMontoEfectivoMixto] = useState("");
+  const [metaDiaria, setMetaDiariaRaw] = useState(() => {
+    const guardada = Number(localStorage.getItem("reyDelHuevo_metaDiaria"));
+    return guardada > 0 ? guardada : 600000;
+  });
+  const setMetaDiaria = (valor) => {
+    const n = Math.max(0, Number(valor) || 0);
+    setMetaDiariaRaw(n);
+    localStorage.setItem("reyDelHuevo_metaDiaria", String(n));
+  };
   const [ventaError, setVentaError] = useState("");
   const [ventaExito, setVentaExito] = useState("");
   const [filtroPago, setFiltroPago] = useState("Todos");
@@ -1722,6 +1690,14 @@ export default function App() {
   const [clienteEditando, setClienteEditando] = useState(null);
   const [clienteBusqueda, setClienteBusqueda] = useState("");
   const [clienteError, setClienteError] = useState("");
+
+  // Proveedores
+  const [proveedores, setProveedores] = useState(getProveedores);
+  const proveedorVacio = { nombre: "", rut: "", rubro: "", telefono: "", correo: "", direccion: "", comuna: "", notas: "" };
+  const [proveedorForm, setProveedorForm] = useState(proveedorVacio);
+  const [proveedorEditando, setProveedorEditando] = useState(null);
+  const [proveedorBusqueda, setProveedorBusqueda] = useState("");
+  const [proveedorError, setProveedorError] = useState("");
 
   // Notificaciones
   const [notifOpen, setNotifOpen] = useState(false);
@@ -2240,39 +2216,33 @@ export default function App() {
   // para que no haya pantalla negra al hacer login
   const globalStyles = <style>{darkMode ? getDarkVars() : getLightVars()}{css}</style>;
 
-  if (!currentUser) {
-    if (showAdmin) return <><style>{darkMode ? getDarkVars() : getLightVars()}{css}</style><AdminPanel onBack={() => setShowAdmin(false)} darkMode={darkMode} /></>;
-    return <><style>{darkMode ? getDarkVars() : getLightVars()}{css}</style><AuthScreen onLogin={setCurrentUser} onAdmin={() => setShowAdmin(true)} darkMode={darkMode} config={config} /></>;
-  }
-
-  const iniciales = currentUser.nombre.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
   const lowStock = products.filter(p => p.stock <= (config.stockMinimo || 5)).sort((a, b) => a.stock - b.stock);
 
   // ── Temas ──
   const D = darkMode;
   const card = {
-    background: D ? "#1a1d2e" : "#fff",
-    borderRadius: 16,
+    background: D ? "#1C1A17" : "#fff",
+    borderRadius:0,
     padding: "20px 22px",
-    border: `1px solid ${D ? "#2d3158" : "#eef0f7"}`,
-    boxShadow: `0 2px 8px ${D ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.04)"}`,
+    border: `2px solid ${D ? "#2A2723" : "#E4E1D6"}`,
+    boxShadow: "none",
   };
   const inp = {
-    width: "100%", padding: "10px 13px", borderRadius: 10,
-    border: `1.5px solid ${D ? "#2d3158" : "#e5e7eb"}`,
+    width: "100%", padding: "10px 13px", borderRadius:0,
+    border: `2px solid ${D ? "#2A2723" : "#E4E1D6"}`,
     fontSize: 14, outline: "none",
-    background: D ? "#1e2235" : "#fafafa",
-    color: D ? "#e8eaf6" : "#1a1a2e",
+    background: D ? "#241F1A" : "#fafaf8",
+    color: D ? "#FAF8F3" : "#14120E",
     fontFamily: "inherit", transition: "border 0.15s",
   };
-  const textPrimary = D ? "#e8eaf6" : "#1a1a2e";
-  const textSecondary = D ? "#9ca3af" : "#6b7280";
-  const textMuted = D ? "#6b7280" : "#9ca3af";
-  const bgMain = D ? "#0f1117" : "#f4f5fb";
-  const bgCard = D ? "#1a1d2e" : "#fff";
-  const bgCard2 = D ? "#252840" : "#f9fafb";
-  const borderColor = D ? "#2d3158" : "#eef0f7";
-  const borderColor2 = D ? "#343860" : "#e5e7eb";
+  const textPrimary = D ? "#FAF8F3" : "#14120E";
+  const textSecondary = D ? "#B5A791" : "#6B6558";
+  const textMuted = D ? "#8C8678" : "#948E7E";
+  const bgMain = D ? "#121110" : "#F2F1EC";
+  const bgCard = D ? "#1C1A17" : "#fff";
+  const bgCard2 = D ? "#241F1A" : "#E9E6DB";
+  const borderColor = D ? "#2A2723" : "#E4E1D6";
+  const borderColor2 = D ? "#3A342D" : "#D6D2C4";
 
   const navItems = [
     { name: "Dashboard", label: "Inicio", icon: LayoutDashboard },
@@ -2380,6 +2350,50 @@ export default function App() {
     const nuevos = clientes.filter(c => c.id !== id);
     setClientes(nuevos); saveClientes(nuevos);
     if (clienteEditando === id) { setClienteEditando(null); setClienteForm(clienteVacio); }
+  };
+
+  const guardarProveedor = () => {
+    setProveedorError("");
+    const nombre = proveedorForm.nombre.trim();
+    if (!nombre) { setProveedorError("Ingresa el nombre del proveedor."); return; }
+    let nuevos;
+    if (proveedorEditando) {
+      nuevos = proveedores.map(p => p.id === proveedorEditando ? { ...p, ...proveedorForm, nombre, actualizado: new Date().toISOString() } : p);
+    } else {
+      nuevos = [{ id: Date.now(), ...proveedorForm, nombre, creado: new Date().toISOString(), compras: [] }, ...proveedores];
+    }
+    setProveedores(nuevos); saveProveedores(nuevos);
+    setProveedorForm(proveedorVacio);
+    setProveedorEditando(null);
+  };
+
+  const editarProveedor = (proveedor) => {
+    setProveedorEditando(proveedor.id);
+    setProveedorForm({ ...proveedorVacio, ...proveedor });
+    setProveedorError("");
+  };
+
+  const eliminarProveedor = (id) => {
+    if (!window.confirm("¿Eliminar este proveedor? También se perderá su historial de compras.")) return;
+    const nuevos = proveedores.filter(p => p.id !== id);
+    setProveedores(nuevos); saveProveedores(nuevos);
+    if (proveedorEditando === id) { setProveedorEditando(null); setProveedorForm(proveedorVacio); }
+  };
+
+  const registrarCompraProveedor = (id, monto, detalle) => {
+    const m = Number(monto);
+    if (!m || m <= 0) return;
+    const nuevos = proveedores.map(p => p.id === id
+      ? { ...p, compras: [{ id: Date.now(), fecha: new Date().toISOString(), monto: m, detalle: (detalle || "").trim() }, ...(p.compras || [])] }
+      : p);
+    setProveedores(nuevos); saveProveedores(nuevos);
+  };
+
+  const eliminarCompraProveedor = (proveedorId, compraId) => {
+    const nuevos = proveedores.map(p => p.id === proveedorId
+      ? { ...p, compras: (p.compras || []).filter(c => c.id !== compraId) }
+      : p);
+    setProveedores(nuevos); saveProveedores(nuevos);
   };
 
   const handleMoverProducto = async (prod, nuevaEmpresa) => {
@@ -3197,7 +3211,7 @@ export default function App() {
     const productosMasVendidos = Object.values(productosVendidosMap).sort((a, b) => b.cantidad - a.cantidad);
     return { productosVendidosMap, productosMasVendidos };
   }, [ventasMes]);
-  const barColors = ["#d71920", "#ef2b32", "#748ffc", "#91a7ff", "#ffd966", "#dee2ff"];
+  const barColors = ["#E63946", "#E63946", "#8E7CC3", "#8E7CC3", "#FF9F1C", "#2EC4B6"];
 
   const metodoPagoGlobal = (v) => String(v?.pago || v?.metodoPago || v?.formaPago || "Efectivo").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const { totalEfectivo, totalTarjeta, totalTransferencia } = useMemo(() => {
@@ -3274,13 +3288,14 @@ export default function App() {
     const gananciasHoy = ventasHoy.reduce((sum, v) => sum + gananciaVenta(v), 0);
     const gananciasAyer = ventasAyer.reduce((sum, v) => sum + gananciaVenta(v), 0);
     const huevosVendidosHoy = ventasHoy.reduce((sum, v) => sum + (v.items || []).reduce((itemSum, item) => itemSum + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
+    const huevosVendidosAyer = ventasAyer.reduce((sum, v) => sum + (v.items || []).reduce((itemSum, item) => itemSum + (item.tipoItem === "huevo" ? Number(item.huevos || 0) : 0), 0), 0);
     const diferenciaGanancias = gananciasHoy - gananciasAyer;
 
     return {
       ventasHoy, ventasAyer, movimientosHuevosInicio,
       pagoEfectivoHoy, pagoTarjetaHoy, pagoTransferenciaHoy,
       ventasHuevosHoyTotal, ventasHuevosAyerTotal,
-      gananciasHoy, gananciasAyer, huevosVendidosHoy, diferenciaGanancias,
+      gananciasHoy, gananciasAyer, huevosVendidosHoy, huevosVendidosAyer, diferenciaGanancias,
     };
   }, [ventas, hoyClave, ayerClave, products]);
   const porcentajeGanancias = gananciasAyer > 0 ? (diferenciaGanancias / gananciasAyer) * 100 : (gananciasHoy > 0 ? 100 : 0);
@@ -3289,6 +3304,11 @@ export default function App() {
   const saludoHora = hoyDate.getHours() < 12 ? "Buenos días" : hoyDate.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
   const fechaInicio = hoyDate.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
   const bandejasVendidasHoy = Math.floor(huevosVendidosHoy / 30);
+  const bandejasVendidasAyer = Math.floor(huevosVendidosAyer / 30);
+  const diferenciaBandejas = bandejasVendidasHoy - bandejasVendidasAyer;
+  const porcentajeBandejas = bandejasVendidasAyer > 0 ? (diferenciaBandejas / bandejasVendidasAyer) * 100 : (bandejasVendidasHoy > 0 ? 100 : 0);
+  const diferenciaHuevos = huevosVendidosHoy - huevosVendidosAyer;
+  const porcentajeHuevos = huevosVendidosAyer > 0 ? (diferenciaHuevos / huevosVendidosAyer) * 100 : (huevosVendidosHoy > 0 ? 100 : 0);
   const gastosHoyInicio = gastosReporte.filter(g => fechaLocalClave(g?.fecha || g?.creadoEn || g?.createdAt) === hoyClave);
   const egresosHoyInicio = gastosHoyInicio.reduce((sum, g) => sum + Number(g?.total || 0), 0);
   const movimientosInicioDashboard = [
@@ -3342,9 +3362,9 @@ export default function App() {
   });
 
   const notificaciones = [
-    ...lowStock.map(p => ({ tipo: "stock", msg: `${p.img} ${p.nombre} tiene solo ${p.stock} unidades`, color: "#f59e0b" })),
+    ...lowStock.map(p => ({ tipo: "stock", msg: `${p.img} ${p.nombre} tiene solo ${p.stock} unidades`, color: "#FF9F1C" })),
 
-    ...ventas.slice(0, 2).map(v => ({ tipo: "venta", msg: `Venta registrada por ${fmt(v.total)}`, color: "#10b981" })),
+    ...ventas.slice(0, 2).map(v => ({ tipo: "venta", msg: `Venta registrada por ${fmt(v.total)}`, color: "#2EC4B6" })),
   ];
 
   // ── Usuarios ──
@@ -3694,10 +3714,22 @@ export default function App() {
       topGananciaProd, resumenPagosPeriodo,
     };
   }, [ventas, mermas, gastosReporte, products, reportePeriodo, reporteFecha, mesActual, anioActual]);
+
+  // Guard de sesión: se evalúa DESPUÉS de todos los hooks (arriba) para que
+  // el número y orden de hooks llamados sea siempre el mismo entre renders,
+  // sin sesión y con sesión. Antes este return estaba antes de varios
+  // useCallback/useEffect/useMemo, lo que podía romper la app con pantalla
+  // en blanco justo al iniciar sesión por primera vez en un dispositivo sin
+  // sesión guardada (violación de las reglas de Hooks de React).
+  if (!currentUser) {
+    if (showAdmin) return <><style>{darkMode ? getDarkVars() : getLightVars()}{css}</style><AdminPanel onBack={() => setShowAdmin(false)} darkMode={darkMode} /></>;
+    return <><style>{darkMode ? getDarkVars() : getLightVars()}{css}</style><AuthScreen onLogin={setCurrentUser} onAdmin={() => setShowAdmin(true)} darkMode={darkMode} config={config} /></>;
+  }
+  const iniciales = currentUser.nombre.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
   const metodosRep = [
-    { label: "Efectivo",      color: "#10b981", val: resumenPagosPeriodo.Efectivo },
-    { label: "Débito",        color: "#f59e0b", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"] },
-    { label: "Transferencia", color: "#8b5cf6", val: resumenPagosPeriodo.Transferencia },
+    { label: "Efectivo",      color: "#2EC4B6", val: resumenPagosPeriodo.Efectivo },
+    { label: "Débito",        color: "#FF9F1C", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"] },
+    { label: "Transferencia", color: "#8E7CC3", val: resumenPagosPeriodo.Transferencia },
   ];
   const totalProductos   = products.length;
   const valorInventario = products.reduce((s, p) => s + ((p.precio||0)*(p.stock||0)), 0);
@@ -3715,7 +3747,7 @@ export default function App() {
     catStockMap[cat].valor += (p.precio||0)*(p.stock||0);
   });
   const catStockArr = Object.values(catStockMap).sort((a,b)=>b.valor-a.valor);
-  const catColors = ["#d71920","#10b981","#f59e0b","#e03131","#8b5cf6","#009ee3","#059669","#d97706"];
+  const catColors = ["#E63946","#2EC4B6","#FF9F1C","#E63946","#8E7CC3","#8E7CC3","#2EC4B6","#FF9F1C"];
   const mejorDia = graficoDias.length > 0 ? graficoDias.reduce((a,b)=>b.total>a.total?b:a, graficoDias[0])?.dia || "—" : "—";
 
   // ── Gráfico Tendencia de Ventas: datos reales del mes actual ─────────────────
@@ -3747,29 +3779,29 @@ export default function App() {
       {/* Reset Modal */}
       {showResetModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, backdropFilter: "blur(6px)" }}>
-          <div className="fade-in" style={{ background: D ? "#1a1d2e" : "#fff", borderRadius: 20, padding: 32, width: "92%", maxWidth: 440, boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
+          <div className="fade-in" style={{ background: D ? "#1C1A17" : "#fff", borderRadius:0, padding: 32, width: "92%", maxWidth: 440, boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                <AlertTriangle size={30} color="#e03131" />
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(230,57,70,0.10)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <AlertTriangle size={30} color="#E63946" />
               </div>
-              <h3 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 800, color: D ? "#e8eaf6" : "#1a1a2e" }}>⚠ Restablecer el sistema</h3>
-              <p style={{ margin: 0, fontSize: 14, color: D ? "#9ca3af" : "#6b7280", lineHeight: 1.6 }}>
-                Esta acción es <strong style={{ color: "#e03131" }}>irreversible</strong>. Se borrarán <strong>todas las ventas, recibos, configuración</strong> y el sistema volverá al estado inicial.
+              <h3 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 800, color: D ? "#FAF8F3" : "#121110" }}>⚠ Restablecer el sistema</h3>
+              <p style={{ margin: 0, fontSize: 14, color: D ? "#B5A791" : "#8C8678", lineHeight: 1.6 }}>
+                Esta acción es <strong style={{ color: "#E63946" }}>irreversible</strong>. Se borrarán <strong>todas las ventas, recibos, configuración</strong> y el sistema volverá al estado inicial.
               </p>
             </div>
-            <div style={{ background: "#fff1f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#e03131" }}>Se eliminará permanentemente:</p>
+            <div style={{ background: "rgba(230,57,70,0.10)", border: "1.5px solid rgba(230,57,70,0.30)", borderRadius:0, padding: "12px 16px", marginBottom: 20 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#E63946" }}>Se eliminará permanentemente:</p>
               {["Todas las ventas registradas", "Todos los recibos generados", "Historial de transacciones MP", "Configuración del sistema", "Datos del negocio"].map(item => (
-                <p key={item} style={{ margin: "0 0 4px", fontSize: 12, color: "#dc2626" }}>✗ {item}</p>
+                <p key={item} style={{ margin: "0 0 4px", fontSize: 12, color: "#E63946" }}>✗ {item}</p>
               ))}
             </div>
-            <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: D ? "#e8eaf6" : "#374151" }}>
-              Escribe <strong style={{ color: "#e03131", fontFamily: "monospace" }}>RESTABLECER</strong> para confirmar:
+            <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: D ? "#FAF8F3" : "#8C8678" }}>
+              Escribe <strong style={{ color: "#E63946", fontFamily: "monospace" }}>RESTABLECER</strong> para confirmar:
             </p>
             <input value={resetConfirmText} onChange={e => setResetConfirmText(e.target.value)} placeholder="RESTABLECER" style={{ ...inp, marginBottom: 16, fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.05em" }} />
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { setShowResetModal(false); setResetConfirmText(""); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleResetCompleto} disabled={resetConfirmText !== "RESTABLECER"} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: resetConfirmText === "RESTABLECER" ? "linear-gradient(135deg, #e03131, #f03e3e)" : "#d1d5db", cursor: resetConfirmText === "RESTABLECER" ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700, color: resetConfirmText === "RESTABLECER" ? "#fff" : "#9ca3af", fontFamily: "inherit" }}>
+              <button onClick={() => { setShowResetModal(false); setResetConfirmText(""); }} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleResetCompleto} disabled={resetConfirmText !== "RESTABLECER"} style={{ flex: 1, padding: "11px", borderRadius:0, border: "none", background: resetConfirmText === "RESTABLECER" ? "#E63946" : "#D6D2C4", cursor: resetConfirmText === "RESTABLECER" ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700, color: resetConfirmText === "RESTABLECER" ? "#fff" : "#B5A791", fontFamily: "inherit" }}>
                 Restablecer Todo
               </button>
             </div>
@@ -3778,11 +3810,11 @@ export default function App() {
       )}
 
       {/* ── Sidebar ── */}
-      <aside className="sidebar-desktop" style={{ width: sidebarOpen ? 240 : 70, transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", flexShrink: 0, background: D ? "#191d19" : "#fff", borderRight: `1px solid ${borderColor}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <aside className="sidebar-desktop" style={{ width: sidebarOpen ? 240 : 70, transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", flexShrink: 0, background: D ? "#1C1A17" : "#fff", borderRight: `1px solid ${borderColor}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "22px 16px 18px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }} onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: config.logoNegocio ? "transparent" : (D ? "#ffc400" : "#d71920"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+          <div style={{ width: 38, height: 38, borderRadius:0, background: config.logoNegocio ? "transparent" : (D ? "#FF9F1C" : "#E63946"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
             {config.logoNegocio
-              ? <img src={config.logoNegocio} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+              ? <img src={config.logoNegocio} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius:0 }} />
               : <Package size={18} color="#fff" strokeWidth={2} />}
           </div>
           {sidebarOpen && <div>
@@ -3793,14 +3825,14 @@ export default function App() {
         <nav style={{ flex: 1, padding: "6px 12px", overflowY: "auto" }}>
           {navItems.map(({ name, label, icon: Icon }) => (
             <button key={name} onClick={() => { setEggSaleMode(false); setActiveNav(name); }} className={`nav-btn ${activeNav === name ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 13px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 14, marginBottom: 2, whiteSpace: "nowrap", fontFamily: "inherit", fontWeight: 500, background: "none" }}>
+              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 13px", borderRadius:0, border: "none", cursor: "pointer", fontSize: 14, marginBottom: 2, whiteSpace: "nowrap", fontFamily: "inherit", fontWeight: 500, background: "none" }}>
               <Icon size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
               {sidebarOpen && <span>{label || name}</span>}
             </button>
           ))}
         </nav>
         <div style={{ padding: "14px 14px", borderTop: `1px solid ${borderColor}`, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: esGerente ? (D ? "#ffc400" : "#d71920") : (D ? "#63c2a6" : "#4a8d7a"), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: esGerente ? (D ? "#FF9F1C" : "#E63946") : (D ? "#2EC4B6" : "#2EC4B6"), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
             {iniciales}
           </div>
           {sidebarOpen && <>
@@ -3808,7 +3840,7 @@ export default function App() {
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.nombre}</p>
               <p style={{ margin: 0, fontSize: 11, color: textMuted, fontWeight: 600 }}>{esGerente ? "Gerente" : "Empleado"}</p>
             </div>
-            <button onClick={() => setCurrentUser(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: textMuted, borderRadius: 8 }}><LogOut size={15} /></button>
+            <button onClick={() => setCurrentUser(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: textMuted, borderRadius:0 }}><LogOut size={15} /></button>
           </>}
         </div>
       </aside>
@@ -3821,14 +3853,14 @@ export default function App() {
             {navItems.slice(4).map(({ name, label, icon: Icon }) => (
               <button key={name} onClick={() => { setEggSaleMode(false); setActiveNav(name); setMoreMenuOpen(false); }}
                 className="more-menu-btn"
-                style={{ background: activeNav === name ? (D ? "rgba(79,174,147,0.18)" : "#e4f0ec") : bgCard2, color: activeNav === name ? (D ? "#ffc400" : "#d71920") : textSecondary, border: `1px solid ${borderColor}` }}>
+                style={{ background: activeNav === name ? (D ? "rgba(46,196,182,0.18)" : "rgba(46,196,182,0.12)") : bgCard2, color: activeNav === name ? (D ? "#FF9F1C" : "#E63946") : textSecondary, border: `1px solid ${borderColor}` }}>
                 <Icon size={22} strokeWidth={1.8} />
                 {label || name}
               </button>
             ))}
             <button onClick={() => { setCurrentUser(null); setMoreMenuOpen(false); }}
               className="more-menu-btn"
-              style={{ background: "#fbeae4", color: "#b3452f", border: "1px solid #f0d3c7" }}>
+              style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", border: "1px solid rgba(230,57,70,0.15)" }}>
               <LogOut size={22} strokeWidth={1.8} />
               Salir
             </button>
@@ -3901,7 +3933,7 @@ export default function App() {
       {/* ── Main ── */}
       <div className="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <header className={`mobile-topbar ${activeNav === "Dashboard" ? "dashboard-mobile-topbar" : ""}`} style={{ background: D ? "#13152a" : "#fff", borderBottom: `1px solid ${borderColor}`, padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <header className={`mobile-topbar ${activeNav === "Dashboard" ? "dashboard-mobile-topbar" : ""}`} style={{ background: D ? "#1C1A17" : "#fff", borderBottom: `1px solid ${borderColor}`, padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{navItems.find(n => n.name === activeNav)?.label || activeNav}</h1>
             <p className="header-date" style={{ margin: 0, fontSize: 12, color: textMuted }}>{new Date().toLocaleDateString("es-CL", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
@@ -3909,12 +3941,12 @@ export default function App() {
 
           {/* Selector de empresa — solo programador */}
           {esProgramador && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(124,58,237,0.15)", border: "1.5px solid rgba(124,58,237,0.4)", borderRadius: 10, padding: "6px 10px", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(142,124,195,0.15)", border: "1.5px solid rgba(142,124,195,0.4)", borderRadius:0, padding: "6px 10px", flexShrink: 0 }}>
               <span style={{ fontSize: 13 }}>🏢</span>
               <select
                 value={empresaVista}
                 onChange={e => { setEmpresaVista(e.target.value); setCatFilter("Todos"); }}
-                style={{ background: "transparent", border: "none", outline: "none", color: "#a78bfa", fontWeight: 700, fontSize: 12, fontFamily: "inherit", cursor: "pointer", maxWidth: 130 }}
+                style={{ background: "transparent", border: "none", outline: "none", color: "#8E7CC3", fontWeight: 700, fontSize: 12, fontFamily: "inherit", cursor: "pointer", maxWidth: 130 }}
               >
                 <option value="">Todas las empresas</option>
                 {[...new Set(products.map(p => p.empresa).filter(Boolean))].map(emp => (
@@ -3923,22 +3955,22 @@ export default function App() {
               </select>
             </div>
           )}
-          <div className="header-search" style={{ position: "relative", display: "flex", alignItems: "center", background: bgCard2, borderRadius: 10, padding: "8px 14px", gap: 8, width: 220, border: `1px solid ${borderColor}` }}>
+          <div className="header-search" style={{ position: "relative", display: "flex", alignItems: "center", background: bgCard2, borderRadius:0, padding: "8px 14px", gap: 8, width: 220, border: `1px solid ${borderColor}` }}>
             <Search size={14} color={textMuted} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar productos..." style={{ background: "none", border: "none", outline: "none", fontSize: 13, color: textPrimary, width: "100%", fontFamily: "inherit" }} />
           </div>
           {/* Dark mode toggle */}
           <button className="header-dark-btn" onClick={toggleDark} title={D ? "Modo claro" : "Modo oscuro"}
-            style={{ background: D ? "#252840" : "#f4f5fb", border: `1px solid ${borderColor}`, cursor: "pointer", width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
-            {D ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} color="#6b7280" />}
+            style={{ background: D ? "#241F1A" : "#F2F1EC", border: `1px solid ${borderColor}`, cursor: "pointer", width: 38, height: 38, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+            {D ? <Sun size={17} color="#FF9F1C" /> : <Moon size={17} color="#8C8678" />}
           </button>
           <div style={{ position: "relative" }}>
-            <button onClick={() => setNotifOpen(!notifOpen)} style={{ background: notifOpen ? (D ? "#252840" : "#fff3bf") : (D ? "#1e2235" : "#f4f5fb"), border: `1px solid ${borderColor}`, cursor: "pointer", width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-              <Bell size={17} color={notifOpen ? "#d71920" : textMuted} />
-              {notificaciones.length > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: "50%", background: "#ef4444", border: `2px solid ${D ? "#13152a" : "#fff"}` }} />}
+            <button onClick={() => setNotifOpen(!notifOpen)} style={{ background: notifOpen ? (D ? "#241F1A" : "rgba(255,159,28,0.15)") : (D ? "#1C1A17" : "#F2F1EC"), border: `1px solid ${borderColor}`, cursor: "pointer", width: 38, height: 38, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+              <Bell size={17} color={notifOpen ? "#E63946" : textMuted} />
+              {notificaciones.length > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: "50%", background: "#E63946", border: `2px solid ${D ? "#1C1A17" : "#fff"}` }} />}
             </button>
             {notifOpen && (
-              <div className="fade-in notif-panel" style={{ position: "absolute", right: 0, top: 46, width: "min(320px, 90vw)", background: bgCard, borderRadius: 16, boxShadow: `0 12px 40px ${D ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.12)"}`, border: `1px solid ${borderColor}`, zIndex: 50, overflow: "hidden" }}>
+              <div className="fade-in notif-panel" style={{ position: "absolute", right: 0, top: 46, width: "min(320px, 90vw)", background: bgCard, borderRadius:0, boxShadow: `0 12px 40px ${D ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.12)"}`, border: `1px solid ${borderColor}`, zIndex: 50, overflow: "hidden" }}>
                 <div style={{ padding: "14px 16px", borderBottom: `1px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: textPrimary }}>Notificaciones</p>
                   <button onClick={() => setNotifOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: textMuted }}><X size={14} /></button>
@@ -3956,10 +3988,10 @@ export default function App() {
           </div>
           {/* Mobile: search + dark toggle */}
           <button className="mobile-only" onClick={toggleDark}
-            style={{ background: D ? "#252840" : "#f4f5fb", border: `1px solid ${borderColor}`, cursor: "pointer", width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {D ? <Sun size={16} color="#f59e0b" /> : <Moon size={16} color="#6b7280" />}
+            style={{ background: D ? "#241F1A" : "#F2F1EC", border: `1px solid ${borderColor}`, cursor: "pointer", width: 36, height: 36, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {D ? <Sun size={16} color="#FF9F1C" /> : <Moon size={16} color="#8C8678" />}
           </button>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: esGerente ? "linear-gradient(135deg, #d71920, #ef2b32)" : "linear-gradient(135deg, #10b981, #34d399)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: esGerente ? "#E63946" : "#2EC4B6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12 }}>
             {iniciales}
           </div>
         </header>
@@ -4052,7 +4084,8 @@ export default function App() {
                   huevosHoy={huevosVendidosHoy}
                   gananciaHoy={gananciasHoy}
                   deltaVentas={porcentajeVentas}
-                  deltaHuevos={porcentajeVentas}
+                  deltaBandejas={porcentajeBandejas}
+                  deltaHuevos={porcentajeHuevos}
                   deltaGanancia={porcentajeGanancias}
                   egresosHoy={egresosHoyInicio}
                   efectivoHoy={pagoEfectivoHoy}
@@ -4067,6 +4100,8 @@ export default function App() {
                   onMenu={() => setMoreMenuOpen(true)}
                   onNavigate={(destino) => setActiveNav(destino)}
                   onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
+                  meta={metaDiaria}
+                  onMetaChange={setMetaDiaria}
                 />
               </div>
             </>
@@ -4079,15 +4114,15 @@ export default function App() {
               <div className="mobile-products-search" style={{ display: "none", gap: 10, marginBottom: 12 }}>
                 <div style={{ position: "relative", flex: 1 }}>
                   <Search size={15} color={textMuted} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar productos..." style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: 12, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar productos..." style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
                 </div>
-                <button onClick={() => setModalPapelera(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius: 12, fontSize: 13, border: `1.5px solid ${borderColor2}`, background: bgCard, color: textSecondary, cursor: "pointer", fontFamily: "inherit", position: "relative", flexShrink: 0 }}>
+                <button onClick={() => setModalPapelera(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius:0, fontSize: 13, border: `1.5px solid ${borderColor2}`, background: bgCard, color: textSecondary, cursor: "pointer", fontFamily: "inherit", position: "relative", flexShrink: 0 }}>
                   <Trash2 size={15} />
                   {papelera.length > 0 && (
-                    <span style={{ position: "absolute", top: -6, right: -6, background: "#e03131", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 10, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{papelera.length}</span>
+                    <span style={{ position: "absolute", top: -6, right: -6, background: "#E63946", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius:0, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{papelera.length}</span>
                   )}
                 </button>
-                <button onClick={openAdd} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12, fontSize: 13, whiteSpace: "nowrap" }}>
+                <button onClick={openAdd} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius:0, fontSize: 13, whiteSpace: "nowrap" }}>
                   <Plus size={15} /> Nuevo producto
                 </button>
               </div>
@@ -4095,19 +4130,19 @@ export default function App() {
                 <div className="cat-filters" style={{ display: "flex", gap: 8 }}>
                   {["Todos", ...categorias].map(cat => (
                     <button key={cat} onClick={() => setCatFilter(cat)}
-                      style={{ padding: "7px 14px", borderRadius: 8, border: `1.5px solid ${catFilter === cat ? "#d71920" : borderColor2}`, background: catFilter === cat ? "#d71920" : bgCard, color: catFilter === cat ? "#fff" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit", transition: "all 0.15s" }}>
+                      style={{ padding: "7px 14px", borderRadius:0, border: `1.5px solid ${catFilter === cat ? "#E63946" : borderColor2}`, background: catFilter === cat ? "#E63946" : bgCard, color: catFilter === cat ? "#fff" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit", transition: "all 0.15s" }}>
                       {cat}
                     </button>
                   ))}
                 </div>
                 <div className="desktop-product-actions" style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setModalPapelera(true)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10, fontSize: 13, border: `1.5px solid ${borderColor2}`, background: bgCard, color: textSecondary, cursor: "pointer", fontFamily: "inherit", fontWeight: 600, position: "relative" }}>
+                  <button onClick={() => setModalPapelera(true)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius:0, fontSize: 13, border: `1.5px solid ${borderColor2}`, background: bgCard, color: textSecondary, cursor: "pointer", fontFamily: "inherit", fontWeight: 600, position: "relative" }}>
                     <Trash2 size={15} /> Papelera
                     {papelera.length > 0 && (
-                      <span style={{ position: "absolute", top: -6, right: -6, background: "#e03131", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 10, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{papelera.length}</span>
+                      <span style={{ position: "absolute", top: -6, right: -6, background: "#E63946", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius:0, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{papelera.length}</span>
                     )}
                   </button>
-                  <button onClick={openAdd} className="btn-primary btn-nuevo-desktop" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, fontSize: 13 }}>
+                  <button onClick={openAdd} className="btn-primary btn-nuevo-desktop" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius:0, fontSize: 13 }}>
                     <Plus size={15} /> Nuevo Producto
                   </button>
                 </div>
@@ -4116,17 +4151,17 @@ export default function App() {
                 {filtered.map(p => (
                   <div key={p.id} style={{ ...card, cursor: "default", padding: 0, overflow: "hidden" }} className="card-hover product-card-desktop">
                     {/* Imagen superior */}
-                    <div style={{ position: "relative", width: "100%", height: 120, background: D ? "#1e2235" : "#f4f5fb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "relative", width: "100%", height: 120, background: D ? "#1C1A17" : "#F2F1EC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {p.imagenUrl
                         ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />
                         : <div style={{ fontSize: 52 }}>{p.img}</div>
                       }
                       <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 4 }}>
-                        <button onClick={() => { setModalStock(p); setStockAjuste(""); setStockTipo("agregar"); }} style={{ padding: "4px 7px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#10b981", display: "flex" }}><Plus size={12} /></button>
-                        <button onClick={() => openEdit(p)} style={{ padding: "4px 7px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex" }}><Pencil size={12} /></button>
-                        <button title="Duplicar producto" onClick={() => handleDuplicarProducto(p)} style={{ padding: "4px 7px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#8b5cf6", display: "flex" }}><ClipboardList size={12} /></button>
-                        {esGerente && <button onClick={() => setModalMover(p)} title="Mover a otra empresa" style={{ padding: "4px 7px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#7c3aed", display: "flex", fontSize: 11, fontWeight: 700 }}>🏢</button>}
-                        <button onClick={() => handleDeleteProd(p.id)} className="btn-danger" style={{ padding: "4px 7px", borderRadius: 8, fontSize: 12, display: "flex" }}><Trash2 size={12} /></button>
+                        <button onClick={() => { setModalStock(p); setStockAjuste(""); setStockTipo("agregar"); }} style={{ padding: "4px 7px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#2EC4B6", display: "flex" }}><Plus size={12} /></button>
+                        <button onClick={() => openEdit(p)} style={{ padding: "4px 7px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex" }}><Pencil size={12} /></button>
+                        <button title="Duplicar producto" onClick={() => handleDuplicarProducto(p)} style={{ padding: "4px 7px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#8E7CC3", display: "flex" }}><ClipboardList size={12} /></button>
+                        {esGerente && <button onClick={() => setModalMover(p)} title="Mover a otra empresa" style={{ padding: "4px 7px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: "#8E7CC3", display: "flex", fontSize: 11, fontWeight: 700 }}>🏢</button>}
+                        <button onClick={() => handleDeleteProd(p.id)} className="btn-danger" style={{ padding: "4px 7px", borderRadius:0, fontSize: 12, display: "flex" }}><Trash2 size={12} /></button>
                       </div>
                     </div>
                     <div style={{ padding: "12px 14px 14px" }}>
@@ -4134,19 +4169,19 @@ export default function App() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{p.categoria}</p>
                         {(esGerente) && p.empresa && (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: D ? "rgba(124,58,237,0.2)" : "#f3f0ff", color: "#7c3aed", whiteSpace: "nowrap" }}>🏢 {p.empresa}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius:0, background: D ? "rgba(142,124,195,0.2)" : "rgba(142,124,195,0.10)", color: "#8E7CC3", whiteSpace: "nowrap" }}>🏢 {p.empresa}</span>
                         )}
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: p.mangaActiva && p.mangaCantidad && p.mangaPrecio ? 6 : 10 }}>
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(p.precio)}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: p.stock <= 0 ? "#fff1f2" : p.stock <= (config.stockMinimo || 5) ? "#fffbeb" : D ? "rgba(16,185,129,0.15)" : "#ecfdf5", color: p.stock <= 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#d97706" : "#059669" }}>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(p.precio)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius:0, background: p.stock <= 0 ? "rgba(230,57,70,0.10)" : p.stock <= (config.stockMinimo || 5) ? "rgba(255,159,28,0.12)" : D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", color: p.stock <= 0 ? "#E63946" : p.stock <= (config.stockMinimo || 5) ? "#FF9F1C" : "#2EC4B6" }}>
                           {p.stock} uds{p.mangaActiva && p.mangaCantidad && +p.mangaCantidad > 0 ? ` / ${Math.floor(p.stock / +p.mangaCantidad)} m` : ""}
                         </span>
                       </div>
                       {p.mangaActiva && p.mangaCantidad && p.mangaPrecio && (
-                        <div style={{ marginBottom: 8, padding: "5px 10px", background: D ? "rgba(245,158,11,0.15)" : "#fffbeb", borderRadius: 8, border: `1px solid ${D ? "rgba(245,158,11,0.3)" : "#fde68a"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 11, color: "#d97706", fontWeight: 600 }}>📦 Manga x{p.mangaCantidad}</span>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: "#d97706" }}>{fmt(+p.mangaPrecio)}</span>
+                        <div style={{ marginBottom: 8, padding: "5px 10px", background: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)", borderRadius:0, border: `1px solid ${D ? "rgba(255,159,28,0.3)" : "rgba(255,159,28,0.30)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, color: "#FF9F1C", fontWeight: 600 }}>📦 Manga x{p.mangaCantidad}</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: "#FF9F1C" }}>{fmt(+p.mangaPrecio)}</span>
                         </div>
                       )}
                       {p.promoActiva && p.promoCantMin && p.promoPrecio && (() => {
@@ -4155,17 +4190,17 @@ export default function App() {
                         const hasta = String(p.promoFechaFin || "");
                         const vigente = (!desde || hoy >= desde) && (!hasta || hoy <= hasta);
                         return (
-                          <div style={{ marginBottom: 8, padding: "5px 10px", background: vigente ? (D ? "rgba(215,25,32,0.15)" : "#fff1f2") : (D ? "rgba(107,114,128,0.15)" : "#f3f4f6"), borderRadius: 8, border: `1px solid ${vigente ? (D ? "rgba(215,25,32,0.3)" : "#fecdd3") : borderColor2}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 11, color: vigente ? "#d71920" : textMuted, fontWeight: 600 }}>
+                          <div style={{ marginBottom: 8, padding: "5px 10px", background: vigente ? (D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)") : (D ? "rgba(107,114,128,0.15)" : "#E9E6DB"), borderRadius:0, border: `1px solid ${vigente ? (D ? "rgba(230,57,70,0.3)" : "rgba(230,57,70,0.20)") : borderColor2}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, color: vigente ? "#E63946" : textMuted, fontWeight: 600 }}>
                               🏷️ {p.promoCantMin}x{fmt(+p.promoPrecio)}{(desde || hasta) ? ` · ${desde || "…"} a ${hasta || "…"}` : ""}
                             </span>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: vigente ? "#d71920" : textMuted }}>{vigente ? "Vigente" : "No vigente"}</span>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: vigente ? "#E63946" : textMuted }}>{vigente ? "Vigente" : "No vigente"}</span>
                           </div>
                         );
                       })()}
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input type="number" min="1" placeholder="Cantidad" value={quickStock[p.id] || ""} onChange={e => setQuickStock(prev => ({ ...prev, [p.id]: e.target.value }))} onKeyDown={e => e.key === "Enter" && handleQuickStock(p)} style={{ flex: 1, minWidth: 0, padding: "7px 8px", borderRadius: 8, border: `1.5px solid ${borderColor2}`, background: D ? "#1a1d2e" : "#fafafa", color: textPrimary, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-                        <button onClick={() => handleQuickStock(p)} style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}>+ Stock</button>
+                        <input type="number" min="1" placeholder="Cantidad" value={quickStock[p.id] || ""} onChange={e => setQuickStock(prev => ({ ...prev, [p.id]: e.target.value }))} onKeyDown={e => e.key === "Enter" && handleQuickStock(p)} style={{ flex: 1, minWidth: 0, padding: "7px 8px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: D ? "#1C1A17" : "#fafaf8", color: textPrimary, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                        <button onClick={() => handleQuickStock(p)} style={{ padding: "7px 10px", borderRadius:0, border: "none", background: "#2EC4B6", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}>+ Stock</button>
                       </div>
                     </div>
                   </div>
@@ -4175,17 +4210,17 @@ export default function App() {
               {/* ── Vista móvil lista (estilo app) ── */}
               <div className="products-list-mobile" style={{ display: "none" }}>
                 {filtered.map(p => (
-                  <div key={`m-${p.id}`} className="mobile-product-card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", marginBottom: 10, background: bgCard, borderRadius: 18, border: `1px solid ${borderColor}`, position: "relative", boxShadow: `0 2px 8px ${D ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.04)"}` }}>
+                  <div key={`m-${p.id}`} className="mobile-product-card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", marginBottom: 10, background: bgCard, borderRadius:0, border: `1px solid ${borderColor}`, position: "relative", boxShadow: `0 2px 8px ${D ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.04)"}` }}>
                     {/* Imagen */}
                     <div style={{ position: "relative", flexShrink: 0 }}>
-                      <div style={{ width: 88, height: 88, borderRadius: 14, overflow: "hidden", background: D ? "#1e2235" : "#f4f5fb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 88, height: 88, borderRadius:0, overflow: "hidden", background: D ? "#1C1A17" : "#F2F1EC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {p.imagenUrl
                           ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                           : <div style={{ fontSize: 40 }}>{p.img}</div>
                         }
                       </div>
                       {/* Badge stock */}
-                      <div style={{ position: "absolute", top: -2, left: -2, background: p.stock <= 0 ? "#e03131" : p.stock <= (config.stockMinimo || 5) ? "#f59e0b" : "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 8, whiteSpace: "nowrap" }}>
+                      <div style={{ position: "absolute", top: -2, left: -2, background: p.stock <= 0 ? "#E63946" : p.stock <= (config.stockMinimo || 5) ? "#FF9F1C" : "#2EC4B6", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius:0, whiteSpace: "nowrap" }}>
                         {p.stock} uds{p.mangaActiva && p.mangaCantidad && +p.mangaCantidad > 0 ? ` / ${Math.floor(p.stock / +p.mangaCantidad)} m` : ""}
                       </div>
                     </div>
@@ -4193,18 +4228,18 @@ export default function App() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
                       <p style={{ margin: "0 0 8px", fontSize: 12, color: textMuted }}>{p.categoria}</p>
-                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(p.precio)}</p>
+                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(p.precio)}</p>
                       {p.mangaActiva && p.mangaCantidad && p.mangaPrecio && (
-                        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#d97706", fontWeight: 600 }}>📦 {Math.floor(p.stock / +p.mangaCantidad)} mangas x{p.mangaCantidad}u disponibles · {fmt(+p.mangaPrecio)} c/u</p>
+                        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#FF9F1C", fontWeight: 600 }}>📦 {Math.floor(p.stock / +p.mangaCantidad)} mangas x{p.mangaCantidad}u disponibles · {fmt(+p.mangaPrecio)} c/u</p>
                       )}
                       {/* Stepper + Stock button */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: bgCard2, borderRadius: 10, padding: "5px 10px", border: `1.5px solid ${borderColor2}` }}>
-                          <button onClick={() => { const v = Math.max(0, (+(quickStock[p.id] || p.stock)) - 1); setQuickStock(prev => ({ ...prev, [p.id]: String(v) })); }} style={{ width: 26, height: 26, borderRadius: 7, border: "none", background: D ? "#2d3158" : "#e5e7eb", cursor: "pointer", color: textPrimary, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: bgCard2, borderRadius:0, padding: "5px 10px", border: `1.5px solid ${borderColor2}` }}>
+                          <button onClick={() => { const v = Math.max(0, (+(quickStock[p.id] || p.stock)) - 1); setQuickStock(prev => ({ ...prev, [p.id]: String(v) })); }} style={{ width: 26, height: 26, borderRadius:0, border: "none", background: D ? "#2A2723" : "#E4E1D6", cursor: "pointer", color: textPrimary, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
                           <span style={{ fontSize: 15, fontWeight: 700, color: textPrimary, minWidth: 26, textAlign: "center" }}>{quickStock[p.id] !== undefined ? quickStock[p.id] : p.stock}</span>
-                          <button onClick={() => { const v = (+(quickStock[p.id] || p.stock)) + 1; setQuickStock(prev => ({ ...prev, [p.id]: String(v) })); }} style={{ width: 26, height: 26, borderRadius: 7, border: "none", background: D ? "#2d3158" : "#e5e7eb", cursor: "pointer", color: textPrimary, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+                          <button onClick={() => { const v = (+(quickStock[p.id] || p.stock)) + 1; setQuickStock(prev => ({ ...prev, [p.id]: String(v) })); }} style={{ width: 26, height: 26, borderRadius:0, border: "none", background: D ? "#2A2723" : "#E4E1D6", cursor: "pointer", color: textPrimary, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
                         </div>
-                        <button onClick={() => handleQuickStock(p)} style={{ padding: "7px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Stock</button>
+                        <button onClick={() => handleQuickStock(p)} style={{ padding: "7px 16px", borderRadius:0, border: "none", background: "#2EC4B6", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Stock</button>
                       </div>
                     </div>
                     {/* Menú 3 puntos */}
@@ -4224,15 +4259,15 @@ export default function App() {
                 <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: textPrimary }}>Nueva Categoría</h3>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input value={nuevaCat} onChange={e => setNuevaCat(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAgregarCat()} placeholder="Nombre de la categoría" style={inp} />
-                  <button onClick={handleAgregarCat} className="btn-primary" style={{ padding: "10px 18px", borderRadius: 10, fontSize: 13, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}><Plus size={15} /> Agregar</button>
+                  <button onClick={handleAgregarCat} className="btn-primary" style={{ padding: "10px 18px", borderRadius:0, fontSize: 13, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}><Plus size={15} /> Agregar</button>
                 </div>
-                {catError && <p style={{ color: "#e03131", fontSize: 13, marginTop: 8, fontWeight: 500 }}>⚠ {catError}</p>}
+                {catError && <p style={{ color: "#E63946", fontSize: 13, marginTop: 8, fontWeight: 500 }}>⚠ {catError}</p>}
               </div>
               <div style={card}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: textPrimary }}>Categorías ({categorias.length})</h3>
                 {categorias.map((cat, i) => (
-                  <div key={cat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: bgCard2, borderRadius: 12, marginBottom: 8, border: `1px solid ${borderColor}` }}>
-                    <button onClick={() => setModalIconoCat({ nombre: cat })} style={{ fontSize: 26, border: "none", cursor: "pointer", width: 44, height: 44, borderRadius: 12, background: bgCard, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div key={cat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: bgCard2, borderRadius:0, marginBottom: 8, border: `1px solid ${borderColor}` }}>
+                    <button onClick={() => setModalIconoCat({ nombre: cat })} style={{ fontSize: 26, border: "none", cursor: "pointer", width: 44, height: 44, borderRadius:0, background: bgCard, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {catIconos[cat] || "📦"}
                     </button>
                     <div style={{ flex: 1 }}>
@@ -4246,13 +4281,13 @@ export default function App() {
                     <div style={{ display: "flex", gap: 6 }}>
                       {editandoCat?.index === i ? (
                         <>
-                          <button onClick={() => handleEditarCat(i)} className="btn-success" style={{ padding: "5px 10px", borderRadius: 8, fontSize: 12 }}><Check size={13} /></button>
-                          <button onClick={() => setEditandoCat(null)} style={{ padding: "5px 10px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, fontSize: 12, display: "flex", alignItems: "center" }}><X size={13} /></button>
+                          <button onClick={() => handleEditarCat(i)} className="btn-success" style={{ padding: "5px 10px", borderRadius:0, fontSize: 12 }}><Check size={13} /></button>
+                          <button onClick={() => setEditandoCat(null)} style={{ padding: "5px 10px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, fontSize: 12, display: "flex", alignItems: "center" }}><X size={13} /></button>
                         </>
                       ) : (
                         <>
-                          <button onClick={() => setEditandoCat({ index: i, valor: cat })} style={{ padding: "5px 8px", borderRadius: 8, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex" }}><Pencil size={13} /></button>
-                          <button onClick={() => handleEliminarCat(i)} className="btn-danger" style={{ padding: "5px 8px", borderRadius: 8, fontSize: 12, display: "flex" }}><Trash2 size={13} /></button>
+                          <button onClick={() => setEditandoCat({ index: i, valor: cat })} style={{ padding: "5px 8px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex" }}><Pencil size={13} /></button>
+                          <button onClick={() => handleEliminarCat(i)} className="btn-danger" style={{ padding: "5px 8px", borderRadius:0, fontSize: 12, display: "flex" }}><Trash2 size={13} /></button>
                         </>
                       )}
                     </div>
@@ -4267,19 +4302,19 @@ export default function App() {
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Estadísticas de {mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)}</h3>
-                <button onClick={exportarExcel} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, fontSize: 13 }}>
+                <button onClick={exportarExcel} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius:0, fontSize: 13 }}>
                   <Download size={15} /> Exportar Excel
                 </button>
               </div>
               <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
                 {[
-                  { label: "Total Ingresos", value: fmt(totalMes), icon: DollarSign, color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
-                  { label: "Ventas realizadas", value: ventasMes.length, icon: ShoppingCart, color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
-                  { label: "Ticket Promedio", value: fmt(ticketPromedio), icon: Activity, color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
-                  { label: "Boletas emitidas", value: boletas.filter(b => { const d = new Date(b.timestamp); return d.getMonth() === mesActual && d.getFullYear() === anioActual; }).length, icon: Receipt, color: "#f59e0b", bg: D ? "rgba(245,158,11,0.15)" : "#fffbeb" },
+                  { label: "Total Ingresos", value: fmt(totalMes), icon: DollarSign, color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                  { label: "Ventas realizadas", value: ventasMes.length, icon: ShoppingCart, color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                  { label: "Ticket Promedio", value: fmt(ticketPromedio), icon: Activity, color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
+                  { label: "Boletas emitidas", value: boletas.filter(b => { const d = new Date(b.timestamp); return d.getMonth() === mesActual && d.getFullYear() === anioActual; }).length, icon: Receipt, color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)" },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
                   <div key={label} style={card} className="card-hover">
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={18} color={color} /></div>
+                    <div style={{ width: 38, height: 38, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={18} color={color} /></div>
                     <p style={{ margin: "0 0 2px", fontSize: 22, fontWeight: 800, color: textPrimary }}>{value}</p>
                     <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
                   </div>
@@ -4293,11 +4328,11 @@ export default function App() {
                   ) : (
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={productosMasVendidos.slice(0, 6)} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={D ? "#2d3158" : "#f0f0f0"} vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={D ? "#2A2723" : "#E9E6DB"} vertical={false} />
                         <XAxis dataKey="nombre" tick={{ fontSize: 10, fill: textMuted }} tickLine={false} axisLine={false} tickFormatter={n => n.length > 10 ? n.slice(0, 10) + "…" : n} />
                         <YAxis tick={{ fontSize: 10, fill: textMuted }} tickLine={false} axisLine={false} allowDecimals={false} />
-                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 10, background: bgCard, border: `1px solid ${borderColor}`, color: textPrimary }} />
-                        <Bar dataKey="cantidad" radius={[8, 8, 0, 0]}>
+                        <Tooltip contentStyle={{ fontSize: 12, borderRadius:0, background: bgCard, border: `1px solid ${borderColor}`, color: textPrimary }} />
+                        <Bar dataKey="cantidad" radius={[0, 0, 0, 0]}>
                           {productosMasVendidos.slice(0, 6).map((_, index) => <Cell key={index} fill={barColors[index % barColors.length]} />)}
                         </Bar>
                       </BarChart>
@@ -4308,27 +4343,27 @@ export default function App() {
                   <div style={card}>
                     <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>Métodos de Pago</h3>
                     {[
-                      { icon: Banknote,    label: "Efectivo",      value: totalMesEfectivo,      color: "#10b981", bg: D ? "rgba(16,185,129,0.15)"  : "#ecfdf5" },
-                      { icon: CreditCard, label: "Débito",         value: totalMesDebito,         color: "#f59e0b", bg: D ? "rgba(245,158,11,0.15)"  : "#fffbeb" },
-                      { icon: CreditCard, label: "Crédito",        value: totalMesCredito,        color: "#e03131", bg: D ? "rgba(224,49,49,0.15)"   : "#fff1f2" },
-                      { icon: CreditCard, label: "Transferencia",  value: totalMesTransferencia,  color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
+                      { icon: Banknote,    label: "Efectivo",      value: totalMesEfectivo,      color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)"  : "rgba(46,196,182,0.12)" },
+                      { icon: CreditCard, label: "Débito",         value: totalMesDebito,         color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.15)"  : "rgba(255,159,28,0.12)" },
+                      { icon: CreditCard, label: "Crédito",        value: totalMesCredito,        color: "#E63946", bg: D ? "rgba(230,57,70,0.15)"   : "rgba(230,57,70,0.10)" },
+                      { icon: CreditCard, label: "Transferencia",  value: totalMesTransferencia,  color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
                     ].map(({ icon: Icon, label, value, color, bg }) => (
-                      <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: bg, borderRadius: 10, marginBottom: 8 }}>
+                      <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: bg, borderRadius:0, marginBottom: 8 }}>
                         <Icon size={15} color={color} />
                         <div style={{ flex: 1 }}>
                           <p style={{ margin: 0, fontSize: 11, color: textSecondary }}>{label}</p>
                           <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: textPrimary }} className="mono">{fmt(value)}</p>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color, background: D ? "rgba(255,255,255,0.1)" : "#fff", padding: "2px 7px", borderRadius: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color, background: D ? "rgba(255,255,255,0.1)" : "#fff", padding: "2px 7px", borderRadius:0 }}>
                           {totalMes > 0 ? Math.round((value / totalMes) * 100) : 0}%
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div style={{ ...card, background: D ? "linear-gradient(135deg, #1a1d2e, #252840)" : "linear-gradient(135deg, #1a1a2e, #2d2d4e)" }}>
-                    <p style={{ margin: "0 0 6px", fontSize: 12, color: "#6b7280" }}>Total del Mes</p>
-                    <p style={{ margin: "0 0 4px", fontSize: 28, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(totalMes)}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: "#4b5563" }}>{ventasMes.length} ventas · {boletas.length} boletas</p>
+                  <div style={{ ...card, background: D ? "linear-gradient(135deg, #1C1A17, #241F1A)" : "linear-gradient(135deg, #121110, #241F1A)" }}>
+                    <p style={{ margin: "0 0 6px", fontSize: 12, color: "#8C8678" }}>Total del Mes</p>
+                    <p style={{ margin: "0 0 4px", fontSize: 28, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(totalMes)}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: "#6B6558" }}>{ventasMes.length} ventas · {boletas.length} boletas</p>
                   </div>
                 </div>
               </div>
@@ -4346,11 +4381,11 @@ export default function App() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                     {reportePeriodo === "dia" && (
                       <input type="date" value={reporteFecha} onChange={e => setReporteFecha(e.target.value)}
-                        style={{ padding: "7px 10px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 12, fontFamily: "inherit" }} />
+                        style={{ padding: "7px 10px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 12, fontFamily: "inherit" }} />
                     )}
                     {["dia","semana","mes","todo"].map(p => (
                       <button key={p} onClick={() => setReportePeriodo(p)}
-                        style={{ padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${reportePeriodo === p ? "#d71920" : borderColor2}`, background: reportePeriodo === p ? "#d71920" : bgCard2, color: reportePeriodo === p ? "#fff" : textSecondary, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}>
+                        style={{ padding: "7px 14px", borderRadius:0, border: `1.5px solid ${reportePeriodo === p ? "#E63946" : borderColor2}`, background: reportePeriodo === p ? "#E63946" : bgCard2, color: reportePeriodo === p ? "#fff" : textSecondary, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}>
                         {p === "dia" ? "Día" : p === "semana" ? "7 días" : p === "mes" ? "Este mes" : "Todo"}
                       </button>
                     ))}
@@ -4361,7 +4396,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
                   {[{ id: "ventas", label: "📈 Reporte Ventas" }, { id: "inventario", label: "📦 Reporte Inventario" }].map(t => (
                     <button key={t.id} onClick={() => setReporteTab(t.id)}
-                      style={{ padding: "10px 20px", borderRadius: 12, border: `2px solid ${reporteTab === t.id ? "#d71920" : borderColor2}`, background: reporteTab === t.id ? (D ? "rgba(59,91,219,0.15)" : "#fff3bf") : bgCard2, color: reporteTab === t.id ? "#d71920" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+                      style={{ padding: "10px 20px", borderRadius:0, border: `2px solid ${reporteTab === t.id ? "#E63946" : borderColor2}`, background: reporteTab === t.id ? (D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, color: reporteTab === t.id ? "#E63946" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
                       {t.label}
                     </button>
                   ))}
@@ -4370,12 +4405,12 @@ export default function App() {
                 {/* Ingresos / Egresos / Balance del período */}
                 <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 20 }}>
                   {[
-                    { label: "Ingresos", val: ingresosPeriodo, color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", icon: TrendingUp, prefix: "" },
-                    { label: "Egresos", val: egresosPeriodo, color: "#e03131", bg: D ? "rgba(224,49,49,0.15)" : "#fff1f2", icon: TrendingDown, prefix: "-" },
-                    { label: "Balance", val: balancePeriodo, color: balancePeriodo >= 0 ? "#10b981" : "#e03131", bg: balancePeriodo >= 0 ? (D ? "rgba(16,185,129,0.15)" : "#ecfdf5") : (D ? "rgba(224,49,49,0.15)" : "#fff1f2"), icon: DollarSign, prefix: "" },
+                    { label: "Ingresos", val: ingresosPeriodo, color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", icon: TrendingUp, prefix: "" },
+                    { label: "Egresos", val: egresosPeriodo, color: "#E63946", bg: D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)", icon: TrendingDown, prefix: "-" },
+                    { label: "Balance", val: balancePeriodo, color: balancePeriodo >= 0 ? "#2EC4B6" : "#E63946", bg: balancePeriodo >= 0 ? (D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)") : (D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)"), icon: DollarSign, prefix: "" },
                   ].map(({ label, val, color, bg, icon: Icon, prefix }) => (
                     <div key={label} style={card} className="card-hover">
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
+                      <div style={{ width: 36, height: 36, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
                       <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color }} className="mono">{prefix}{fmt(Math.abs(val))}</p>
                       <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
                     </div>
@@ -4388,15 +4423,15 @@ export default function App() {
                     {/* KPIs */}
                     <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
                       {[
-                        { label: "Total Ventas", val: fmt(totalPeriodo), icon: DollarSign, color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
-                        { label: "Nº Transacciones", val: ventasPeriodo.length, icon: ShoppingCart, color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
-                        { label: "Ticket Promedio", val: fmt(ticketProm), icon: Activity, color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
-                        { label: "Mejor Día", val: graficoDias.length > 0 ? graficoDias.reduce((a,b) => b.total > a.total ? b : a, graficoDias[0])?.dia || "—" : "—", icon: Star, color: "#f59e0b", bg: D ? "rgba(245,158,11,0.15)" : "#fffbeb" },
-                        { label: "Productos vendidos", val: productosVendidosPeriodo.toLocaleString("es-CL"), icon: Package, color: "#2563eb", bg: D ? "rgba(37,99,235,0.15)" : "#eff6ff" },
-                        { label: "Huevos vendidos", val: huevosVendidosPeriodo.toLocaleString("es-CL"), icon: Egg, color: "#ea580c", bg: D ? "rgba(234,88,12,0.15)" : "#ffedd5" },
+                        { label: "Total Ventas", val: fmt(totalPeriodo), icon: DollarSign, color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                        { label: "Nº Transacciones", val: ventasPeriodo.length, icon: ShoppingCart, color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                        { label: "Ticket Promedio", val: fmt(ticketProm), icon: Activity, color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
+                        { label: "Mejor Día", val: graficoDias.length > 0 ? graficoDias.reduce((a,b) => b.total > a.total ? b : a, graficoDias[0])?.dia || "—" : "—", icon: Star, color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)" },
+                        { label: "Productos vendidos", val: productosVendidosPeriodo.toLocaleString("es-CL"), icon: Package, color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.10)" },
+                        { label: "Huevos vendidos", val: huevosVendidosPeriodo.toLocaleString("es-CL"), icon: Egg, color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)" },
                       ].map(({ label, val, icon: Icon, color, bg }) => (
                         <div key={label} style={card} className="card-hover">
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
+                          <div style={{ width: 36, height: 36, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
                           <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: textPrimary }}>{val}</p>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
                         </div>
@@ -4413,9 +4448,9 @@ export default function App() {
                           { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, icon: "🏦" },
                           { label: "Total", val: totalPeriodo, icon: "Σ" },
                         ].map(({ label, val, icon }) => (
-                          <div key={label} style={{ padding: "12px 6px", borderRadius: 14, background: bgCard2, textAlign: "center", minWidth: 0 }}>
+                          <div key={label} style={{ padding: "12px 6px", borderRadius:0, background: bgCard2, textAlign: "center", minWidth: 0 }}>
                             <div style={{ fontSize: 18 }}>{icon}</div>
-                            <strong style={{ display: "block", fontSize: 15, marginTop: 6, color: label === "Total" ? "#10b981" : textPrimary, wordBreak: "break-word", lineHeight: 1.15 }} className="mono">{fmt(val)}</strong>
+                            <strong style={{ display: "block", fontSize: 15, marginTop: 6, color: label === "Total" ? "#2EC4B6" : textPrimary, wordBreak: "break-word", lineHeight: 1.15 }} className="mono">{fmt(val)}</strong>
                             <span style={{ fontSize: 11, color: textMuted }}>{label}</span>
                           </div>
                         ))}
@@ -4432,15 +4467,15 @@ export default function App() {
                           <AreaChart data={graficoDias} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
                             <defs>
                               <linearGradient id="gradRep" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#d71920" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#d71920" stopOpacity={0} />
+                                <stop offset="5%" stopColor="#E63946" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#E63946" stopOpacity={0} />
                               </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={D ? "#2d3158" : "#f0f0f0"} vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={D ? "#2A2723" : "#E9E6DB"} vertical={false} />
                             <XAxis dataKey="dia" tick={{ fontSize: 10, fill: textMuted }} tickLine={false} axisLine={false} />
                             <YAxis tick={{ fontSize: 10, fill: textMuted }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 10, background: bgCard, border: `1px solid ${borderColor}`, color: textPrimary }} formatter={v => [fmt(v), "Total"]} />
-                            <Area type="monotone" dataKey="total" stroke="#d71920" strokeWidth={2.5} fill="url(#gradRep)" />
+                            <Tooltip contentStyle={{ fontSize: 12, borderRadius:0, background: bgCard, border: `1px solid ${borderColor}`, color: textPrimary }} formatter={v => [fmt(v), "Total"]} />
+                            <Area type="monotone" dataKey="total" stroke="#E63946" strokeWidth={2.5} fill="url(#gradRep)" />
                           </AreaChart>
                         </ResponsiveContainer>
                       )}
@@ -4452,11 +4487,11 @@ export default function App() {
                         <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>Top productos por ingreso</h3>
                         {topProductosRep.length === 0 ? <p style={{ color: textMuted, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sin ventas</p> : topProductosRep.map((p, i) => (
                           <div key={p.nombre} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                            <span style={{ width: 22, height: 22, borderRadius: 6, background: D ? "rgba(215,25,32,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#d71920", flexShrink: 0 }}>{i+1}</span>
+                            <span style={{ width: 22, height: 22, borderRadius:0, background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#E63946", flexShrink: 0 }}>{i+1}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
-                              <div style={{ height: 4, borderRadius: 4, background: D ? "#2d3158" : "#f0f0f0", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${Math.round((p.ingresos / topProductosRep[0].ingresos) * 100)}%`, background: barColors[i % barColors.length], borderRadius: 4 }} />
+                              <div style={{ height: 4, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB", overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${Math.round((p.ingresos / topProductosRep[0].ingresos) * 100)}%`, background: barColors[i % barColors.length], borderRadius:0 }} />
                               </div>
                             </div>
                             <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -4476,8 +4511,8 @@ export default function App() {
                               <span style={{ fontSize: 12, fontWeight: 600, color: textSecondary }}>{m.label}</span>
                               <span style={{ fontSize: 12, fontWeight: 800, color: textPrimary }} className="mono">{fmt(m.val)} · {totalPeriodo > 0 ? Math.round((m.val / totalPeriodo) * 100) : 0}%</span>
                             </div>
-                            <div style={{ height: 8, borderRadius: 8, background: D ? "#2d3158" : "#f0f0f0", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${totalPeriodo > 0 ? Math.round((m.val / totalPeriodo) * 100) : 0}%`, background: m.color, borderRadius: 8, transition: "width 0.5s" }} />
+                            <div style={{ height: 8, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${totalPeriodo > 0 ? Math.round((m.val / totalPeriodo) * 100) : 0}%`, background: m.color, borderRadius:0, transition: "width 0.5s" }} />
                             </div>
                           </div>
                         ))}
@@ -4490,16 +4525,16 @@ export default function App() {
 
                     {/* Resumen comparativo */}
                     {cambioMes !== null && (
-                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1a1d2e,#252840)" : "linear-gradient(135deg,#1a1a2e,#2d2d4e)", display: "flex", alignItems: "center", gap: 20 }}>
+                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1C1A17,#241F1A)" : "linear-gradient(135deg,#121110,#241F1A)", display: "flex", alignItems: "center", gap: 20 }}>
                         <div style={{ flex: 1 }}>
-                          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#6b7280" }}>Este mes vs mes anterior</p>
-                          <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(totalMes)}</p>
+                          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#8C8678" }}>Este mes vs mes anterior</p>
+                          <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(totalMes)}</p>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: cambioMes >= 0 ? "#10b981" : "#e03131" }}>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: cambioMes >= 0 ? "#2EC4B6" : "#E63946" }}>
                             {cambioMes >= 0 ? "▲" : "▼"} {Math.abs(cambioMes)}%
                           </span>
-                          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280" }}>vs {fmt(totalMesAnterior)} mes ant.</p>
+                          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#8C8678" }}>vs {fmt(totalMesAnterior)} mes ant.</p>
                         </div>
                       </div>
                     )}
@@ -4508,17 +4543,17 @@ export default function App() {
                     <div style={{ ...card, marginTop: 16 }}>
                       <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 800, color: textPrimary }}>💰 Costo / Beneficio del período</h3>
                       {costosPeriodo === 0 && (
-                        <p style={{ margin: "0 0 12px", fontSize: 12, color: textMuted, background: D ? "rgba(245,158,11,0.1)" : "#fffbeb", padding: "10px 14px", borderRadius: 8 }}>
+                        <p style={{ margin: "0 0 12px", fontSize: 12, color: textMuted, background: D ? "rgba(255,159,28,0.1)" : "rgba(255,159,28,0.12)", padding: "10px 14px", borderRadius:0 }}>
                           ⚠️ Agrega el costo de compra a tus productos para ver la ganancia real. Edita cada producto y completa el campo <strong>Costo</strong>.
                         </p>
                       )}
                       <div className="grid-3-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
                         {[
-                          { label: "Ingresos totales", val: fmt(ingresosPeriodo), color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", icon: "💵" },
-                          { label: "Costo total",       val: fmt(costosPeriodo),  color: "#e03131", bg: D ? "rgba(224,49,49,0.15)"  : "#fff1f2", icon: "🧾" },
-                          { label: "Ganancia neta",     val: fmt(gananciaPeriodo), color: gananciaPeriodo >= 0 ? "#d71920" : "#e03131", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf", icon: "📈" },
+                          { label: "Ingresos totales", val: fmt(ingresosPeriodo), color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", icon: "💵" },
+                          { label: "Costo total",       val: fmt(costosPeriodo),  color: "#E63946", bg: D ? "rgba(230,57,70,0.15)"  : "rgba(230,57,70,0.10)", icon: "🧾" },
+                          { label: "Ganancia neta",     val: fmt(gananciaPeriodo), color: gananciaPeriodo >= 0 ? "#E63946" : "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)", icon: "📈" },
                         ].map(({ label, val, color, bg, icon }) => (
-                          <div key={label} style={{ background: bg, borderRadius: 12, padding: "14px 16px" }}>
+                          <div key={label} style={{ background: bg, borderRadius:0, padding: "14px 16px" }}>
                             <p style={{ margin: "0 0 4px", fontSize: 20 }}>{icon}</p>
                             <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color }} className="mono">{val}</p>
                             <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{label}</p>
@@ -4530,10 +4565,10 @@ export default function App() {
                       <div style={{ marginBottom: 20 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: textSecondary }}>Incremento sobre costo del período</span>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: margenPct >= 30 ? "#10b981" : margenPct >= 10 ? "#f59e0b" : "#e03131" }}>{margenPct}%</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: margenPct >= 30 ? "#2EC4B6" : margenPct >= 10 ? "#FF9F1C" : "#E63946" }}>{margenPct}%</span>
                         </div>
-                        <div style={{ height: 10, borderRadius: 10, background: D ? "#2d3158" : "#f0f0f0", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${Math.min(margenPct, 100)}%`, background: margenPct >= 30 ? "#10b981" : margenPct >= 10 ? "#f59e0b" : "#e03131", borderRadius: 10, transition: "width 0.6s" }} />
+                        <div style={{ height: 10, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${Math.min(margenPct, 100)}%`, background: margenPct >= 30 ? "#2EC4B6" : margenPct >= 10 ? "#FF9F1C" : "#E63946", borderRadius:0, transition: "width 0.6s" }} />
                         </div>
                         <p style={{ margin: "4px 0 0", fontSize: 11, color: textMuted }}>
                           {margenPct >= 30 ? "✅ Incremento saludable" : margenPct >= 10 ? "⚠️ Incremento ajustado" : costosPeriodo === 0 ? "— Sin datos de costo" : "🔴 Incremento bajo"}
@@ -4549,12 +4584,12 @@ export default function App() {
                               <span style={{ fontSize: 13, fontWeight: 800, color: textMuted, width: 18 }}>#{i+1}</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
-                                <div style={{ height: 4, borderRadius: 4, background: D ? "#2d3158" : "#f0f0f0" }}>
-                                  <div style={{ height: "100%", width: `${topGananciaProd[0].ganancia > 0 ? Math.round((p.ganancia / topGananciaProd[0].ganancia) * 100) : 0}%`, background: catColors[i % catColors.length], borderRadius: 4 }} />
+                                <div style={{ height: 4, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB" }}>
+                                  <div style={{ height: "100%", width: `${topGananciaProd[0].ganancia > 0 ? Math.round((p.ganancia / topGananciaProd[0].ganancia) * 100) : 0}%`, background: catColors[i % catColors.length], borderRadius:0 }} />
                                 </div>
                               </div>
                               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: p.ganancia >= 0 ? "#10b981" : "#e03131" }} className="mono">{fmt(p.ganancia)}</p>
+                                <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: p.ganancia >= 0 ? "#2EC4B6" : "#E63946" }} className="mono">{fmt(p.ganancia)}</p>
                                 <p style={{ margin: 0, fontSize: 10, color: textMuted }}>{p.margen}% incremento</p>
                               </div>
                             </div>
@@ -4571,13 +4606,13 @@ export default function App() {
                     {/* KPIs inventario */}
                     <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
                       {[
-                        { label: "Valor en Stock", val: fmt(valorInventario), icon: DollarSign, color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
-                        { label: "Total Productos", val: totalProductos, icon: Package, color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
-                        { label: "Unidades en Stock", val: stockTotal, icon: Layers, color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
-                        { label: "Stock Bajo / Sin stock", val: `${stockBajoRep.length} / ${sinStockRep.length}`, icon: AlertTriangle, color: "#e03131", bg: D ? "rgba(224,49,49,0.15)" : "#fff1f2" },
+                        { label: "Valor en Stock", val: fmt(valorInventario), icon: DollarSign, color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                        { label: "Total Productos", val: totalProductos, icon: Package, color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                        { label: "Unidades en Stock", val: stockTotal, icon: Layers, color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
+                        { label: "Stock Bajo / Sin stock", val: `${stockBajoRep.length} / ${sinStockRep.length}`, icon: AlertTriangle, color: "#E63946", bg: D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)" },
                       ].map(({ label, val, icon: Icon, color, bg }) => (
                         <div key={label} style={card} className="card-hover">
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
+                          <div style={{ width: 36, height: 36, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
                           <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: textPrimary }}>{val}</p>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{label}</p>
                         </div>
@@ -4595,8 +4630,8 @@ export default function App() {
                               <span style={{ fontSize: 18, flexShrink: 0 }}>{p.emoji || "📦"}</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
-                                <div style={{ height: 4, borderRadius: 4, background: D ? "#2d3158" : "#f0f0f0" }}>
-                                  <div style={{ height: "100%", width: `${Math.round((val / ((topValorStock[0].precio || 1) * (topValorStock[0].stock || 1))) * 100)}%`, background: catColors[i % catColors.length], borderRadius: 4 }} />
+                                <div style={{ height: 4, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB" }}>
+                                  <div style={{ height: "100%", width: `${Math.round((val / ((topValorStock[0].precio || 1) * (topValorStock[0].stock || 1))) * 100)}%`, background: catColors[i % catColors.length], borderRadius:0 }} />
                                 </div>
                               </div>
                               <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -4617,8 +4652,8 @@ export default function App() {
                               <span style={{ fontSize: 12, fontWeight: 600, color: textSecondary }}>{c.cat}</span>
                               <span style={{ fontSize: 12, fontWeight: 800, color: textPrimary }}>{c.cantidad} uds · <span className="mono">{fmt(c.valor)}</span></span>
                             </div>
-                            <div style={{ height: 8, borderRadius: 8, background: D ? "#2d3158" : "#f0f0f0", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${catStockArr[0].valor > 0 ? Math.round((c.valor / catStockArr[0].valor) * 100) : 0}%`, background: catColors[i % catColors.length], borderRadius: 8 }} />
+                            <div style={{ height: 8, borderRadius:0, background: D ? "#2A2723" : "#E9E6DB", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${catStockArr[0].valor > 0 ? Math.round((c.valor / catStockArr[0].valor) * 100) : 0}%`, background: catColors[i % catColors.length], borderRadius:0 }} />
                             </div>
                           </div>
                         ))}
@@ -4631,23 +4666,23 @@ export default function App() {
                         <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>⚠️ Alertas de Stock</h3>
                         <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                           <div>
-                            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#e03131" }}>Sin stock ({sinStockRep.length})</p>
+                            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#E63946" }}>Sin stock ({sinStockRep.length})</p>
                             {sinStockRep.slice(0, 5).map(p => (
-                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: D ? "rgba(224,49,49,0.1)" : "#fff1f2", borderRadius: 8, marginBottom: 6 }}>
+                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: D ? "rgba(230,57,70,0.1)" : "rgba(230,57,70,0.10)", borderRadius:0, marginBottom: 6 }}>
                                 <span style={{ fontSize: 16 }}>{p.emoji || "📦"}</span>
                                 <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: textPrimary, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: "#e03131" }}>0</span>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: "#E63946" }}>0</span>
                               </div>
                             ))}
                             {sinStockRep.length > 5 && <p style={{ margin: 0, fontSize: 11, color: textMuted }}>+{sinStockRep.length - 5} más</p>}
                           </div>
                           <div>
-                            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#f59e0b" }}>Stock bajo ({stockBajoRep.length})</p>
+                            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#FF9F1C" }}>Stock bajo ({stockBajoRep.length})</p>
                             {stockBajoRep.slice(0, 5).map(p => (
-                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: D ? "rgba(245,158,11,0.1)" : "#fffbeb", borderRadius: 8, marginBottom: 6 }}>
+                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: D ? "rgba(255,159,28,0.1)" : "rgba(255,159,28,0.12)", borderRadius:0, marginBottom: 6 }}>
                                 <span style={{ fontSize: 16 }}>{p.emoji || "📦"}</span>
                                 <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: textPrimary, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre}</p>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b" }}>{p.stock}</span>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: "#FF9F1C" }}>{p.stock}</span>
                               </div>
                             ))}
                             {stockBajoRep.length > 5 && <p style={{ margin: 0, fontSize: 11, color: textMuted }}>+{stockBajoRep.length - 5} más</p>}
@@ -4665,35 +4700,35 @@ export default function App() {
                         <>
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 8 }}>
                             {[
-                              ["Vencido", mermasPorMotivo.porMotivo["Vencido"], "#e5a22b"],
-                              ["Dañado", mermasPorMotivo.porMotivo["Dañado"], "#d9483f"],
-                              ["Robo", mermasPorMotivo.porMotivo["Robo"], "#e03131"],
-                              ["Error inv.", mermasPorMotivo.porMotivo["Error de inventario"], "#8b5cf6"],
-                              ["Total", mermasPorMotivo.unidadesTotal, "#c7362f"],
+                              ["Vencido", mermasPorMotivo.porMotivo["Vencido"], "#FF9F1C"],
+                              ["Dañado", mermasPorMotivo.porMotivo["Dañado"], "#E63946"],
+                              ["Robo", mermasPorMotivo.porMotivo["Robo"], "#E63946"],
+                              ["Error inv.", mermasPorMotivo.porMotivo["Error de inventario"], "#8E7CC3"],
+                              ["Total", mermasPorMotivo.unidadesTotal, "#E63946"],
                             ].map(([label, value, color]) => (
-                              <div key={label} style={{ padding: "10px 4px", borderRadius: 12, background: bgCard2, textAlign: "center", minWidth: 0 }}>
+                              <div key={label} style={{ padding: "10px 4px", borderRadius:0, background: bgCard2, textAlign: "center", minWidth: 0 }}>
                                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${color}22`, color, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12 }}>📦</div>
                                 <strong style={{ display: "block", fontSize: 15, color: textPrimary, wordBreak: "break-word", lineHeight: 1.15 }}>{Number(value || 0)}</strong>
                                 <span style={{ fontSize: 9.5, color: textMuted }}>{label}</span>
                               </div>
                             ))}
                           </div>
-                          <p style={{ margin: "13px 0 0", fontSize: 11, color: textMuted }}>Valor perdido al costo: <strong style={{ color: "#e03131" }}>{fmt(mermasPorMotivo.valorTotal)}</strong> · {mermasPeriodo.length} registro{mermasPeriodo.length===1?"":"s"}</p>
+                          <p style={{ margin: "13px 0 0", fontSize: 11, color: textMuted }}>Valor perdido al costo: <strong style={{ color: "#E63946" }}>{fmt(mermasPorMotivo.valorTotal)}</strong> · {mermasPeriodo.length} registro{mermasPeriodo.length===1?"":"s"}</p>
                         </>
                       )}
                     </div>
 
                     {/* Resumen financiero */}
                     <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 16 }}>
-                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1a1d2e,#252840)" : "linear-gradient(135deg,#1a1a2e,#2d2d4e)" }}>
-                        <p style={{ margin: "0 0 4px", fontSize: 12, color: "#6b7280" }}>Valor total inventario</p>
-                        <p style={{ margin: "0 0 2px", fontSize: 26, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(valorInventario)}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: "#4b5563" }}>{stockTotal} unidades · {conStockRep.length} productos</p>
+                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1C1A17,#241F1A)" : "linear-gradient(135deg,#121110,#241F1A)" }}>
+                        <p style={{ margin: "0 0 4px", fontSize: 12, color: "#8C8678" }}>Valor total inventario</p>
+                        <p style={{ margin: "0 0 2px", fontSize: 26, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(valorInventario)}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: "#6B6558" }}>{stockTotal} unidades · {conStockRep.length} productos</p>
                       </div>
-                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1a1d2e,#252840)" : "linear-gradient(135deg,#f0fdf4,#ecfdf5)" }}>
-                        <p style={{ margin: "0 0 4px", fontSize: 12, color: D ? "#6b7280" : "#374151" }}>Incremento estimado en stock</p>
-                        <p style={{ margin: "0 0 2px", fontSize: 26, fontWeight: 800, color: "#d71920" }} className="mono">{fmt(valorInventario - valorCosto)}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: D ? "#4b5563" : "#6b7280" }}>Precio venta − costo</p>
+                      <div style={{ ...card, background: D ? "linear-gradient(135deg,#1C1A17,#241F1A)" : "linear-gradient(135deg,rgba(46,196,182,0.12),rgba(46,196,182,0.12))" }}>
+                        <p style={{ margin: "0 0 4px", fontSize: 12, color: D ? "#8C8678" : "#8C8678" }}>Incremento estimado en stock</p>
+                        <p style={{ margin: "0 0 2px", fontSize: 26, fontWeight: 800, color: "#E63946" }} className="mono">{fmt(valorInventario - valorCosto)}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: D ? "#6B6558" : "#8C8678" }}>Precio venta − costo</p>
                       </div>
                     </div>
                   </div>
@@ -4702,7 +4737,7 @@ export default function App() {
           )}
 
           {activeNav === "Ventas" && (
-            !cajaAbierta ? <div style={{...card,textAlign:"center",padding:36}}><Banknote size={42} color="#d71920"/><h2 style={{color:textPrimary}}>Caja cerrada</h2><p style={{color:textMuted}}>Debes abrir caja antes de registrar cualquier venta.</p><button className="btn-primary" onClick={()=>{setActiveNav("Caja");setShowAperturaModal(true);}} style={{padding:"12px 22px",borderRadius:12}}>Abrir caja</button></div> :
+            !cajaAbierta ? <div style={{...card,textAlign:"center",padding:36}}><Banknote size={42} color="#E63946"/><h2 style={{color:textPrimary}}>Caja cerrada</h2><p style={{color:textMuted}}>Debes abrir caja antes de registrar cualquier venta.</p><button className="btn-primary" onClick={()=>{setActiveNav("Caja");setShowAperturaModal(true);}} style={{padding:"12px 22px",borderRadius:0}}>Abrir caja</button></div> :
             <div>
               {/* ── Scanner de código de barras ── */}
               {showScanner && (
@@ -4718,13 +4753,13 @@ export default function App() {
 
               <div className="dashboard-grid sales-desktop-only" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
                 {[
-                  { icon: DollarSign, label: "Total General", value: fmt(totalGeneral), color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
-                  { icon: Banknote, label: "Efectivo", value: fmt(totalEfectivo), color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
-                  { icon: CreditCard, label: "Tarjeta", value: fmt(totalTarjeta), color: "#7c3aed", bg: D ? "rgba(124,58,237,0.15)" : "#f5f3ff" },
-                  { icon: CreditCard, label: "Transferencia", value: fmt(totalTransferencia), color: "#2563eb", bg: D ? "rgba(37,99,235,0.15)" : "#eff6ff" },
+                  { icon: DollarSign, label: "Total General", value: fmt(totalGeneral), color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                  { icon: Banknote, label: "Efectivo", value: fmt(totalEfectivo), color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                  { icon: CreditCard, label: "Tarjeta", value: fmt(totalTarjeta), color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
+                  { icon: CreditCard, label: "Transferencia", value: fmt(totalTransferencia), color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.10)" },
                 ].map(({ icon: Icon, label, value, color, bg }) => (
                   <div key={label} style={{ ...card, display: "flex", alignItems: "center", gap: 16 }} className="card-hover">
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 46, height: 46, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Icon size={22} color={color} strokeWidth={1.8} />
                     </div>
                     <div>
@@ -4795,7 +4830,7 @@ export default function App() {
                       {products.filter(p => (saleCatFilter==="Todos" || p.categoria===saleCatFilter) && (!busquedaVenta || p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase()))).map(p => {
                         const item=carrito.find(c=>String(c.productoId)===String(p.id) && !c.esManga);
                         return <article key={p.id}>
-                          <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em style={Number(p.stock) < 0 ? { background: "#e03131" } : undefined}>{p.stock} uds</em></div>
+                          <div className="sales-prod-img">{p.imagenUrl?<img src={p.imagenUrl} alt={p.nombre}/>:<span>{p.img||"📦"}</span>}<em style={Number(p.stock) < 0 ? { background: "#E63946" } : undefined}>{p.stock} uds</em></div>
                           <h4>{p.nombre}</h4><strong className="mono">{fmt(p.precio)}</strong>
                           <div className="sales-prod-controls">
                             <button disabled={!item} onClick={()=>item && (item.cantidad===1?quitarDelCarrito(p.id,false):cambiarCantidadCarrito(p.id,item.cantidad-1,false))}>−</button>
@@ -4820,7 +4855,7 @@ export default function App() {
                       {freeEggInventory.map(q => {
                         const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
                         return <article key={q.id} className="free-egg-card">
-                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#e03131",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#E63946",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
                           <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
                           <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
                         </article>;
@@ -4844,10 +4879,10 @@ export default function App() {
                     <div className="sales-cart-name">
                       <b>{item.calidad}</b>
                       <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}</small>
-                      <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#d71920":"#2563eb",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                      <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#E63946":"#8E7CC3",fontSize:11,fontWeight:800,cursor:"pointer"}}>
                         {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
                       </button>
-                      {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualHuevo(item.calidadId,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:8,background:bgCard,color:textPrimary,fontWeight:800}} />}
+                      {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualHuevo(item.calidadId,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:0,background:bgCard,color:textPrimary,fontWeight:800}} />}
                     </div>
                     <strong className="mono">{fmt(item.subtotal)}</strong>
                     <button className="trash" onClick={()=>setFreeEggCart(prev=>({...prev,[item.calidadId]:{...(prev[item.calidadId]||{}),cantidad:0}}))}><Trash2 size={15}/></button>
@@ -4857,10 +4892,10 @@ export default function App() {
                     <div className="sales-cart-name">
                       <b>{item.nombre}</b>
                       <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : (item.esManga ? `${fmt(item.precio)} por manga` : (item.pricingLabel ? `${item.pricingLabel} · ${fmt(item.subtotal)}` : `${fmt(item.precio)} c/u`))}</small>
-                      <button type="button" onClick={()=>alternarPrecioManualCarrito(item.productoId,item.esManga)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#d71920":"#2563eb",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                      <button type="button" onClick={()=>alternarPrecioManualCarrito(item.productoId,item.esManga)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#E63946":"#8E7CC3",fontSize:11,fontWeight:800,cursor:"pointer"}}>
                         {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
                       </button>
-                      {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualCarrito(item.productoId,item.esManga,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:8,background:bgCard,color:textPrimary,fontWeight:800}} />}
+                      {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualCarrito(item.productoId,item.esManga,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:0,background:bgCard,color:textPrimary,fontWeight:800}} />}
                     </div>
                     <div className="sales-cart-step">
                       <button onClick={()=>item.cantidad===1?quitarDelCarrito(item.productoId,item.esManga):cambiarCantidadCarrito(item.productoId,item.cantidad-1,item.esManga)}>−</button>
@@ -4881,7 +4916,7 @@ export default function App() {
                   {carrito.length===0 && freeEggItems.length===0 && <p style={{color:textMuted,textAlign:"center",padding:"20px 0"}}>El carrito está vacío. Vuelve a productos para agregar algo.</p>}
                   <div className="sales-cart-total"><span>Total a pagar</span><strong className="mono">{fmt(totalCarrito)}</strong></div>
 
-                  <div style={{ marginBottom: 14, padding: 12, borderRadius: 12, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
+                  <div style={{ marginBottom: 14, padding: 12, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
                     <label style={{ display:"block", fontSize:12, fontWeight:800, color:textSecondary, marginBottom:7 }}>Cliente</label>
                     <select value={clienteVentaId} onChange={e => { const id=e.target.value; setClienteVentaId(id); const c=clientes.find(x=>String(x.id)===String(id)); setRequiereFactura(!!c?.solicitaFactura); }} style={{...inp, marginBottom:10}}>
                       <option value="">Consumidor final</option>
@@ -4890,7 +4925,7 @@ export default function App() {
                     <label style={{display:"flex",alignItems:"center",gap:9,fontSize:12,fontWeight:700,color:textSecondary}}>
                       <input type="checkbox" checked={requiereFactura} onChange={e=>setRequiereFactura(e.target.checked)} /> Esta venta requiere factura
                     </label>
-                    {requiereFactura && !clienteVentaId && <button onClick={()=>setActiveNav("Clientes")} style={{marginTop:9,border:"none",background:"transparent",color:"#d71920",fontWeight:800,cursor:"pointer"}}>+ Crear o seleccionar cliente de factura</button>}
+                    {requiereFactura && !clienteVentaId && <button onClick={()=>setActiveNav("Clientes")} style={{marginTop:9,border:"none",background:"transparent",color:"#E63946",fontWeight:800,cursor:"pointer"}}>+ Crear o seleccionar cliente de factura</button>}
                   </div>
                   <h4 className="sales-pay-title">Método de pago</h4>
                   <div className="sales-pay-v2">
@@ -4902,7 +4937,7 @@ export default function App() {
                       <label>Monto en efectivo</label>
                       <input type="number" min="0" max={totalCarrito} inputMode="numeric" value={montoEfectivoMixto} onChange={e=>setMontoEfectivoMixto(e.target.value)} placeholder="0"/>
                       <span>Resto por tarjeta: {fmt(montoTarjetaMixto)}</span>
-                      {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#d71920"}}>El efectivo supera el total.</span>}
+                      {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#E63946"}}>El efectivo supera el total.</span>}
                     </div>
                   )}
                   <button className="sales-finish-v2" disabled={boletaGenerando || (carrito.length===0 && freeEggItems.length===0)} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
@@ -4921,18 +4956,18 @@ export default function App() {
                 {/* ── Formulario Nueva Venta ── */}
                 <div style={{ ...card, height: "fit-content" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #d71920, #ef2b32)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 36, height: 36, borderRadius:0, background: "#E63946", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <ShoppingBag size={16} color="#fff" />
                     </div>
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Nueva Venta</h3>
-                    {boletaGenerando && <span style={{ fontSize: 11, color: "#d71920", background: D ? "rgba(215,25,32,0.15)" : "#fff3bf", padding: "3px 8px", borderRadius: 6, fontWeight: 600 }} className="pulse">Generando recibo...</span>}
+                    {boletaGenerando && <span style={{ fontSize: 11, color: "#E63946", background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)", padding: "3px 8px", borderRadius:0, fontWeight: 600 }} className="pulse">Generando recibo...</span>}
                   </div>
 
-                  {ventaExito && <div style={{ background: "#ecfdf5", color: "#059669", fontSize: 13, padding: "11px 14px", borderRadius: 10, marginBottom: 14, fontWeight: 600 }}>{ventaExito}</div>}
-                  {ventaError && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "11px 14px", borderRadius: 10, marginBottom: 14, fontWeight: 600 }}>⚠ {ventaError}</div>}
+                  {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>{ventaExito}</div>}
+                  {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>⚠ {ventaError}</div>}
 
                   {/* Buscador */}
-                  <div style={{ background: bgCard2, borderRadius: 12, padding: "14px 16px", marginBottom: 16, border: `1px solid ${borderColor}` }}>
+                  <div style={{ background: bgCard2, borderRadius:0, padding: "14px 16px", marginBottom: 16, border: `1px solid ${borderColor}` }}>
                     <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Buscar producto</p>
                     <div style={{ position: "relative" }} ref={busquedaRef}>
                       <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
@@ -4950,7 +4985,7 @@ export default function App() {
                           />
                           {busquedaVenta && <button onClick={() => { setBusquedaVenta(""); setProductoSeleccionadoVenta(null); setShowBusquedaDropdown(false); }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: textMuted, padding: 2 }}><X size={14} /></button>}
                         </div>
-                        <button onClick={() => setShowScanner(true)} title="Escanear código de barras" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: D ? "#252840" : "#f0f2ff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#d71920" }}>
+                        <button onClick={() => setShowScanner(true)} title="Escanear código de barras" style={{ flexShrink: 0, width: 40, height: 40, borderRadius:0, border: `1.5px solid ${borderColor2}`, background: D ? "#241F1A" : "rgba(142,124,195,0.10)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#E63946" }}>
                           <span style={{ fontSize: 18 }}>📷</span>
                         </button>
                       </div>
@@ -4961,9 +4996,9 @@ export default function App() {
                               <span style={{ fontSize: 20 }}>{p.img}</span>
                               <div style={{ flex: 1 }}>
                                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: textPrimary }}>{p.nombre}</p>
-                                <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{p.categoria} · Stock: <span style={{ color: Number(p.stock) < 0 ? "#e03131" : textMuted, fontWeight: Number(p.stock) < 0 ? 800 : 400 }}>{p.stock}</span></p>
+                                <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{p.categoria} · Stock: <span style={{ color: Number(p.stock) < 0 ? "#E63946" : textMuted, fontWeight: Number(p.stock) < 0 ? 800 : 400 }}>{p.stock}</span></p>
                               </div>
-                              <span style={{ fontSize: 12, fontWeight: 800, color: "#10b981", fontFamily: "JetBrains Mono" }}>{fmt(p.precio)}</span>
+                              <span style={{ fontSize: 12, fontWeight: 800, color: "#2EC4B6", fontFamily: "JetBrains Mono" }}>{fmt(p.precio)}</span>
                             </div>
                           ))}
                         </div>
@@ -4972,17 +5007,17 @@ export default function App() {
                     {productoSeleccionadoVenta && (
                       <div style={{ marginTop: 10 }}>
                         {/* Info producto seleccionado */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: D ? "rgba(59,91,219,0.15)" : "#fff3bf", borderRadius: 10, marginBottom: 8, border: `1.5px solid ${D ? "#d7192040" : "#ffd966"}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)", borderRadius:0, marginBottom: 8, border: `1.5px solid ${D ? "#E6394640" : "#FF9F1C"}` }}>
                           <span style={{ fontSize: 22 }}>{productoSeleccionadoVenta.img}</span>
                           <div style={{ flex: 1 }}>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#d71920" }}>{productoSeleccionadoVenta.nombre}</p>
-                            <p style={{ margin: 0, fontSize: 11, color: "#ef2b32" }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#E63946" }}>{productoSeleccionadoVenta.nombre}</p>
+                            <p style={{ margin: 0, fontSize: 11, color: "#E63946" }}>
                               {fmt(productoSeleccionadoVenta.precio)} c/u
                               {productoSeleccionadoVenta.mangaActiva && productoSeleccionadoVenta.mangaCantidad && productoSeleccionadoVenta.mangaPrecio && (
-                                <span style={{ marginLeft: 8, color: "#f59e0b", fontWeight: 700 }}>· Manga x{productoSeleccionadoVenta.mangaCantidad}: {fmt(+productoSeleccionadoVenta.mangaPrecio)}</span>
+                                <span style={{ marginLeft: 8, color: "#FF9F1C", fontWeight: 700 }}>· Manga x{productoSeleccionadoVenta.mangaCantidad}: {fmt(+productoSeleccionadoVenta.mangaPrecio)}</span>
                               )}
                             </p>
-                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280" }}>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8C8678" }}>
                               Stock: {productoSeleccionadoVenta.stock} uds
                               {productoSeleccionadoVenta.mangaActiva && productoSeleccionadoVenta.mangaCantidad && productoSeleccionadoVenta.mangaCantidad > 0 && (
                                 <span style={{ marginLeft: 6 }}>/ {Math.floor(productoSeleccionadoVenta.stock / +productoSeleccionadoVenta.mangaCantidad)} mangas</span>
@@ -4994,11 +5029,11 @@ export default function App() {
                         {productoSeleccionadoVenta.mangaActiva && productoSeleccionadoVenta.mangaCantidad && productoSeleccionadoVenta.mangaPrecio && (
                           <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                             <button onClick={() => setModoManga(false)}
-                              style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${!modoManga ? "#d71920" : borderColor2}`, background: !modoManga ? (D ? "rgba(215,25,32,0.15)" : "#fff3bf") : bgCard2, cursor: "pointer", fontSize: 12, fontWeight: 700, color: !modoManga ? "#d71920" : textSecondary, fontFamily: "inherit" }}>
+                              style={{ flex: 1, padding: "8px", borderRadius:0, border: `1.5px solid ${!modoManga ? "#E63946" : borderColor2}`, background: !modoManga ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, cursor: "pointer", fontSize: 12, fontWeight: 700, color: !modoManga ? "#E63946" : textSecondary, fontFamily: "inherit" }}>
                               📦 Por unidad<br /><span style={{ fontWeight: 400, fontSize: 11 }}>{fmt(productoSeleccionadoVenta.precio)} c/u</span>
                             </button>
                             <button onClick={() => setModoManga(true)}
-                              style={{ flex: 1, padding: "8px", borderRadius: 9, border: `1.5px solid ${modoManga ? "#f59e0b" : borderColor2}`, background: modoManga ? (D ? "rgba(245,158,11,0.2)" : "#fffbeb") : bgCard2, cursor: "pointer", fontSize: 12, fontWeight: 700, color: modoManga ? "#d97706" : textSecondary, fontFamily: "inherit" }}>
+                              style={{ flex: 1, padding: "8px", borderRadius:0, border: `1.5px solid ${modoManga ? "#FF9F1C" : borderColor2}`, background: modoManga ? (D ? "rgba(255,159,28,0.2)" : "rgba(255,159,28,0.12)") : bgCard2, cursor: "pointer", fontSize: 12, fontWeight: 700, color: modoManga ? "#FF9F1C" : textSecondary, fontFamily: "inherit" }}>
                               📦 Por manga<br /><span style={{ fontWeight: 400, fontSize: 11 }}>{fmt(+productoSeleccionadoVenta.mangaPrecio)} x{productoSeleccionadoVenta.mangaCantidad} uds</span>
                             </button>
                           </div>
@@ -5007,12 +5042,12 @@ export default function App() {
                     )}
                     <div style={{ display: "flex", gap: 8, marginTop: productoSeleccionadoVenta ? 0 : 10 }}>
                       <input type="number" min="1" value={carritoCantidad} onChange={e => setCarritoCantidad(e.target.value)} placeholder={modoManga ? "Nº mangas" : "Cantidad"} style={{ ...inp, flex: 1 }} />
-                      <button onClick={agregarAlCarrito} className="btn-primary" style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                      <button onClick={agregarAlCarrito} className="btn-primary" style={{ padding: "10px 16px", borderRadius:0, fontSize: 13, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
                         <Plus size={15} /> Agregar
                       </button>
                     </div>
-                    {carritoError && <p style={{ color: "#e03131", fontSize: 12, margin: "6px 0 0", fontWeight: 500 }}>⚠ {carritoError}</p>}
-                    {stockWarning && <p style={{ color: "#d97706", fontSize: 12, margin: "6px 0 0", fontWeight: 500, background: "#fffbeb", padding: "6px 10px", borderRadius: 8 }}>{stockWarning}</p>}
+                    {carritoError && <p style={{ color: "#E63946", fontSize: 12, margin: "6px 0 0", fontWeight: 500 }}>⚠ {carritoError}</p>}
+                    {stockWarning && <p style={{ color: "#FF9F1C", fontSize: 12, margin: "6px 0 0", fontWeight: 500, background: "rgba(255,159,28,0.12)", padding: "6px 10px", borderRadius:0 }}>{stockWarning}</p>}
                   </div>
 
                   {/* Carrito */}
@@ -5020,23 +5055,23 @@ export default function App() {
                     <div style={{ marginBottom: 16 }}>
                       <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Carrito ({carrito.length})</p>
                       {carrito.map(item => (
-                        <div key={`${item.productoId}-${item.esManga ? "manga" : "unit"}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: bgCard2, borderRadius: 10, marginBottom: 6, border: `1px solid ${item.esManga ? (D ? "rgba(245,158,11,0.4)" : "#fde68a") : borderColor}` }}>
+                        <div key={`${item.productoId}-${item.esManga ? "manga" : "unit"}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: bgCard2, borderRadius:0, marginBottom: 6, border: `1px solid ${item.esManga ? (D ? "rgba(255,159,28,0.4)" : "rgba(255,159,28,0.30)") : borderColor}` }}>
                           <span style={{ fontSize: 18 }}>{item.img}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.nombre}</p>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{fmt(item.precio)} {item.esManga ? `x manga` : `c/u`}</p>
                               {item.esManga && item.mangaLabel && (
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#d97706", background: "#fffbeb", padding: "1px 6px", borderRadius: 6 }}>📦 {item.mangaLabel}</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#FF9F1C", background: "rgba(255,159,28,0.12)", padding: "1px 6px", borderRadius:0 }}>📦 {item.mangaLabel}</span>
                               )}
                               {!item.esManga && item.enPromo && item.promoLabel && (
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#d71920", background: "#fff3bf", padding: "1px 6px", borderRadius: 6 }}>🏷️ {item.promoLabel}</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#E63946", background: "rgba(255,159,28,0.15)", padding: "1px 6px", borderRadius:0 }}>🏷️ {item.promoLabel}</span>
                               )}
                             </div>
                             {item.esManga && (
-                              <p style={{ margin: 0, fontSize: 10, color: "#d97706" }}>{item.cantidad * (item.unidadesPorManga || 1)} unidades descontadas</p>
+                              <p style={{ margin: 0, fontSize: 10, color: "#FF9F1C" }}>{item.cantidad * (item.unidadesPorManga || 1)} unidades descontadas</p>
                             )}
-                            <button type="button" onClick={() => alternarPrecioManualCarrito(item.productoId, item.esManga)} style={{ marginTop: 4, border: "none", padding: 0, background: "transparent", color: item.precioManualActivo ? "#d71920" : "#2563eb", fontSize: 10, fontWeight: 800, cursor: "pointer" }}>
+                            <button type="button" onClick={() => alternarPrecioManualCarrito(item.productoId, item.esManga)} style={{ marginTop: 4, border: "none", padding: 0, background: "transparent", color: item.precioManualActivo ? "#E63946" : "#8E7CC3", fontSize: 10, fontWeight: 800, cursor: "pointer" }}>
                               {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
                             </button>
                             {item.precioManualActivo && (
@@ -5044,17 +5079,17 @@ export default function App() {
                             )}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <button onClick={() => cambiarCantidadCarrito(item.productoId, item.cantidad - 1, item.esManga)} style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>−</button>
+                            <button onClick={() => cambiarCantidadCarrito(item.productoId, item.cantidad - 1, item.esManga)} style={{ width: 24, height: 24, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>−</button>
                             <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: "center", color: textPrimary }}>{item.cantidad}</span>
-                            <button onClick={() => cambiarCantidadCarrito(item.productoId, item.cantidad + 1, item.esManga)} style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>+</button>
+                            <button onClick={() => cambiarCantidadCarrito(item.productoId, item.cantidad + 1, item.esManga)} style={{ width: 24, height: 24, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>+</button>
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: "#10b981", minWidth: 70, textAlign: "right" }} className="mono">{fmt(item.subtotal)}</span>
-                          <button onClick={() => quitarDelCarrito(item.productoId, item.esManga)} style={{ background: "none", border: "none", cursor: "pointer", color: "#e03131", padding: 2 }}><X size={14} /></button>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: "#2EC4B6", minWidth: 70, textAlign: "right" }} className="mono">{fmt(item.subtotal)}</span>
+                          <button onClick={() => quitarDelCarrito(item.productoId, item.esManga)} style={{ background: "none", border: "none", cursor: "pointer", color: "#E63946", padding: 2 }}><X size={14} /></button>
                         </div>
                       ))}
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", borderRadius: 10, marginTop: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", borderRadius:0, marginTop: 6 }}>
                         <span style={{ fontWeight: 700, color: textPrimary }}>Total</span>
-                        <span style={{ fontWeight: 800, fontSize: 18, color: "#10b981" }} className="mono">{fmt(totalCarrito)}</span>
+                        <span style={{ fontWeight: 800, fontSize: 18, color: "#2EC4B6" }} className="mono">{fmt(totalCarrito)}</span>
                       </div>
                     </div>
                   )}
@@ -5062,7 +5097,7 @@ export default function App() {
 
 
 
-                  <div style={{ marginBottom: 14, padding: 12, borderRadius: 12, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
+                  <div style={{ marginBottom: 14, padding: 12, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
                     <label style={{ display:"block", fontSize:12, fontWeight:800, color:textSecondary, marginBottom:7 }}>Cliente</label>
                     <select value={clienteVentaId} onChange={e => { const id=e.target.value; setClienteVentaId(id); const c=clientes.find(x=>String(x.id)===String(id)); setRequiereFactura(!!c?.solicitaFactura); }} style={{...inp, marginBottom:10}}>
                       <option value="">Consumidor final</option>
@@ -5071,7 +5106,7 @@ export default function App() {
                     <label style={{display:"flex",alignItems:"center",gap:9,fontSize:12,fontWeight:700,color:textSecondary}}>
                       <input type="checkbox" checked={requiereFactura} onChange={e=>setRequiereFactura(e.target.checked)} /> Esta venta requiere factura
                     </label>
-                    {requiereFactura && !clienteVentaId && <button onClick={()=>setActiveNav("Clientes")} style={{marginTop:9,border:"none",background:"transparent",color:"#d71920",fontWeight:800,cursor:"pointer"}}>+ Crear o seleccionar cliente de factura</button>}
+                    {requiereFactura && !clienteVentaId && <button onClick={()=>setActiveNav("Clientes")} style={{marginTop:9,border:"none",background:"transparent",color:"#E63946",fontWeight:800,cursor:"pointer"}}>+ Crear o seleccionar cliente de factura</button>}
                   </div>
                   {/* Método de pago */}
                   {carrito.length > 0 && (
@@ -5079,12 +5114,12 @@ export default function App() {
                       <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Método de pago</p>
                       <div className="grid-3-mobile-sm" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
                         {[
-                          { val: "Efectivo", icon: Banknote, color: "#10b981" },
-                          { val: "Tarjeta", icon: CreditCard, color: "#7c3aed" },
-                          { val: "Transferencia", icon: CreditCard, color: "#8b5cf6" },
+                          { val: "Efectivo", icon: Banknote, color: "#2EC4B6" },
+                          { val: "Tarjeta", icon: CreditCard, color: "#8E7CC3" },
+                          { val: "Transferencia", icon: CreditCard, color: "#8E7CC3" },
                         ].map(({ val, icon: Icon, color }) => (
                           <button key={val} onClick={() => setPago(val)}
-                            style={{ padding: "9px 6px", borderRadius: 10, border: `2px solid ${pago === val ? color : borderColor2}`, background: pago === val ? (D ? `${color}20` : `${color}10`) : bgCard, cursor: "pointer", fontSize: 11, fontWeight: 700, color: pago === val ? color : textSecondary, fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s" }}>
+                            style={{ padding: "9px 6px", borderRadius:0, border: `2px solid ${pago === val ? color : borderColor2}`, background: pago === val ? (D ? `${color}20` : `${color}10`) : bgCard, cursor: "pointer", fontSize: 11, fontWeight: 700, color: pago === val ? color : textSecondary, fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s" }}>
                             <Icon size={14} />
                             {val}
                           </button>
@@ -5096,13 +5131,13 @@ export default function App() {
                           <label style={{ fontSize: 11, fontWeight: 700, color: textSecondary, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>Dinero recibido</label>
                           <input type="number" min={totalCarrito} value={dineroRecibido} onChange={e => setDineroRecibido(e.target.value)} placeholder={String(totalCarrito)} style={inp} />
                           {vuelto !== null && vuelto >= 0 && (
-                            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#10b981", fontWeight: 700 }}>Vuelto: <span className="mono">{fmt(vuelto)}</span></p>
+                            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#2EC4B6", fontWeight: 700 }}>Vuelto: <span className="mono">{fmt(vuelto)}</span></p>
                           )}
                         </div>
                       )}
 
                       {/* Botón confirmar */}
-                      <button onClick={handleVentaDirecta} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius: 10, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      <button onClick={handleVentaDirecta} className="btn-primary" style={{ width: "100%", padding: "13px", borderRadius:0, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                         <Check size={16} /> Confirmar Venta
                       </button>
                     </div>
@@ -5116,7 +5151,7 @@ export default function App() {
                     <div style={{ display: "flex", gap: 6 }}>
                       {["Todos", "Efectivo", "Tarjeta", "Transferencia"].map(f => (
                         <button key={f} onClick={() => setFiltroPago(f)}
-                          style={{ padding: "5px 12px", borderRadius: 8, border: `1.5px solid ${filtroPago === f ? "#d71920" : borderColor2}`, background: filtroPago === f ? "#d71920" : bgCard2, color: filtroPago === f ? "#fff" : textSecondary, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
+                          style={{ padding: "5px 12px", borderRadius:0, border: `1.5px solid ${filtroPago === f ? "#E63946" : borderColor2}`, background: filtroPago === f ? "#E63946" : bgCard2, color: filtroPago === f ? "#fff" : textSecondary, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
                           {f}
                         </button>
                       ))}
@@ -5125,10 +5160,10 @@ export default function App() {
                   {ventasFiltradas.length === 0
                     ? <p style={{ color: textMuted, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No hay ventas registradas</p>
                     : ventasFiltradas.map(v => (
-                      <div key={v.id} style={{ padding: "14px", background: bgCard2, borderRadius: 12, marginBottom: 10, border: `1px solid ${borderColor}` }}>
+                      <div key={v.id} style={{ padding: "14px", background: bgCard2, borderRadius:0, marginBottom: 10, border: `1px solid ${borderColor}` }}>
                         <div style={{ display: "flex", gap: 12 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, background: v.pago === "Efectivo" ? (D ? "rgba(16,185,129,0.2)" : "#ecfdf5") : ["Tarjeta", "Débito"].includes(v.pago) ? (D ? "rgba(245,158,11,0.2)" : "#fffbeb") :  (D ? "rgba(139,92,246,0.2)" : "#f5f3ff"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            {v.pago === "Efectivo" ? <Banknote size={18} color="#10b981" /> : ["Tarjeta", "Débito"].includes(v.pago) ? <CreditCard size={18} color="#f59e0b" /> :  <CreditCard size={18} color="#8b5cf6" />}
+                          <div style={{ width: 38, height: 38, borderRadius:0, background: v.pago === "Efectivo" ? (D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)") : ["Tarjeta", "Débito"].includes(v.pago) ? (D ? "rgba(255,159,28,0.2)" : "rgba(255,159,28,0.12)") :  (D ? "rgba(142,124,195,0.2)" : "rgba(142,124,195,0.12)"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {v.pago === "Efectivo" ? <Banknote size={18} color="#2EC4B6" /> : ["Tarjeta", "Débito"].includes(v.pago) ? <CreditCard size={18} color="#FF9F1C" /> :  <CreditCard size={18} color="#8E7CC3" />}
                           </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -5137,20 +5172,20 @@ export default function App() {
                                 <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{v.fecha} · {v.usuario}</p>
                               </div>
                               <div style={{ textAlign: "right" }}>
-                                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(v.total)}</p>
-                                <span className="badge" style={{ background: v.pago === "Efectivo" ? "#ecfdf5" : ["Tarjeta", "Débito"].includes(v.pago) ? "#fffbeb" : v.pago === "Crédito" ? "#fff1f2" : "#f5f3ff", color: v.pago === "Efectivo" ? "#059669" : ["Tarjeta", "Débito"].includes(v.pago) ? "#f59e0b" : v.pago === "Crédito" ? "#e03131" : "#8b5cf6" }}>{v.pago}</span>
+                                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(v.total)}</p>
+                                <span className="badge" style={{ background: v.pago === "Efectivo" ? "rgba(46,196,182,0.12)" : ["Tarjeta", "Débito"].includes(v.pago) ? "rgba(255,159,28,0.12)" : v.pago === "Crédito" ? "rgba(230,57,70,0.10)" : "rgba(142,124,195,0.12)", color: v.pago === "Efectivo" ? "#2EC4B6" : ["Tarjeta", "Débito"].includes(v.pago) ? "#FF9F1C" : v.pago === "Crédito" ? "#E63946" : "#8E7CC3" }}>{v.pago}</span>
                               </div>
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                               {(v.items||[]).map(item => (
-                                <span key={`${item.productoId}-${item.esManga ? "m" : "u"}`} style={{ fontSize: 11, background: D ? "#2d3158" : "#f3f4f6", color: textSecondary, padding: "2px 8px", borderRadius: 5, fontWeight: 500 }}>
+                                <span key={`${item.productoId}-${item.esManga ? "m" : "u"}`} style={{ fontSize: 11, background: D ? "#2A2723" : "#E9E6DB", color: textSecondary, padding: "2px 8px", borderRadius:0, fontWeight: 500 }}>
                                   {item.img} {item.nombre} ×{item.cantidad}{item.esManga ? " 📦" : ""}
                                 </span>
                               ))}
                             </div>
                             {/* Boleta asociada */}
                             {(() => { const b = boletas.find(b => b.ventaId === v.id); return b ? (
-                              <button onClick={() => setBoletaModal(b)} style={{ marginTop: 8, padding: "4px 10px", borderRadius: 7, border: `1px solid ${D ? "#2d3158" : "#e5e7eb"}`, background: "none", cursor: "pointer", fontSize: 11, color: "#d71920", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
+                              <button onClick={() => setBoletaModal(b)} style={{ marginTop: 8, padding: "4px 10px", borderRadius:0, border: `1px solid ${D ? "#2A2723" : "#E4E1D6"}`, background: "none", cursor: "pointer", fontSize: 11, color: "#E63946", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
                                 <Receipt size={12} /> Boleta #{String(b.numero).padStart(6, "0")}
                               </button>
                             ) : null; })()}
@@ -5182,7 +5217,7 @@ export default function App() {
                             } catch (err) {
                               alert("No se pudo eliminar la venta: " + err.message);
                             }
-                          }} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#e03131", alignSelf: "flex-start", flexShrink: 0 }} title="Eliminar venta"><Trash2 size={15} /></button>
+                          }} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#E63946", alignSelf: "flex-start", flexShrink: 0 }} title="Eliminar venta"><Trash2 size={15} /></button>
                         </div>
                       </div>
                     ))}
@@ -5196,8 +5231,8 @@ export default function App() {
             <div className="receipts-screen">
               <div className="grid-2-mobile receipts-kpis" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
                 <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
-                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(59,91,219,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Receipt size={20} color="#d71920" />
+                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius:0, background: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Receipt size={20} color="#E63946" />
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: textPrimary }}>{boletas.length}</p>
@@ -5205,8 +5240,8 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
-                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius: 12, background: D ? "rgba(16,185,129,0.15)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <DollarSign size={20} color="#10b981" />
+                  <div className="receipts-kpi-icon" style={{ width: 42, height: 42, borderRadius:0, background: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <DollarSign size={20} color="#2EC4B6" />
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: textPrimary }} className="mono">{fmt(boletas.reduce((s, b) => s + b.total, 0))}</p>
@@ -5243,7 +5278,7 @@ export default function App() {
                         XLSX.utils.book_append_sheet(wb, wsDetalle, "Detalle");
                         const fecha = new Date().toLocaleDateString("es-CL").replace(/\//g,"-");
                         XLSX.writeFile(wb, `respaldo-boletas-${fecha}.xlsx`);
-                      }} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${D ? "#2d3158" : "#d1d5db"}`, background: D ? "#252840" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", color: "#10b981" }}>
+                      }} style={{ padding: "7px 14px", borderRadius:0, border: `1px solid ${D ? "#2A2723" : "#D6D2C4"}`, background: D ? "#241F1A" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", color: "#2EC4B6" }}>
                         <Download size={12} /> Guardar respaldo Excel
                       </button>
                       <button onClick={() => {
@@ -5296,26 +5331,26 @@ export default function App() {
                           }
                         };
                         input.click();
-                      }} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${D ? "#2d3158" : "#d1d5db"}`, background: D ? "#252840" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", color: "#3b82f6" }}>
+                      }} style={{ padding: "7px 14px", borderRadius:0, border: `1px solid ${D ? "#2A2723" : "#D6D2C4"}`, background: D ? "#241F1A" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", color: "#8E7CC3" }}>
                         <RefreshCw size={12} /> Restaurar Excel
                       </button>
                       <button onClick={async () => {
                         if (!window.confirm(`¿Borrar todos los recibos? (${boletas.length} documentos)`)) return;
                         alert("Por seguridad, las boletas no se pueden borrar. Puedes exportarlas a Excel para respaldo.");
-                      }} className="btn-danger" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
+                      }} className="btn-danger" style={{ padding: "7px 14px", borderRadius:0, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
                         <Trash2 size={12} /> Borrar todos
                       </button>
                     </>)}
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 14, padding: "11px 14px", borderRadius: 10, background: D ? "rgba(59,130,246,0.10)" : "#eff6ff", border: `1px solid ${D ? "rgba(59,130,246,0.25)" : "#bfdbfe"}`, color: D ? "#93c5fd" : "#1d4ed8", fontSize: 12, lineHeight: 1.5 }}>
+                <div style={{ marginBottom: 14, padding: "11px 14px", borderRadius:0, background: D ? "rgba(142,124,195,0.10)" : "rgba(142,124,195,0.10)", border: `1px solid ${D ? "rgba(142,124,195,0.25)" : "rgba(142,124,195,0.30)"}`, color: D ? "#8E7CC3" : "#8E7CC3", fontSize: 12, lineHeight: 1.5 }}>
                   <strong>Respaldo de seguridad:</strong> guarda el Excel regularmente. El archivo incluye una hoja con las boletas y otra con el detalle de cada producto, y luego puede restaurarse sin borrar las boletas actuales.
                 </div>
 
                 {boletas.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "50px 0" }}>
-                    <Receipt size={48} color={D ? "#2d3158" : "#e5e7eb"} style={{ marginBottom: 12 }} />
+                    <Receipt size={48} color={D ? "#2A2723" : "#E4E1D6"} style={{ marginBottom: 12 }} />
                     <p style={{ color: textMuted, fontSize: 14 }}>No hay recibos generados aún</p>
                     <p style={{ color: textMuted, fontSize: 12 }}>Los recibos se generan automáticamente al confirmar una venta</p>
                   </div>
@@ -5323,8 +5358,8 @@ export default function App() {
                   <div>
                     {boletas.map(b => (
                       <div key={b.numero} className="receipt-card" style={{ background: bgCard2, border: `1px solid ${borderColor}` }} onClick={() => setBoletaModal(b)}>
-                        <div className="receipt-card-icon" style={{ background: D ? "rgba(215,25,32,0.15)" : "#fff3bf" }}>
-                          <Receipt size={20} color="#d71920" />
+                        <div className="receipt-card-icon" style={{ background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)" }}>
+                          <Receipt size={20} color="#E63946" />
                         </div>
                         <div className="receipt-card-main">
                           <div className="receipt-card-topline">
@@ -5365,7 +5400,7 @@ export default function App() {
                               } catch (err) {
                                 alert("No se pudo eliminar la venta: " + err.message);
                               }
-                            }} style={{ padding: "2px 8px", borderRadius: 6, background: "#fff1f2", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, color: "#e03131" }}>
+                            }} style={{ padding: "2px 8px", borderRadius:0, background: "rgba(230,57,70,0.10)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, color: "#E63946" }}>
                               <Trash2 size={11} />
                             </button>
                           </div>
@@ -5384,27 +5419,27 @@ export default function App() {
               {/* Modales apertura / cierre */}
               {showAperturaModal && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}>
-                  <div className="fade-in" style={{ background: bgCard, borderRadius: 20, padding: 28, width: "92%", maxWidth: 380, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+                  <div className="fade-in" style={{ background: bgCard, borderRadius:0, padding: 28, width: "92%", maxWidth: 380, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                       <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>Abrir Caja</h3>
-                      <button onClick={() => setShowAperturaModal(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+                      <button onClick={() => setShowAperturaModal(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
                     </div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Monto de apertura (efectivo en caja)</label>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Monto de apertura (efectivo en caja)</label>
                     <input type="number" min="0" value={montoApertura} onChange={e => setMontoApertura(e.target.value)} placeholder="Ej: 50000" style={{ ...inp, marginBottom: 16 }} />
-                    {cajaError && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 8, marginBottom: 14 }}>⚠ {cajaError}</div>}
+                    {cajaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {cajaError}</div>}
                     <div style={{ display: "flex", gap: 10 }}>
-                      <button onClick={() => { setShowAperturaModal(false); setCajaError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-                      <button onClick={handleAbrirCaja} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>Abrir Caja</button>
+                      <button onClick={() => { setShowAperturaModal(false); setCajaError(""); }} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+                      <button onClick={handleAbrirCaja} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius:0, fontSize: 14 }}>Abrir Caja</button>
                     </div>
                   </div>
                 </div>
               )}
               {showCierreModal && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}>
-                  <div className="fade-in" style={{ background: bgCard, borderRadius: 20, padding: 28, width: "92%", maxWidth: 420, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+                  <div className="fade-in" style={{ background: bgCard, borderRadius:0, padding: 28, width: "92%", maxWidth: 420, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                       <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>Cerrar Caja</h3>
-                      <button onClick={() => setShowCierreModal(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+                      <button onClick={() => setShowCierreModal(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
                     </div>
                     {(() => {
                       const inicio = new Date(cajaData.apertura).getTime();
@@ -5417,11 +5452,11 @@ export default function App() {
                         + vt.filter(v => v.pago === "Mixto").reduce((s, v) => s + Number(v.montoTarjeta || 0), 0);
                       return (
                         <div>
-                          <div style={{ background: D ? "#1e2235" : "#f8f9ff", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                          <div style={{ background: D ? "#1C1A17" : "rgba(142,124,195,0.08)", borderRadius:0, padding: "14px 16px", marginBottom: 16 }}>
                             <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: textPrimary }}>Resumen del turno</p>
                             {[
                               { label: "Apertura", val: fmt(cajaData.montoApertura), color: textSecondary },
-                              { label: "Ventas totales", val: fmt(total), color: "#10b981" },
+                              { label: "Ventas totales", val: fmt(total), color: "#2EC4B6" },
                               { label: "— Efectivo", val: fmt(ef), color: textSecondary },
                               { label: "— Transferencia", val: fmt(tr), color: textSecondary },
                               { label: "— Tarjeta", val: fmt(deb), color: textSecondary },
@@ -5433,26 +5468,26 @@ export default function App() {
                             ))}
                             <div style={{ borderTop: `1.5px solid ${borderColor2}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 800, color: textPrimary }}>
                               <span>Efectivo en caja</span>
-                              <span style={{ color: "#10b981" }}>{fmt(cajaData.montoApertura + ef)}</span>
+                              <span style={{ color: "#2EC4B6" }}>{fmt(cajaData.montoApertura + ef)}</span>
                             </div>
                           </div>
-                          <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Efectivo contado en caja (opcional)</label>
+                          <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Efectivo contado en caja (opcional)</label>
                           <input type="number" min="0" value={montoContado} onChange={e => setMontoContado(e.target.value)}
                             placeholder={`Esperado: $${(cajaData.montoApertura + ef).toLocaleString("es-CL")}`}
                             style={{ ...inp, marginBottom: 4 }} />
                           {montoContado !== "" && (
                             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700,
-                              color: (+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "#10b981" : "#e03131" }}>
+                              color: (+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "#2EC4B6" : "#E63946" }}>
                               Diferencia: {(+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "+" : ""}
                               ${(+montoContado - (cajaData.montoApertura + ef)).toLocaleString("es-CL")}
                             </p>
                           )}
-                          <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Notas del cierre (opcional)</label>
+                          <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Notas del cierre (opcional)</label>
                           <textarea value={notasCierre} onChange={e => setNotasCierre(e.target.value)} placeholder="Observaciones, diferencias, incidentes..." rows={3}
                             style={{ ...inp, resize: "vertical", marginBottom: 16 }} />
                           <div style={{ display: "flex", gap: 10 }}>
-                            <button onClick={() => setShowCierreModal(false)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-                            <button disabled={cajaProcesando} onClick={handleCerrarCaja} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #e03131, #f03e3e)", cursor: cajaProcesando ? "wait" : "pointer", opacity: cajaProcesando ? 0.7 : 1, fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>{cajaProcesando ? "Cerrando..." : "Cerrar Caja"}</button>
+                            <button onClick={() => setShowCierreModal(false)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+                            <button disabled={cajaProcesando} onClick={handleCerrarCaja} style={{ flex: 1, padding: "11px", borderRadius:0, border: "none", background: "#E63946", cursor: cajaProcesando ? "wait" : "pointer", opacity: cajaProcesando ? 0.7 : 1, fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>{cajaProcesando ? "Cerrando..." : "Cerrar Caja"}</button>
                           </div>
                         </div>
                       );
@@ -5468,22 +5503,22 @@ export default function App() {
                   <p style={{ margin: 0, fontSize: 13, color: textMuted }}>Apertura, cierre e historial de turnos</p>
                 </div>
                 {!cajaAbierta
-                  ? <button onClick={() => { setShowAperturaModal(true); setCajaError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, fontSize: 13 }}>
+                  ? <button onClick={() => { setShowAperturaModal(true); setCajaError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius:0, fontSize: 13 }}>
                       <Banknote size={15} /> Abrir Caja
                     </button>
-                  : <button onClick={() => setShowCierreModal(true)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, fontSize: 13, border: "none", background: "linear-gradient(135deg, #e03131, #f03e3e)", color: "#fff", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}>
+                  : <button onClick={() => setShowCierreModal(true)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius:0, fontSize: 13, border: "none", background: "#E63946", color: "#fff", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}>
                       <X size={15} /> Cerrar Caja
                     </button>
                 }
               </div>
 
-              {cajaExito && <div style={{ background: "#ecfdf5", color: "#059669", fontSize: 13, padding: "12px 16px", borderRadius: 10, marginBottom: 16, fontWeight: 600 }}>{cajaExito}</div>}
+              {cajaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "12px 16px", borderRadius:0, marginBottom: 16, fontWeight: 600 }}>{cajaExito}</div>}
 
               {/* Tabs */}
               <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
                 {[{ id: "actual", label: "Turno actual" }, { id: "historial", label: `Historial (${historialCaja.length})` }].map(t => (
                   <button key={t.id} onClick={() => setCajaTab(t.id)}
-                    style={{ padding: "8px 18px", borderRadius: 10, border: `1.5px solid ${cajaTab === t.id ? "#d71920" : borderColor2}`, background: cajaTab === t.id ? (D ? "rgba(59,91,219,0.15)" : "#fff3bf") : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: cajaTab === t.id ? "#d71920" : textSecondary, fontFamily: "inherit" }}>
+                    style={{ padding: "8px 18px", borderRadius:0, border: `1.5px solid ${cajaTab === t.id ? "#E63946" : borderColor2}`, background: cajaTab === t.id ? (D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: cajaTab === t.id ? "#E63946" : textSecondary, fontFamily: "inherit" }}>
                     {t.label}
                   </button>
                 ))}
@@ -5497,7 +5532,7 @@ export default function App() {
                       <div style={{ fontSize: 48, marginBottom: 14 }}>🔒</div>
                       <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: textPrimary }}>Caja cerrada</p>
                       <p style={{ margin: "0 0 20px", fontSize: 13, color: textMuted }}>Abre la caja para comenzar a registrar ventas del turno.</p>
-                      <button onClick={() => { setShowAperturaModal(true); setCajaError(""); }} className="btn-primary" style={{ padding: "10px 24px", borderRadius: 10, fontSize: 14 }}>
+                      <button onClick={() => { setShowAperturaModal(true); setCajaError(""); }} className="btn-primary" style={{ padding: "10px 24px", borderRadius:0, fontSize: 14 }}>
                         <Banknote size={15} style={{ marginRight: 6 }} />Abrir Caja
                       </button>
                     </div>
@@ -5517,7 +5552,7 @@ export default function App() {
                     return (
                       <div>
                         {/* Banner turno abierto */}
-                        <div style={{ background: "linear-gradient(135deg, #10b981, #059669)", borderRadius: 16, padding: "18px 22px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ background: "#2EC4B6", borderRadius:0, padding: "18px 22px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <div>
                             <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>🟢 Caja abierta</p>
                             <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 900, color: "#fff" }}>{fmt(cajaData.montoApertura + ef)}</p>
@@ -5533,12 +5568,12 @@ export default function App() {
                         {/* Cards de resumen */}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
                           {[
-                            { label: "Total vendido", val: fmt(total), icon: "💰", color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
-                            { label: "N° ventas",     val: vt.length,  icon: "🧾", color: "#d71920", bg: D ? "rgba(59,91,219,0.15)"  : "#fff3bf" },
-                            { label: "Efectivo",      val: fmt(ef),    icon: "💵", color: "#f59e0b", bg: D ? "rgba(245,158,11,0.15)" : "#fffbeb" },
-                            { label: "Débito",        val: fmt(deb),   icon: "💳", color: "#f59e0b", bg: D ? "rgba(245,158,11,0.10)" : "#fffbeb" },
-                            { label: "Crédito",       val: fmt(cred),  icon: "💳", color: "#e03131", bg: D ? "rgba(224,49,49,0.15)"  : "#fff1f2" },
-                            { label: "Transferencia", val: fmt(tr),    icon: "🔁", color: "#8b5cf6", bg: D ? "rgba(139,92,246,0.15)" : "#f5f3ff" },
+                            { label: "Total vendido", val: fmt(total), icon: "💰", color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                            { label: "N° ventas",     val: vt.length,  icon: "🧾", color: "#E63946", bg: D ? "rgba(255,159,28,0.15)"  : "rgba(255,159,28,0.15)" },
+                            { label: "Efectivo",      val: fmt(ef),    icon: "💵", color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)" },
+                            { label: "Débito",        val: fmt(deb),   icon: "💳", color: "#FF9F1C", bg: D ? "rgba(255,159,28,0.10)" : "rgba(255,159,28,0.12)" },
+                            { label: "Crédito",       val: fmt(cred),  icon: "💳", color: "#E63946", bg: D ? "rgba(230,57,70,0.15)"  : "rgba(230,57,70,0.10)" },
+                            { label: "Transferencia", val: fmt(tr),    icon: "🔁", color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
                             { label: "Apertura",      val: fmt(cajaData.montoApertura), icon: "🔓", color: textSecondary, bg: bgCard2 },
                           ].map(({ label, val, icon, color, bg }) => (
                             <div key={label} style={{ ...card, background: bg, border: "none" }}>
@@ -5559,7 +5594,7 @@ export default function App() {
                                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: textPrimary }}>{(v.items||[]).map(it => it.nombre).join(", ").slice(0, 40)}{(v.items||[]).reduce((s, it) => s + it.nombre.length, 0) > 40 ? "…" : ""}</p>
                                   <p style={{ margin: 0, fontSize: 11, color: textMuted }}>{v.pago} · {v.usuario} · {new Date(v.timestamp).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>
                                 </div>
-                                <span style={{ fontSize: 14, fontWeight: 800, color: "#10b981" }} className="mono">{fmt(v.total)}</span>
+                                <span style={{ fontSize: 14, fontWeight: 800, color: "#2EC4B6" }} className="mono">{fmt(v.total)}</span>
                               </div>
                             ))}
                           </div>
@@ -5578,7 +5613,7 @@ export default function App() {
                       <button onClick={() => {
                         if (!window.confirm(`¿Borrar todo el historial de caja? (${historialCaja.length} turnos)`)) return;
                         setHistorialCaja([]); saveHistorialCaja([]);
-                      }} className="btn-danger" style={{ padding: "8px 16px", borderRadius: 10, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
+                      }} className="btn-danger" style={{ padding: "8px 16px", borderRadius:0, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
                         <Trash2 size={13} /> Borrar historial
                       </button>
                     </div>
@@ -5605,7 +5640,7 @@ export default function App() {
                               {apertura.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
                             </p>
                           </div>
-                          <span style={{ background: "#ecfdf5", color: "#059669", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>✓ Cerrado</span>
+                          <span style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius:0 }}>✓ Cerrado</span>
                         </div>
                         <div className="grid-3-mobile-sm" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: h.notas ? 12 : 0 }}>
                           {[
@@ -5619,14 +5654,14 @@ export default function App() {
                             { label: "Efectivo", val: fmt(h.efectivoTurno || 0) },
                             { label: "Abierta por", val: h.abiertaPor },
                           ].map(({ label, val }) => (
-                            <div key={label} style={{ background: bgCard2, borderRadius: 10, padding: "10px 12px" }}>
+                            <div key={label} style={{ background: bgCard2, borderRadius:0, padding: "10px 12px" }}>
                               <p style={{ margin: "0 0 2px", fontSize: 11, color: textMuted }}>{label}</p>
                               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>{val}</p>
                             </div>
                           ))}
                         </div>
                         {h.notas && (
-                          <div style={{ background: D ? "rgba(245,158,11,0.1)" : "#fffbeb", border: `1px solid ${D ? "rgba(245,158,11,0.3)" : "#fde68a"}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: D ? "#fbbf24" : "#92400e" }}>
+                          <div style={{ background: D ? "rgba(255,159,28,0.1)" : "rgba(255,159,28,0.12)", border: `1px solid ${D ? "rgba(255,159,28,0.3)" : "rgba(255,159,28,0.30)"}`, borderRadius:0, padding: "8px 12px", fontSize: 12, color: D ? "#FF9F1C" : "#5C4B12" }}>
                             📝 {h.notas}
                           </div>
                         )}
@@ -5646,7 +5681,7 @@ export default function App() {
                   <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>Registro de Mermas</h2>
                   <p style={{ margin: 0, fontSize: 13, color: textMuted }}>Productos dañados, vencidos o perdidos</p>
                 </div>
-                <button onClick={() => { setModalMerma(true); setFormMerma({ productoId: "", cantidad: "", motivo: "" }); setMermaError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, fontSize: 13 }}>
+                <button onClick={() => { setModalMerma(true); setFormMerma({ productoId: "", cantidad: "", motivo: "" }); setMermaError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius:0, fontSize: 13 }}>
                   <Plus size={15} /> Registrar Merma
                 </button>
               </div>
@@ -5659,15 +5694,15 @@ export default function App() {
                 <div style={card}>
                   {mermas.map((m, i) => (
                     <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: i < mermas.length - 1 ? `1px solid ${borderColor}` : "none" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <TrendingDown size={18} color="#e03131" />
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: "rgba(230,57,70,0.10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <TrendingDown size={18} color="#E63946" />
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: textPrimary }}>{m.producto}</p>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{m.motivo} · {m.fecha} · {m.usuario}</p>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e03131", background: "#fff1f2", padding: "4px 10px", borderRadius: 8 }}>-{m.cantidad} u.</span>
-                      <button onClick={() => { const nuevas = mermas.filter(x => x.id !== m.id); setMermas(nuevas); saveMermas(nuevas); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#e03131", flexShrink: 0 }} title="Eliminar merma"><Trash2 size={15} /></button>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#E63946", background: "rgba(230,57,70,0.10)", padding: "4px 10px", borderRadius:0 }}>-{m.cantidad} u.</span>
+                      <button onClick={() => { const nuevas = mermas.filter(x => x.id !== m.id); setMermas(nuevas); saveMermas(nuevas); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#E63946", flexShrink: 0 }} title="Eliminar merma"><Trash2 size={15} /></button>
                     </div>
                   ))}
                 </div>
@@ -5678,18 +5713,18 @@ export default function App() {
           {/* ── USUARIOS ── */}
           {activeNav === "Usuarios" && esGerente && (
             <div>
-              <div style={{ ...card, background: D ? "linear-gradient(135deg, #13152a, #1a1d2e)" : "linear-gradient(135deg, #1a1a2e, #2d2d4e)", marginBottom: 18 }}>
+              <div style={{ ...card, background: D ? "#1C1A17" : "linear-gradient(135deg, #121110, #241F1A)", marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(215,25,32,0.28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Shield size={22} color="#748ffc" />
+                    <div style={{ width: 46, height: 46, borderRadius:0, background: "rgba(230,57,70,0.28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Shield size={22} color="#8E7CC3" />
                     </div>
                     <div>
                       <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#fff" }}>Panel de Administración</p>
-                      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Gestión de usuarios · v{APP_VERSION}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#8C8678" }}>Gestión de usuarios · v{APP_VERSION}</p>
                     </div>
                   </div>
-                  <button onClick={() => { setModalNuevoUsuario(true); setFormNuevoUsuario({ nombre: "", usuario: "", correo: "", clave: "", rol: "empleado", empresa: currentUser?.empresa || "" }); setNuevoUsuarioError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 18px", borderRadius: 10, fontSize: 13 }}>
+                  <button onClick={() => { setModalNuevoUsuario(true); setFormNuevoUsuario({ nombre: "", usuario: "", correo: "", clave: "", rol: "empleado", empresa: currentUser?.empresa || "" }); setNuevoUsuarioError(""); }} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 18px", borderRadius:0, fontSize: 13 }}>
                     <UserPlus size={15} /> Nuevo Usuario
                   </button>
                 </div>
@@ -5703,38 +5738,38 @@ export default function App() {
                   return (
                     <div key={empresa} style={{ marginBottom: 24 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                        <Building2 size={16} color={D ? "#748ffc" : "#d71920"} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: D ? "#748ffc" : "#d71920" }}>{empresa}</span>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: D ? "rgba(59,91,219,0.15)" : "#fff3bf", color: D ? "#748ffc" : "#d71920", fontWeight: 600 }}>{grupoUsuarios.length} usuario{grupoUsuarios.length !== 1 ? "s" : ""}</span>
+                        <Building2 size={16} color={D ? "#8E7CC3" : "#E63946"} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: D ? "#8E7CC3" : "#E63946" }}>{empresa}</span>
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius:0, background: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)", color: D ? "#8E7CC3" : "#E63946", fontWeight: 600 }}>{grupoUsuarios.length} usuario{grupoUsuarios.length !== 1 ? "s" : ""}</span>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
                         {loadingUsuarios ? <p style={{ color: textMuted, fontSize: 13 }}>Cargando...</p> : grupoUsuarios.map(u => (
                           <div key={u.usuario} style={{ ...card, opacity: u.blocked ? 0.8 : 1 }} className="card-hover">
                             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                              <div style={{ width: 46, height: 46, borderRadius: "50%", background: u.blocked ? (D ? "#2d3158" : "#f3f4f6") : u.rol === "gerente" ? "linear-gradient(135deg, #d71920, #ef2b32)" : "linear-gradient(135deg, #10b981, #34d399)", color: u.blocked ? textMuted : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>
+                              <div style={{ width: 46, height: 46, borderRadius: "50%", background: u.blocked ? (D ? "#2A2723" : "#E9E6DB") : u.rol === "gerente" ? "#E63946" : "#2EC4B6", color: u.blocked ? textMuted : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>
                                 {u.nombre.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
                               </div>
                               <div style={{ flex: 1 }}>
                                 <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>{u.nombre}</p>
                                 <p style={{ margin: 0, fontSize: 12, color: textMuted }}>@{u.usuario}</p>
                               </div>
-                              <span className="badge" style={{ background: u.rol === "gerente" ? (D ? "rgba(215,25,32,0.15)" : "#fff3bf") : (D ? "rgba(16,185,129,0.2)" : "#ecfdf5"), color: u.rol === "gerente" ? "#ef2b32" : "#059669" }}>
+                              <span className="badge" style={{ background: u.rol === "gerente" ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : (D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)"), color: u.rol === "gerente" ? "#E63946" : "#2EC4B6" }}>
                                 {u.rol === "gerente" ? "👑" : "👤"} {u.rol}
                               </span>
                             </div>
                             {u.correo && <p style={{ margin: "0 0 4px", fontSize: 12, color: textMuted }}>✉ {u.correo}</p>}
-                            {u.blocked && <p style={{ margin: "0 0 10px", fontSize: 11, color: "#e03131", fontWeight: 700 }}>🔒 Bloqueado</p>}
+                            {u.blocked && <p style={{ margin: "0 0 10px", fontSize: 11, color: "#E63946", fontWeight: 700 }}>🔒 Bloqueado</p>}
                             <div style={{ display: "flex", gap: 8 }}>
-                              <button onClick={() => handleEditarUsuario(u)} style={{ padding: "7px 12px", borderRadius: 9, border: `1px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                              <button onClick={() => handleEditarUsuario(u)} style={{ padding: "7px 12px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
                                 <Pencil size={12} /> Editar
                               </button>
                               {u.usuario !== currentUser.usuario && (
                                 <>
                                   <button onClick={() => handleBloquearUsuario(u.usuario, !u.blocked)}
-                                    style={{ padding: "7px 12px", borderRadius: 9, border: `1px solid ${u.blocked ? "#a7f3d0" : "#fecaca"}`, background: u.blocked ? "#ecfdf5" : "#fff1f2", cursor: "pointer", fontSize: 12, color: u.blocked ? "#059669" : "#e03131", fontFamily: "inherit" }}>
+                                    style={{ padding: "7px 12px", borderRadius:0, border: `1px solid ${u.blocked ? "#2EC4B6" : "rgba(230,57,70,0.30)"}`, background: u.blocked ? "rgba(46,196,182,0.12)" : "rgba(230,57,70,0.10)", cursor: "pointer", fontSize: 12, color: u.blocked ? "#2EC4B6" : "#E63946", fontFamily: "inherit" }}>
                                     {u.blocked ? "Desbloquear" : "Bloquear"}
                                   </button>
-                                  <button onClick={() => handleEliminarUsuario(u.usuario)} className="btn-danger" style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12, display: "flex", alignItems: "center" }}>
+                                  <button onClick={() => handleEliminarUsuario(u.usuario)} className="btn-danger" style={{ padding: "7px 10px", borderRadius:0, fontSize: 12, display: "flex", alignItems: "center" }}>
                                     <Trash2 size={13} />
                                   </button>
                                 </>
@@ -5770,10 +5805,10 @@ export default function App() {
 
                 <div className="stats-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:16 }}>
                   {[
-                    ["Clientes registrados", totalClientes, Users, "#d71920"],
-                    ["Compras registradas", totalComprasClientes, ShoppingBag, "#8b5cf6"],
-                    ["Total gastado", fmt(totalGastadoClientes), DollarSign, "#10b981"],
-                  ].map(([label,value,Icon,color]) => <div key={label} style={card}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><p style={{margin:0,color:textMuted,fontSize:12}}>{label}</p><p style={{margin:"7px 0 0",color:textPrimary,fontSize:22,fontWeight:800}}>{value}</p></div><div style={{width:42,height:42,borderRadius:12,background:`${color}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><Icon size={19} color={color}/></div></div></div>)}
+                    ["Clientes registrados", totalClientes, Users, "#E63946"],
+                    ["Compras registradas", totalComprasClientes, ShoppingBag, "#8E7CC3"],
+                    ["Total gastado", fmt(totalGastadoClientes), DollarSign, "#2EC4B6"],
+                  ].map(([label,value,Icon,color]) => <div key={label} style={card}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><p style={{margin:0,color:textMuted,fontSize:12}}>{label}</p><p style={{margin:"7px 0 0",color:textPrimary,fontSize:22,fontWeight:800}}>{value}</p></div><div style={{width:42,height:42,borderRadius:0,background:`${color}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><Icon size={19} color={color}/></div></div></div>)}
                 </div>
 
                 <div style={{ display:"grid", gridTemplateColumns:"minmax(280px,360px) 1fr", gap:16 }} className="config-layout">
@@ -5782,10 +5817,10 @@ export default function App() {
                     {[["Nombre de contacto","nombre"],["Razón social","razonSocial"],["RUT","rut"],["Giro","giro"],["Teléfono","telefono"],["Correo","correo"],["Dirección","direccion"],["Comuna","comuna"]].map(([l,k]) => <label key={k} style={{display:"block",marginBottom:11,fontSize:12,color:textSecondary,fontWeight:700}}>{l}<input value={clienteForm[k] || ""} onChange={e=>setClienteForm({...clienteForm,[k]:e.target.value})} style={{...inp,marginTop:6}} /></label>)}
                     <label style={{display:"flex",alignItems:"center",gap:9,marginBottom:13,fontSize:12,color:textSecondary,fontWeight:700}}><input type="checkbox" checked={!!clienteForm.solicitaFactura} onChange={e=>setClienteForm({...clienteForm,solicitaFactura:e.target.checked})}/> Cliente solicita factura habitualmente</label>
                     <label style={{display:"block",marginBottom:11,fontSize:12,color:textSecondary,fontWeight:700}}>Notas<textarea value={clienteForm.notas} onChange={e=>setClienteForm({...clienteForm,notas:e.target.value})} style={{...inp,marginTop:6,minHeight:76,resize:"vertical"}} /></label>
-                    {clienteError && <p style={{margin:"0 0 10px",color:"#e03131",fontSize:12,fontWeight:700}}>{clienteError}</p>}
+                    {clienteError && <p style={{margin:"0 0 10px",color:"#E63946",fontSize:12,fontWeight:700}}>{clienteError}</p>}
                     <div style={{display:"flex",gap:8}}>
-                      {clienteEditando && <button onClick={()=>{setClienteEditando(null);setClienteForm(clienteVacio);}} style={{flex:1,padding:10,borderRadius:10,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontWeight:700}}>Cancelar</button>}
-                      <button onClick={guardarCliente} className="btn-primary" style={{flex:1,padding:10,borderRadius:10}}>{clienteEditando ? "Guardar cambios" : "Agregar cliente"}</button>
+                      {clienteEditando && <button onClick={()=>{setClienteEditando(null);setClienteForm(clienteVacio);}} style={{flex:1,padding:10,borderRadius:0,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontWeight:700}}>Cancelar</button>}
+                      <button onClick={guardarCliente} className="btn-primary" style={{flex:1,padding:10,borderRadius:0}}>{clienteEditando ? "Guardar cambios" : "Agregar cliente"}</button>
                     </div>
                   </div>
 
@@ -5795,11 +5830,11 @@ export default function App() {
                       <div style={{position:"relative",width:260,maxWidth:"100%"}}><Search size={14} color={textMuted} style={{position:"absolute",left:11,top:11}}/><input placeholder="Buscar cliente..." value={clienteBusqueda} onChange={e=>setClienteBusqueda(e.target.value)} style={{...inp,paddingLeft:34}}/></div>
                     </div>
                     {lista.length===0 ? <div style={{textAlign:"center",padding:34,color:textMuted}}><Users size={32} style={{marginBottom:8}}/><p style={{margin:0,fontSize:13}}>No hay clientes registrados.</p></div> : lista.map((c,i)=><div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<lista.length-1?`1px solid ${borderColor}`:"none"}}>
-                      <div style={{width:40,height:40,borderRadius:12,background:D?"rgba(59,91,219,.16)":"#eef2ff",display:"flex",alignItems:"center",justifyContent:"center",color:"#d71920",fontWeight:800}}>{(c.nombre||"?").slice(0,1).toUpperCase()}</div>
-                      <div style={{flex:1,minWidth:0}}><p style={{margin:0,color:textPrimary,fontSize:13,fontWeight:800}}>{c.razonSocial || c.nombre} {c.solicitaFactura && <span style={{fontSize:10,color:"#d71920",background:"#fff1f2",padding:"2px 6px",borderRadius:6}}>FACTURA</span>}</p><p style={{margin:"3px 0 0",color:textMuted,fontSize:11,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{[c.telefono,c.correo,c.direccion].filter(Boolean).join(" · ") || "Sin datos de contacto"}</p></div>
-                      <div style={{textAlign:"right",marginRight:8}}><p style={{margin:0,color:"#10b981",fontSize:12,fontWeight:800}}>{fmt(c.totalGastado||0)}</p><p style={{margin:"2px 0 0",color:textMuted,fontSize:10}}>{c.compras||0} compras</p></div>
-                      <button onClick={()=>editarCliente(c)} style={{width:32,height:32,borderRadius:8,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer"}}><Pencil size={13}/></button>
-                      <button onClick={()=>eliminarCliente(c.id)} className="btn-danger" style={{width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><Trash2 size={13}/></button>
+                      <div style={{width:40,height:40,borderRadius:0,background:D?"rgba(255,159,28,.16)":"rgba(142,124,195,0.10)",display:"flex",alignItems:"center",justifyContent:"center",color:"#E63946",fontWeight:800}}>{(c.nombre||"?").slice(0,1).toUpperCase()}</div>
+                      <div style={{flex:1,minWidth:0}}><p style={{margin:0,color:textPrimary,fontSize:13,fontWeight:800}}>{c.razonSocial || c.nombre} {c.solicitaFactura && <span style={{fontSize:10,color:"#E63946",background:"rgba(230,57,70,0.10)",padding:"2px 6px",borderRadius:0}}>FACTURA</span>}</p><p style={{margin:"3px 0 0",color:textMuted,fontSize:11,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{[c.telefono,c.correo,c.direccion].filter(Boolean).join(" · ") || "Sin datos de contacto"}</p></div>
+                      <div style={{textAlign:"right",marginRight:8}}><p style={{margin:0,color:"#2EC4B6",fontSize:12,fontWeight:800}}>{fmt(c.totalGastado||0)}</p><p style={{margin:"2px 0 0",color:textMuted,fontSize:10}}>{c.compras||0} compras</p></div>
+                      <button onClick={()=>editarCliente(c)} style={{width:32,height:32,borderRadius:0,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer"}}><Pencil size={13}/></button>
+                      <button onClick={()=>eliminarCliente(c.id)} className="btn-danger" style={{width:32,height:32,borderRadius:0,display:"flex",alignItems:"center",justifyContent:"center"}}><Trash2 size={13}/></button>
                     </div>)}
                   </div>
                 </div>
@@ -5807,15 +5842,65 @@ export default function App() {
             );
           })()}
 
-          {activeNav === "Proveedores" && (
-            <div className="fade-in empty-state">
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: D ? "rgba(79,174,147,0.15)" : "#e4f0ec", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                <Building2 size={26} color={D ? "#ffc400" : "#d71920"} strokeWidth={1.8} />
+          {activeNav === "Proveedores" && (() => {
+            const lista = proveedores.filter(p => {
+              const q = proveedorBusqueda.toLowerCase();
+              return !q || [p.nombre, p.rubro, p.telefono, p.correo].some(v => String(v || "").toLowerCase().includes(q));
+            });
+            const totalProveedores = proveedores.length;
+            const totalComprasProv = proveedores.reduce((s, p) => s + (p.compras || []).length, 0);
+            const totalGastadoProv = proveedores.reduce((s, p) => s + (p.compras || []).reduce((s2, c) => s2 + Number(c.monto || 0), 0), 0);
+            return (
+              <div className="fade-in">
+                <div className="page-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+                  <div>
+                    <h2 style={{ margin: 0, color: textPrimary, fontSize: 22 }}>Proveedores</h2>
+                    <p style={{ margin: "5px 0 0", color: textMuted, fontSize: 12 }}>Registra tus proveedores y lleva el historial de compras por cada uno.</p>
+                  </div>
+                </div>
+
+                <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 16 }}>
+                  {[
+                    ["Proveedores registrados", totalProveedores, Building2, "#E63946"],
+                    ["Compras registradas", totalComprasProv, ShoppingBag, "#8E7CC3"],
+                    ["Total comprado", fmt(totalGastadoProv), DollarSign, "#2EC4B6"],
+                  ].map(([label, value, Icon, color]) => <div key={label} style={card}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><div><p style={{ margin: 0, color: textMuted, fontSize: 12 }}>{label}</p><p style={{ margin: "7px 0 0", color: textPrimary, fontSize: 22, fontWeight: 800 }}>{value}</p></div><div style={{ width: 42, height: 42, borderRadius: 0, background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon size={19} color={color} /></div></div></div>)}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(280px,360px) 1fr", gap: 16 }} className="config-layout">
+                  <div style={card}>
+                    <h3 style={{ margin: "0 0 14px", color: textPrimary, fontSize: 15 }}>{proveedorEditando ? "Editar proveedor" : "Nuevo proveedor"}</h3>
+                    {[["Nombre / Razón social", "nombre"], ["RUT", "rut"], ["Rubro / Qué suministra", "rubro"], ["Teléfono", "telefono"], ["Correo", "correo"], ["Dirección", "direccion"], ["Comuna", "comuna"]].map(([l, k]) => <label key={k} style={{ display: "block", marginBottom: 11, fontSize: 12, color: textSecondary, fontWeight: 700 }}>{l}<input value={proveedorForm[k] || ""} onChange={e => setProveedorForm({ ...proveedorForm, [k]: e.target.value })} style={{ ...inp, marginTop: 6 }} /></label>)}
+                    <label style={{ display: "block", marginBottom: 11, fontSize: 12, color: textSecondary, fontWeight: 700 }}>Notas<textarea value={proveedorForm.notas} onChange={e => setProveedorForm({ ...proveedorForm, notas: e.target.value })} style={{ ...inp, marginTop: 6, minHeight: 76, resize: "vertical" }} /></label>
+                    {proveedorError && <p style={{ margin: "0 0 10px", color: "#E63946", fontSize: 12, fontWeight: 700 }}>{proveedorError}</p>}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {proveedorEditando && <button onClick={() => { setProveedorEditando(null); setProveedorForm(proveedorVacio); }} style={{ flex: 1, padding: 10, borderRadius: 0, border: `1px solid ${borderColor2}`, background: bgCard2, color: textSecondary, cursor: "pointer", fontWeight: 700 }}>Cancelar</button>}
+                      <button onClick={guardarProveedor} className="btn-primary" style={{ flex: 1, padding: 10, borderRadius: 0 }}>{proveedorEditando ? "Guardar cambios" : "Agregar proveedor"}</button>
+                    </div>
+                  </div>
+
+                  <div style={card}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                      <h3 style={{ margin: 0, color: textPrimary, fontSize: 15 }}>Listado de proveedores</h3>
+                      <div style={{ position: "relative", width: 260, maxWidth: "100%" }}><Search size={14} color={textMuted} style={{ position: "absolute", left: 11, top: 11 }} /><input placeholder="Buscar proveedor..." value={proveedorBusqueda} onChange={e => setProveedorBusqueda(e.target.value)} style={{ ...inp, paddingLeft: 34 }} /></div>
+                    </div>
+                    {lista.length === 0 ? <div style={{ textAlign: "center", padding: 34, color: textMuted }}><Building2 size={32} style={{ marginBottom: 8 }} /><p style={{ margin: 0, fontSize: 13 }}>No hay proveedores registrados.</p></div> : lista.map(p => (
+                      <FilaProveedor
+                        key={p.id} p={p}
+                        borderColor={borderColor} borderColor2={borderColor2} bgCard2={bgCard2}
+                        textPrimary={textPrimary} textSecondary={textSecondary} textMuted={textMuted}
+                        inp={inp} D={D} fmt={fmt}
+                        onEditar={() => editarProveedor(p)}
+                        onEliminar={() => eliminarProveedor(p.id)}
+                        onRegistrarCompra={(monto, detalle) => registrarCompraProveedor(p.id, monto, detalle)}
+                        onEliminarCompra={(compraId) => eliminarCompraProveedor(p.id, compraId)}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-              <h3 style={{ margin: "0 0 6px", color: textPrimary, fontSize: 16, fontWeight: 700 }}>Proveedores</h3>
-              <p style={{ margin: 0, color: textMuted, fontSize: 13, maxWidth: 320 }}>Este módulo está en construcción. Acá vas a poder registrar tus proveedores y llevar el historial de compras por cada uno.</p>
-            </div>
-          )}
+            );
+          })()}
 
           {activeNav === "Gastos" && (
             <GastosModule
@@ -5855,7 +5940,7 @@ export default function App() {
                 {configTab === "general" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(215,25,32,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center" }}><Store size={18} color="#d71920" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}><Store size={18} color="#E63946" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Datos del Negocio</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Información general de tu empresa</p>
@@ -5868,7 +5953,7 @@ export default function App() {
                       { label: "Teléfono", key: "telefono", placeholder: "+56 9 1234 5678" },
                     ].map(({ label, key, placeholder }) => (
                       <div key={key} style={{ marginBottom: 16 }}>
-                        <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>{label}</label>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>{label}</label>
                         <input value={config[key] || ""} onChange={e => guardarConfig({ ...config, [key]: e.target.value })} placeholder={placeholder} style={inp} />
                       </div>
                     ))}
@@ -5892,15 +5977,15 @@ export default function App() {
 
                     {/* Logo del negocio */}
                     <div style={{ marginBottom: 16 }}>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 8 }}>Logo del negocio</label>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 8 }}>Logo del negocio</label>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div style={{ width: 64, height: 64, borderRadius: 14, background: D ? "#252840" : "#f0f2ff", border: `2px dashed ${borderColor2}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                        <div style={{ width: 64, height: 64, borderRadius:0, background: D ? "#241F1A" : "rgba(142,124,195,0.10)", border: `2px dashed ${borderColor2}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                           {config.logoNegocio
                             ? <img src={config.logoNegocio} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            : <Store size={24} color={D ? "#ef2b32" : "#d71920"} />}
+                            : <Store size={24} color={D ? "#E63946" : "#E63946"} />}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: "inline-block", padding: "9px 16px", borderRadius: 10, background: D ? "#252840" : "#f0f2ff", border: `1.5px solid ${borderColor2}`, cursor: "pointer", fontSize: 13, color: "#d71920", fontWeight: 600, fontFamily: "inherit" }}>
+                          <label style={{ display: "inline-block", padding: "9px 16px", borderRadius:0, background: D ? "#241F1A" : "rgba(142,124,195,0.10)", border: `1.5px solid ${borderColor2}`, cursor: "pointer", fontSize: 13, color: "#E63946", fontWeight: 600, fontFamily: "inherit" }}>
                             📷 Subir imagen
                             <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                               const file = e.target.files[0];
@@ -5911,13 +5996,13 @@ export default function App() {
                             }} />
                           </label>
                           {config.logoNegocio && (
-                            <button onClick={() => guardarConfig({ ...config, logoNegocio: "" })} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#e03131", fontFamily: "inherit", fontWeight: 600 }}>✕ Quitar</button>
+                            <button onClick={() => guardarConfig({ ...config, logoNegocio: "" })} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#E63946", fontFamily: "inherit", fontWeight: 600 }}>✕ Quitar</button>
                           )}
                           <p style={{ margin: "6px 0 0", fontSize: 11, color: textMuted }}>PNG, JPG o SVG. Se muestra en el sidebar y la boleta.</p>
                         </div>
                       </div>
                     </div>
-                    <div style={{ marginTop: 4, padding: "12px 16px", background: D ? "rgba(59,91,219,0.1)" : "#f0f2ff", borderRadius: 10, fontSize: 13, color: "#d71920" }}>
+                    <div style={{ marginTop: 4, padding: "12px 16px", background: D ? "rgba(255,159,28,0.1)" : "rgba(142,124,195,0.10)", borderRadius:0, fontSize: 13, color: "#E63946" }}>
                       ✓ Los cambios se guardan automáticamente
                     </div>
                   </div>
@@ -5927,28 +6012,28 @@ export default function App() {
                 {configTab === "pagos" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(16,185,129,0.2)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={18} color="#10b981" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={18} color="#2EC4B6" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Métodos de Pago</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Formas de cobro disponibles en el punto de venta</p>
                       </div>
                     </div>
                     {[
-                      { val: "Efectivo", icon: "💵", color: "#10b981", desc: "Pago en efectivo con vuelto automático" },
-                      { val: "Débito", icon: "💳", color: "#f59e0b", desc: "Tarjeta de débito" },
-                      { val: "Crédito", icon: "💳", color: "#e03131", desc: "Tarjeta de crédito" },
-                      { val: "Transferencia", icon: "🔁", color: "#8b5cf6", desc: "Transferencia bancaria" },
+                      { val: "Efectivo", icon: "💵", color: "#2EC4B6", desc: "Pago en efectivo con vuelto automático" },
+                      { val: "Débito", icon: "💳", color: "#FF9F1C", desc: "Tarjeta de débito" },
+                      { val: "Crédito", icon: "💳", color: "#E63946", desc: "Tarjeta de crédito" },
+                      { val: "Transferencia", icon: "🔁", color: "#8E7CC3", desc: "Transferencia bancaria" },
                     ].map(({ val, icon, color, desc }) => (
-                      <div key={val} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: D ? "#1e2235" : "#f9fafb", borderRadius: 12, marginBottom: 10, border: `1.5px solid ${borderColor2}` }}>
+                      <div key={val} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: D ? "#1C1A17" : "#E9E6DB", borderRadius:0, marginBottom: 10, border: `1.5px solid ${borderColor2}` }}>
                         <span style={{ fontSize: 22 }}>{icon}</span>
                         <div style={{ flex: 1 }}>
                           <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: textPrimary }}>{val}</p>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{desc}</p>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: D ? `${color}22` : `${color}18`, color }}> ✓ Activo</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius:0, background: D ? `${color}22` : `${color}18`, color }}> ✓ Activo</span>
                       </div>
                     ))}
-                    <div style={{ marginTop: 4, padding: "12px 16px", background: D ? "rgba(59,91,219,0.1)" : "#f0f2ff", borderRadius: 10, fontSize: 13, color: "#d71920" }}>
+                    <div style={{ marginTop: 4, padding: "12px 16px", background: D ? "rgba(255,159,28,0.1)" : "rgba(142,124,195,0.10)", borderRadius:0, fontSize: 13, color: "#E63946" }}>
                       ✓ Los métodos de pago están siempre disponibles en el punto de venta
                     </div>
                   </div>
@@ -5959,7 +6044,7 @@ export default function App() {
                 {configTab === "notificaciones" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(16,185,129,0.2)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}><Bell size={18} color="#10b981" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><Bell size={18} color="#2EC4B6" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Notificaciones</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Configura qué alertas recibir</p>
@@ -5974,13 +6059,13 @@ export default function App() {
                           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: textPrimary }}>{label}</p>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{desc}</p>
                         </div>
-                        <button onClick={() => guardarConfig({ ...config, [key]: !config[key] })} className="toggle-switch" style={{ background: config[key] ? "#d71920" : "#d1d5db" }}>
+                        <button onClick={() => guardarConfig({ ...config, [key]: !config[key] })} className="toggle-switch" style={{ background: config[key] ? "#E63946" : "#D6D2C4" }}>
                           <div className="toggle-thumb" style={{ left: config[key] ? 23 : 3 }} />
                         </button>
                       </div>
                     ))}
                     <div style={{ marginTop: 20 }}>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 8 }}>Stock mínimo para alertas</label>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 8 }}>Stock mínimo para alertas</label>
                       <input type="number" min="1" value={config.stockMinimo} onChange={e => guardarConfig({ ...config, stockMinimo: +e.target.value })} style={{ ...inp, width: 120 }} />
                     </div>
                   </div>
@@ -5990,7 +6075,7 @@ export default function App() {
                 {configTab === "preferencias" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(139,92,246,0.2)" : "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}><Sliders size={18} color="#8b5cf6" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(142,124,195,0.2)" : "rgba(142,124,195,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><Sliders size={18} color="#8E7CC3" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Preferencias</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Personalización de la interfaz</p>
@@ -5998,44 +6083,44 @@ export default function App() {
                     </div>
 
                     {/* Dark mode */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", background: D ? "#252840" : "#f9fafb", borderRadius: 14, marginBottom: 20, border: `1px solid ${borderColor}` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", background: D ? "#241F1A" : "#E9E6DB", borderRadius:0, marginBottom: 20, border: `1px solid ${borderColor}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: D ? "#1a1d2e" : "#1a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {D ? <Moon size={20} color="#748ffc" /> : <Moon size={20} color="#e8eaf6" />}
+                        <div style={{ width: 44, height: 44, borderRadius:0, background: D ? "#1C1A17" : "#121110", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {D ? <Moon size={20} color="#8E7CC3" /> : <Moon size={20} color="#FAF8F3" />}
                         </div>
                         <div>
                           <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Modo Oscuro</p>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Cambia la apariencia a tema oscuro</p>
                         </div>
                       </div>
-                      <button onClick={toggleDark} className="toggle-switch" style={{ background: D ? "#d71920" : "#d1d5db", flexShrink: 0 }}>
+                      <button onClick={toggleDark} className="toggle-switch" style={{ background: D ? "#E63946" : "#D6D2C4", flexShrink: 0 }}>
                         <div className="toggle-thumb" style={{ left: D ? 23 : 3 }} />
                       </button>
                     </div>
 
-                    <div style={{ padding: "16px", background: D ? "#252840" : "#f0f2ff", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                      {D ? <Moon size={18} color="#748ffc" /> : <Sun size={18} color="#f59e0b" />}
-                      <p style={{ margin: 0, fontSize: 13, color: D ? "#748ffc" : "#d71920", fontWeight: 600 }}>
+                    <div style={{ padding: "16px", background: D ? "#241F1A" : "rgba(142,124,195,0.10)", borderRadius:0, display: "flex", alignItems: "center", gap: 12 }}>
+                      {D ? <Moon size={18} color="#8E7CC3" /> : <Sun size={18} color="#FF9F1C" />}
+                      <p style={{ margin: 0, fontSize: 13, color: D ? "#8E7CC3" : "#E63946", fontWeight: 600 }}>
                         Actualmente usando el tema {D ? "oscuro 🌙" : "claro ☀️"} — los cambios se aplican inmediatamente.
                       </p>
                     </div>
 
                     {/* Reset */}
-                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `2px solid ${D ? "#2d3158" : "#fee2e2"}` }}>
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `2px solid ${D ? "#2A2723" : "rgba(230,57,70,0.10)"}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <RefreshCw size={18} color="#e03131" />
+                        <div style={{ width: 40, height: 40, borderRadius:0, background: "rgba(230,57,70,0.10)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <RefreshCw size={18} color="#E63946" />
                         </div>
                         <div>
-                          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#e03131" }}>Restablecer Ajustes</h3>
+                          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#E63946" }}>Restablecer Ajustes</h3>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Elimina todo y deja el sistema como instalación limpia</p>
                         </div>
                       </div>
-                      <div style={{ background: "#fff1f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "12px 16px", marginBottom: 14, fontSize: 12, color: "#dc2626" }}>
+                      <div style={{ background: "rgba(230,57,70,0.10)", border: "1.5px solid rgba(230,57,70,0.30)", borderRadius:0, padding: "12px 16px", marginBottom: 14, fontSize: 12, color: "#E63946" }}>
                         ⚠️ Esta acción borrará permanentemente: todas las ventas, recibos, historial de pagos, configuración del negocio, usuarios guardados localmente y desactivará el modo oscuro.
                       </div>
                       <button onClick={() => setShowResetModal(true)}
-                        style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #e03131, #f03e3e)", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}>
+                        style={{ width: "100%", padding: "13px", borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}>
                         <RefreshCw size={16} /> Restablecer Todo el Sistema
                       </button>
                     </div>
@@ -6046,7 +6131,7 @@ export default function App() {
                 {configTab === "respaldo" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(16,185,129,0.2)" : "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}><Download size={18} color="#10b981" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><Download size={18} color="#2EC4B6" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Respaldo de Datos</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Exporta todo tu sistema como archivo JSON</p>
@@ -6055,7 +6140,7 @@ export default function App() {
                     <p style={{ margin: "0 0 18px", fontSize: 13, color: textSecondary, lineHeight: 1.6 }}>
                       Genera un archivo de respaldo con todos tus datos: productos, ventas, recibos, mermas y configuración. Úsalo para restaurar tu sistema si cambias de dispositivo o se pierde el almacenamiento.
                     </p>
-                    <div style={{ background: D ? "rgba(16,185,129,0.1)" : "#ecfdf5", border: `1.5px solid ${D ? "#10b98140" : "#a7f3d0"}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: "#059669" }}>
+                    <div style={{ background: D ? "rgba(46,196,182,0.1)" : "rgba(46,196,182,0.12)", border: `1.5px solid ${D ? "#2EC4B640" : "#2EC4B6"}`, borderRadius:0, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: "#2EC4B6" }}>
                       ✅ Se incluye: productos, categorías, ventas, recibos, mermas, configuración del negocio
                     </div>
                     <button onClick={() => {
@@ -6078,7 +6163,7 @@ export default function App() {
                       a.download = `respaldo-${config.negocio || "inventario"}-${new Date().toLocaleDateString("es-CL").replace(/\//g, "-")}.json`;
                       a.click();
                       URL.revokeObjectURL(url);
-                    }} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #10b981, #059669)", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    }} style={{ width: "100%", padding: "13px", borderRadius:0, border: "none", background: "#2EC4B6", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       <Download size={16} /> Descargar Respaldo JSON
                     </button>
                   </div>
@@ -6088,55 +6173,55 @@ export default function App() {
                 {configTab === "cuenta" && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(215,25,32,0.15)" : "#f0f2ff", display: "flex", alignItems: "center", justifyContent: "center" }}><Lock size={18} color="#d71920" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(230,57,70,0.15)" : "rgba(142,124,195,0.10)", display: "flex", alignItems: "center", justifyContent: "center" }}><Lock size={18} color="#E63946" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Mi Cuenta</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Información de tu perfil</p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px", background: D ? "linear-gradient(135deg, #252840, #1e2235)" : "linear-gradient(135deg, #f0f2ff, #fff3bf)", borderRadius: 14, marginBottom: 20 }}>
-                      <div style={{ width: 56, height: 56, borderRadius: "50%", background: esGerente ? "linear-gradient(135deg, #d71920, #ef2b32)" : "linear-gradient(135deg, #10b981, #34d399)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px", background: D ? "linear-gradient(135deg, #241F1A, #1C1A17)" : "linear-gradient(135deg, rgba(142,124,195,0.10), rgba(255,159,28,0.15))", borderRadius:0, marginBottom: 20 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "50%", background: esGerente ? "#E63946" : "#2EC4B6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20 }}>
                         {iniciales}
                       </div>
                       <div>
                         <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>{currentUser.nombre}</p>
                         <p style={{ margin: 0, fontSize: 13, color: textMuted }}>@{currentUser.usuario}</p>
                         {currentUser.correo && <p style={{ margin: "2px 0 0", fontSize: 12, color: textMuted }}>{currentUser.correo}</p>}
-                        <span className="badge" style={{ marginTop: 6, background: esProgramador ? "rgba(124,58,237,0.2)" : esGerente ? (D ? "rgba(215,25,32,0.15)" : "#fff3bf") : (D ? "rgba(16,185,129,0.2)" : "#ecfdf5"), color: esProgramador ? "#a78bfa" : esGerente ? "#ef2b32" : "#059669" }}>
+                        <span className="badge" style={{ marginTop: 6, background: esProgramador ? "rgba(142,124,195,0.2)" : esGerente ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : (D ? "rgba(46,196,182,0.2)" : "rgba(46,196,182,0.12)"), color: esProgramador ? "#8E7CC3" : esGerente ? "#E63946" : "#2EC4B6" }}>
                           {esProgramador ? "🛠️ Programador" : esGerente ? "👑 Gerente" : "👤 Empleado"}
                         </span>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
                       <button onClick={() => { setPinInput(""); setPinError(""); setShowPinLock(true); }} disabled={!getPinGuardado()}
-                        style={{ flex: 1, padding: "11px", borderRadius: 12, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: getPinGuardado() ? "pointer" : "not-allowed", fontSize: 13, color: getPinGuardado() ? "#f59e0b" : textMuted, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit", opacity: getPinGuardado() ? 1 : 0.5 }}>
+                        style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: getPinGuardado() ? "pointer" : "not-allowed", fontSize: 13, color: getPinGuardado() ? "#FF9F1C" : textMuted, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit", opacity: getPinGuardado() ? 1 : 0.5 }}>
                         🔒 Bloquear pantalla
                       </button>
                       <button onClick={() => setCurrentUser(null)}
-                        style={{ flex: 1, padding: "11px", borderRadius: 12, border: "1.5px solid #fee2e2", background: "#fff1f2", cursor: "pointer", fontSize: 13, color: "#e03131", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }}>
+                        style={{ flex: 1, padding: "11px", borderRadius:0, border: "1.5px solid rgba(230,57,70,0.10)", background: "rgba(230,57,70,0.10)", cursor: "pointer", fontSize: 13, color: "#E63946", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }}>
                         <LogOut size={14} /> Cerrar sesión
                       </button>
                     </div>
                     {/* Configurar PIN */}
-                    <div style={{ background: D ? "#1e2235" : "#f8f9ff", borderRadius: 12, padding: "16px", border: `1.5px solid ${borderColor2}` }}>
+                    <div style={{ background: D ? "#1C1A17" : "rgba(142,124,195,0.08)", borderRadius:0, padding: "16px", border: `1.5px solid ${borderColor2}` }}>
                       <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: textPrimary }}>🔢 PIN de bloqueo rápido</p>
                       <p style={{ margin: "0 0 12px", fontSize: 12, color: textMuted }}>Configura un PIN de 4 dígitos para bloquear y desbloquear la pantalla sin cerrar sesión.</p>
                       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                         <input type="password" maxLength={4} inputMode="numeric" value={pinNuevo} onChange={e => setPinNuevo(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="Nuevo PIN (4 dígitos)" style={{ ...inp, flex: 1 }} />
                         <input type="password" maxLength={4} inputMode="numeric" value={pinConfirm} onChange={e => setPinConfirm(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="Confirmar PIN" style={{ ...inp, flex: 1 }} />
                       </div>
-                      {pinMsg && <p style={{ margin: "0 0 8px", fontSize: 12, color: pinMsg.startsWith("✅") ? "#059669" : "#e03131", fontWeight: 600 }}>{pinMsg}</p>}
+                      {pinMsg && <p style={{ margin: "0 0 8px", fontSize: 12, color: pinMsg.startsWith("✅") ? "#2EC4B6" : "#E63946", fontWeight: 600 }}>{pinMsg}</p>}
                       <button onClick={() => {
                         if (pinNuevo.length !== 4) { setPinMsg("El PIN debe tener 4 dígitos."); return; }
                         if (pinNuevo !== pinConfirm) { setPinMsg("Los PINs no coinciden."); return; }
                         localStorage.setItem("inv_pin", pinNuevo);
                         setPinNuevo(""); setPinConfirm(""); setPinMsg("✅ PIN guardado correctamente.");
                         setTimeout(() => setPinMsg(""), 3000);
-                      }} className="btn-primary" style={{ width: "100%", padding: "10px", borderRadius: 10, fontSize: 13 }}>
+                      }} className="btn-primary" style={{ width: "100%", padding: "10px", borderRadius:0, fontSize: 13 }}>
                         Guardar PIN
                       </button>
                       {getPinGuardado() && (
-                        <button onClick={() => { localStorage.removeItem("inv_pin"); setPinMsg("PIN eliminado."); setTimeout(() => setPinMsg(""), 2000); }} style={{ width: "100%", marginTop: 8, padding: "9px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: "none", cursor: "pointer", fontSize: 12, color: textMuted, fontFamily: "inherit" }}>
+                        <button onClick={() => { localStorage.removeItem("inv_pin"); setPinMsg("PIN eliminado."); setTimeout(() => setPinMsg(""), 2000); }} style={{ width: "100%", marginTop: 8, padding: "9px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: "none", cursor: "pointer", fontSize: 12, color: textMuted, fontFamily: "inherit" }}>
                           Eliminar PIN
                         </button>
                       )}
@@ -6148,17 +6233,17 @@ export default function App() {
                 {configTab === "seguridad" && esGerente && (
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(215,25,32,0.15)" : "#fff3bf", display: "flex", alignItems: "center", justifyContent: "center" }}><Shield size={18} color="#d71920" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}><Shield size={18} color="#E63946" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Seguridad y Roles</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Solo visible para gerentes</p>
                       </div>
                     </div>
                     {[
-                      { rol: "Gerente", permisos: ["Crear/editar/eliminar usuarios", "Configuración completa", "Panel de administración", "Exportar reportes"], color: "#d71920", bg: D ? "rgba(59,91,219,0.15)" : "#fff3bf" },
-                      { rol: "Empleado", permisos: ["Ver productos e inventario", "Registrar ventas", "Ver estadísticas básicas", "Generar boletas"], color: "#10b981", bg: D ? "rgba(16,185,129,0.15)" : "#ecfdf5" },
+                      { rol: "Gerente", permisos: ["Crear/editar/eliminar usuarios", "Configuración completa", "Panel de administración", "Exportar reportes"], color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                      { rol: "Empleado", permisos: ["Ver productos e inventario", "Registrar ventas", "Ver estadísticas básicas", "Generar boletas"], color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
                     ].map(({ rol, permisos, color, bg }) => (
-                      <div key={rol} style={{ padding: "14px", background: bg, borderRadius: 10, marginBottom: 10 }}>
+                      <div key={rol} style={{ padding: "14px", background: bg, borderRadius:0, marginBottom: 10 }}>
                         <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color }}>{rol}</p>
                         {permisos.map(p => <p key={p} style={{ margin: "0 0 4px", fontSize: 12, color: textSecondary }}>✓ {p}</p>)}
                       </div>
@@ -6170,7 +6255,7 @@ export default function App() {
                 {configTab === "seguridad" && esGerente && (
                   <div style={{ ...card, marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(245,158,11,0.15)" : "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}><RefreshCw size={18} color="#f59e0b" /></div>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><RefreshCw size={18} color="#FF9F1C" /></div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Mantenimiento de Stock</h3>
                         <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Corrige ventas que no descontaron el stock a tiempo</p>
@@ -6179,12 +6264,12 @@ export default function App() {
                     <p style={{ margin: "0 0 16px", fontSize: 13, color: textSecondary, lineHeight: 1.6 }}>
                       Revisa el historial de ventas y descuenta el stock de las que quedaron pendientes (por ejemplo, ventas hechas antes de una actualización del sistema). Las ventas que ya tienen su stock aplicado no se tocan, así que es seguro usar este botón más de una vez.
                     </p>
-                    <button onClick={handleReconciliarStock} disabled={reconciliando} className="btn-primary" style={{ padding: "11px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, opacity: reconciliando ? 0.7 : 1 }}>
+                    <button onClick={handleReconciliarStock} disabled={reconciliando} className="btn-primary" style={{ padding: "11px 18px", borderRadius:0, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, opacity: reconciliando ? 0.7 : 1 }}>
                       <RefreshCw size={14} /> {reconciliando ? "Corrigiendo stock…" : "Corregir stock pendiente"}
                     </button>
 
                     {resultReconciliacion && (
-                      <div style={{ marginTop: 18, padding: "14px", background: bgCard2, borderRadius: 10, border: `1px solid ${borderColor2}` }}>
+                      <div style={{ marginTop: 18, padding: "14px", background: bgCard2, borderRadius:0, border: `1px solid ${borderColor2}` }}>
                         <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: textPrimary }}>
                           ✓ {resultReconciliacion.ventasProcesadas} venta{resultReconciliacion.ventasProcesadas !== 1 ? "s" : ""} revisada{resultReconciliacion.ventasProcesadas !== 1 ? "s" : ""}
                         </p>
@@ -6200,12 +6285,12 @@ export default function App() {
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>No había stock pendiente por corregir.</p>
                         )}
                         {resultReconciliacion.noAplicados?.length > 0 && (
-                          <div style={{ marginTop: 8, padding: "10px 12px", background: "#fff1f2", borderRadius: 8 }}>
-                            <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#e03131" }}>⚠ {resultReconciliacion.noAplicados.length} ítem{resultReconciliacion.noAplicados.length !== 1 ? "s" : ""} no se pudo{resultReconciliacion.noAplicados.length !== 1 ? "ieron" : ""} corregir automáticamente:</p>
+                          <div style={{ marginTop: 8, padding: "10px 12px", background: "rgba(230,57,70,0.10)", borderRadius:0 }}>
+                            <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#E63946" }}>⚠ {resultReconciliacion.noAplicados.length} ítem{resultReconciliacion.noAplicados.length !== 1 ? "s" : ""} no se pudo{resultReconciliacion.noAplicados.length !== 1 ? "ieron" : ""} corregir automáticamente:</p>
                             {resultReconciliacion.noAplicados.map((n, i) => (
-                              <p key={i} style={{ margin: "0 0 3px", fontSize: 11, color: "#dc2626" }}>{n.nombre} — {n.motivo}</p>
+                              <p key={i} style={{ margin: "0 0 3px", fontSize: 11, color: "#E63946" }}>{n.nombre} — {n.motivo}</p>
                             ))}
-                            <p style={{ margin: "6px 0 0", fontSize: 11, color: "#dc2626" }}>Probablemente el producto fue eliminado. Revísalo manualmente si es necesario.</p>
+                            <p style={{ margin: "6px 0 0", fontSize: 11, color: "#E63946" }}>Probablemente el producto fue eliminado. Revísalo manualmente si es necesario.</p>
                           </div>
                         )}
                       </div>
@@ -6213,16 +6298,16 @@ export default function App() {
 
                     {/* Revertir reconciliación — devuelve el stock restado de más */}
                     <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${borderColor}` }}>
-                      <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#e03131" }}>Revertir reconciliación duplicada</p>
+                      <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#E63946" }}>Revertir reconciliación duplicada</p>
                       <p style={{ margin: "0 0 12px", fontSize: 12, color: textSecondary, lineHeight: 1.6 }}>
                         Si el botón de arriba se corrió antes de que el sistema marcara las ventas como "stock aplicado", pudo restar el stock dos veces a boletas que ya estaban bien. Este botón devuelve exactamente esas unidades. Es seguro usarlo más de una vez.
                       </p>
-                      <button onClick={handleRevertirReconciliacion} disabled={revirtiendo} className="btn-danger" style={{ padding: "11px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, opacity: revirtiendo ? 0.7 : 1 }}>
+                      <button onClick={handleRevertirReconciliacion} disabled={revirtiendo} className="btn-danger" style={{ padding: "11px 18px", borderRadius:0, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, opacity: revirtiendo ? 0.7 : 1 }}>
                         <RefreshCw size={14} /> {revirtiendo ? "Revirtiendo…" : "Revertir descuento duplicado"}
                       </button>
 
                       {resultReversion && (
-                        <div style={{ marginTop: 18, padding: "14px", background: bgCard2, borderRadius: 10, border: `1px solid ${borderColor2}` }}>
+                        <div style={{ marginTop: 18, padding: "14px", background: bgCard2, borderRadius:0, border: `1px solid ${borderColor2}` }}>
                           <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: textPrimary }}>
                             ✓ {resultReversion.boletasProcesadas} boleta{resultReversion.boletasProcesadas !== 1 ? "s" : ""} revertida{resultReversion.boletasProcesadas !== 1 ? "s" : ""}
                           </p>
@@ -6238,12 +6323,12 @@ export default function App() {
                             <p style={{ margin: 0, fontSize: 12, color: textMuted }}>No había boletas pendientes por revertir.</p>
                           )}
                           {resultReversion.noAplicados?.length > 0 && (
-                            <div style={{ marginTop: 8, padding: "10px 12px", background: "#fff1f2", borderRadius: 8 }}>
-                              <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#e03131" }}>⚠ {resultReversion.noAplicados.length} ítem{resultReversion.noAplicados.length !== 1 ? "s" : ""} no se pudo{resultReversion.noAplicados.length !== 1 ? "ieron" : ""} devolver automáticamente:</p>
+                            <div style={{ marginTop: 8, padding: "10px 12px", background: "rgba(230,57,70,0.10)", borderRadius:0 }}>
+                              <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#E63946" }}>⚠ {resultReversion.noAplicados.length} ítem{resultReversion.noAplicados.length !== 1 ? "s" : ""} no se pudo{resultReversion.noAplicados.length !== 1 ? "ieron" : ""} devolver automáticamente:</p>
                               {resultReversion.noAplicados.map((n, i) => (
-                                <p key={i} style={{ margin: "0 0 3px", fontSize: 11, color: "#dc2626" }}>{n.nombre} — {n.motivo}</p>
+                                <p key={i} style={{ margin: "0 0 3px", fontSize: 11, color: "#E63946" }}>{n.nombre} — {n.motivo}</p>
                               ))}
-                              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#dc2626" }}>Probablemente el producto fue eliminado. Revísalo manualmente si es necesario.</p>
+                              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#E63946" }}>Probablemente el producto fue eliminado. Revísalo manualmente si es necesario.</p>
                             </div>
                           )}
                         </div>
@@ -6257,13 +6342,13 @@ export default function App() {
                   <div style={card}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22, paddingBottom: 16, borderBottom: `1px solid ${borderColor}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: D ? "rgba(139,92,246,0.2)" : "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}><Users size={18} color="#8b5cf6" /></div>
+                        <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "rgba(142,124,195,0.2)" : "rgba(142,124,195,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><Users size={18} color="#8E7CC3" /></div>
                         <div>
                           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: textPrimary }}>Gestión de Usuarios</h3>
                           <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{usuarios.length} usuarios registrados</p>
                         </div>
                       </div>
-                      <button onClick={() => setActiveNav("Usuarios")} style={{ padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 13, color: textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                      <button onClick={() => setActiveNav("Usuarios")} style={{ padding: "8px 16px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 13, color: textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                         <Users size={14} /> Ir a Usuarios
                       </button>
                     </div>
@@ -6283,19 +6368,19 @@ export default function App() {
           <div className="fade-in mobile-bottom-sheet product-modal-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 0, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div className="product-modal-header" style={{ flexShrink: 0, padding: "24px 24px 0" }}>
               {/* Handle bar */}
-              <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+              <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>{modal === "add" ? "Agregar Producto" : "Editar Producto"}</h3>
-                <button onClick={() => setModal(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+                <button onClick={() => setModal(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
               </div>
             </div>
             <div className="product-modal-body" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px", paddingBottom: 120 }}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Nombre</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Nombre</label>
               <input type="text" value={form.nombre || ""} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={inp} />
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Costo (precio de compra)</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Costo (precio de compra)</label>
               <input type="number" min="0" value={form.costo || ""} onChange={e => {
                 const costo = e.target.value;
                 // Solo autocompletamos el precio si el usuario todavía no escribió uno
@@ -6305,7 +6390,7 @@ export default function App() {
               }} placeholder="Opcional" style={inp} />
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Incremento sobre el costo (%)</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Incremento sobre el costo (%)</label>
               <input type="number" min="-100" step="0.01" value={form.incrementoPct ?? ""} onChange={e => {
                 const incrementoPct = e.target.value;
                 // Mismo criterio: Incremento % solo calcula el precio cuando el campo
@@ -6314,54 +6399,54 @@ export default function App() {
               }} placeholder="Ej: 18" style={inp} />
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Precio de venta</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Precio de venta</label>
               <input type="number" min="0" value={form.precio || ""} onChange={e => {
                 const precio = e.target.value;
                 setForm(f => ({ ...f, precio, incrementoPct: f.costo && precio ? calcIncrementPct(f.costo, precio).toFixed(2) : f.incrementoPct }));
               }} style={inp} />
               {+form.costo > 0 && +form.precio > 0 && (
                 <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11 }}>
-                  <span style={{ color: textMuted }}>Ganancia por unidad: <strong style={{ color: "#10b981" }}>{fmt(+form.precio - +form.costo)}</strong></span>
-                  <span style={{ color: textMuted }}>Incremento real: <strong style={{ color: "#10b981" }}>{calcIncrementPct(form.costo, form.precio).toFixed(2)}%</strong></span>
+                  <span style={{ color: textMuted }}>Ganancia por unidad: <strong style={{ color: "#2EC4B6" }}>{fmt(+form.precio - +form.costo)}</strong></span>
+                  <span style={{ color: textMuted }}>Incremento real: <strong style={{ color: "#2EC4B6" }}>{calcIncrementPct(form.costo, form.precio).toFixed(2)}%</strong></span>
                 </div>
               )}
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Stock</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Stock</label>
               <input type="number" min="0" value={form.stock || ""} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} style={inp} />
             </div>
             {+form.stock > 0 && +form.precio > 0 && (
-              <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 12, background: D ? "rgba(16,185,129,0.12)" : "#ecfdf5", border: `1.5px solid ${D ? "rgba(16,185,129,0.35)" : "#a7f3d0"}` }}>
+              <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius:0, background: D ? "rgba(46,196,182,0.12)" : "rgba(46,196,182,0.12)", border: `1.5px solid ${D ? "rgba(46,196,182,0.35)" : "#2EC4B6"}` }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div>
                     <p style={{ margin: 0, fontSize: 11, color: textMuted }}>Valor total del producto</p>
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: textSecondary }}>{Number(form.stock).toLocaleString("es-CL")} unidades × {fmt(+form.precio)}</p>
                   </div>
-                  <strong style={{ fontSize: 22, color: "#10b981" }}>{fmt(+form.stock * +form.precio)}</strong>
+                  <strong style={{ fontSize: 22, color: "#2EC4B6" }}>{fmt(+form.stock * +form.precio)}</strong>
                 </div>
                 {+form.costo > 0 && (
-                  <div className="grid-3-mobile-sm" style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${D ? "rgba(16,185,129,0.25)" : "#bbf7d0"}`, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
+                  <div className="grid-3-mobile-sm" style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${D ? "rgba(46,196,182,0.25)" : "rgba(46,196,182,0.25)"}`, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
                     <div>
                       <span style={{ display: "block", fontSize: 10, color: textMuted }}>Costo total</span>
                       <strong style={{ fontSize: 13, color: textPrimary }}>{fmt(+form.stock * +form.costo)}</strong>
                     </div>
                     <div>
                       <span style={{ display: "block", fontSize: 10, color: textMuted }}>Ganancia estimada</span>
-                      <strong style={{ fontSize: 13, color: (+form.precio - +form.costo) >= 0 ? "#10b981" : "#e03131" }}>{fmt(+form.stock * (+form.precio - +form.costo))}</strong>
+                      <strong style={{ fontSize: 13, color: (+form.precio - +form.costo) >= 0 ? "#2EC4B6" : "#E63946" }}>{fmt(+form.stock * (+form.precio - +form.costo))}</strong>
                     </div>
                   </div>
                 )}
               </div>
             )}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Categoría</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Categoría</label>
               <select value={form.categoria || categorias[0] || ""} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={{ ...inp }}>
                 {categorias.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             {/* Código de Barras */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>
                 🔍 Código de barras
               </label>
               <div style={{ display: "flex", gap: 8 }}>
@@ -6375,13 +6460,13 @@ export default function App() {
                 <button
                   onClick={() => setShowScannerModal(true)}
                   title="Escanear código"
-                  style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 10, border: `1.5px solid ${D ? "#2d3158" : "#e5e7eb"}`, background: D ? "#252840" : "#f0f2ff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#d71920" }}
+                  style={{ flexShrink: 0, width: 42, height: 42, borderRadius:0, border: `1.5px solid ${D ? "#2A2723" : "#E4E1D6"}`, background: D ? "#241F1A" : "rgba(142,124,195,0.10)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#E63946" }}
                 >
                   <Scan size={18} />
                 </button>
               </div>
               {form.codigoBarra && (
-                <p style={{ margin: "5px 0 0", fontSize: 11, color: "#10b981" }}>✓ Código registrado: <strong>{form.codigoBarra}</strong></p>
+                <p style={{ margin: "5px 0 0", fontSize: 11, color: "#2EC4B6" }}>✓ Código registrado: <strong>{form.codigoBarra}</strong></p>
               )}
             </div>
             {/* Scanner modal para agregar producto */}
@@ -6397,15 +6482,15 @@ export default function App() {
             )}
             {/* Imagen del producto */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Imagen del producto</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Imagen del producto</label>
               {form.imagenUrl ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <img src={form.imagenUrl} alt="preview" style={{ width: 60, height: 60, borderRadius: 10, objectFit: "cover", border: `1px solid ${borderColor}` }} />
+                  <img src={form.imagenUrl} alt="preview" style={{ width: 60, height: 60, borderRadius:0, objectFit: "cover", border: `1px solid ${borderColor}` }} />
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <button onClick={() => setForm(f => ({ ...f, imagenUrl: "" }))} className="btn-danger" style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12 }}>
+                    <button onClick={() => setForm(f => ({ ...f, imagenUrl: "" }))} className="btn-danger" style={{ padding: "5px 12px", borderRadius:0, fontSize: 12 }}>
                       Quitar imagen
                     </button>
-                    <label style={{ padding: "5px 12px", borderRadius: 8, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, textAlign: "center" }}>
+                    <label style={{ padding: "5px 12px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, textAlign: "center" }}>
                       Cambiar
                       <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                         const file = e.target.files?.[0];
@@ -6417,7 +6502,7 @@ export default function App() {
               ) : (
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <div style={{ fontSize: 32 }}>{form.img || "📦"}</div>
-                  <label style={{ flex: 1, padding: "10px", borderRadius: 10, border: `2px dashed ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <label style={{ flex: 1, padding: "10px", borderRadius:0, border: `2px dashed ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 12, color: textSecondary, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                     <Plus size={14} /> Subir imagen real
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files?.[0];
@@ -6429,20 +6514,20 @@ export default function App() {
               <p style={{ margin: "6px 0 0", fontSize: 11, color: textMuted }}>O elige un emoji como ícono:</p>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                 {["📦","🧴","🖱️","⌨️","🎧","🧼","🖥️","🪑","📓","🍎","👕","🔧","💊","🎮","📚"].map(e => (
-                  <button key={e} onClick={() => setForm(f => ({ ...f, img: e }))} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${form.img === e ? "#d71920" : borderColor2}`, background: form.img === e ? (D ? "rgba(215,25,32,0.15)" : "#fff3bf") : bgCard2, fontSize: 16, cursor: "pointer" }}>{e}</button>
+                  <button key={e} onClick={() => setForm(f => ({ ...f, img: e }))} style={{ width: 32, height: 32, borderRadius:0, border: `1.5px solid ${form.img === e ? "#E63946" : borderColor2}`, background: form.img === e ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, fontSize: 16, cursor: "pointer" }}>{e}</button>
                 ))}
               </div>
             </div>
             {/* Promoción */}
             {/* Manga / Bulto */}
-            <div style={{ marginBottom: 16, background: D ? "#1e2235" : "#fffbeb", borderRadius: 12, padding: "14px 16px", border: `1.5px solid ${form.mangaActiva ? "#f59e0b" : borderColor2}` }}>
+            <div style={{ marginBottom: 16, background: D ? "#1C1A17" : "rgba(255,159,28,0.12)", borderRadius:0, padding: "14px 16px", border: `1.5px solid ${form.mangaActiva ? "#FF9F1C" : borderColor2}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: form.mangaActiva ? 12 : 0 }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>📦 Venta por manga / bulto</p>
                   <p style={{ margin: 0, fontSize: 11, color: textMuted }}>Permite vender por pack con precio especial</p>
                 </div>
                 <button onClick={() => setForm(f => ({ ...f, mangaActiva: !f.mangaActiva }))}
-                  className="toggle-switch" style={{ background: form.mangaActiva ? "#f59e0b" : (D ? "#2d3158" : "#e5e7eb"), flexShrink: 0 }}>
+                  className="toggle-switch" style={{ background: form.mangaActiva ? "#FF9F1C" : (D ? "#2A2723" : "#E4E1D6"), flexShrink: 0 }}>
                   <div className="toggle-thumb" style={{ left: form.mangaActiva ? 23 : 3 }} />
                 </button>
               </div>
@@ -6450,14 +6535,14 @@ export default function App() {
                 <>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Unidades por manga</label>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Unidades por manga</label>
                       <input type="number" min="2" value={form.mangaCantidad || ""} onChange={e => setForm(f => ({ ...f, mangaCantidad: e.target.value }))} placeholder="Ej: 12" style={inp} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>
                         Precio por manga
                         {form.mangaCantidad && form.mangaPrecio && form.precio && +form.mangaCantidad > 0 && (
-                          <span style={{ marginLeft: 6, color: "#10b981", fontWeight: 600 }}>
+                          <span style={{ marginLeft: 6, color: "#2EC4B6", fontWeight: 600 }}>
                             ({fmt(+form.mangaPrecio / +form.mangaCantidad)} c/u)
                           </span>
                         )}
@@ -6466,10 +6551,10 @@ export default function App() {
                     </div>
                   </div>
                   <div style={{ marginTop: 10 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>
                       Precio compra por manga
                       {form.mangaCantidad && form.mangaCostoCompra && +form.mangaCantidad > 0 && (
-                        <span style={{ marginLeft: 6, color: "#f59e0b", fontWeight: 600 }}>
+                        <span style={{ marginLeft: 6, color: "#FF9F1C", fontWeight: 600 }}>
                           ({fmt(+form.mangaCostoCompra / +form.mangaCantidad)} c/u)
                         </span>
                       )}
@@ -6481,14 +6566,14 @@ export default function App() {
               )}
             </div>
             {/* Promoción por cantidad */}
-            <div style={{ marginBottom: 16, background: D ? "#1e2235" : "#f8f9ff", borderRadius: 12, padding: "14px 16px", border: `1.5px solid ${form.promoActiva ? "#d71920" : borderColor2}` }}>
+            <div style={{ marginBottom: 16, background: D ? "#1C1A17" : "rgba(142,124,195,0.08)", borderRadius:0, padding: "14px 16px", border: `1.5px solid ${form.promoActiva ? "#E63946" : borderColor2}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: form.promoActiva ? 12 : 0 }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>🏷️ Promoción por cantidad</p>
                   <p style={{ margin: 0, fontSize: 11, color: textMuted }}>Precio especial al comprar X o más</p>
                 </div>
                 <button onClick={() => setForm(f => ({ ...f, promoActiva: !f.promoActiva }))}
-                  className="toggle-switch" style={{ background: form.promoActiva ? "#d71920" : (D ? "#2d3158" : "#e5e7eb") }}>
+                  className="toggle-switch" style={{ background: form.promoActiva ? "#E63946" : (D ? "#2A2723" : "#E4E1D6") }}>
                   <div className="toggle-thumb" style={{ left: form.promoActiva ? 23 : 3 }} />
                 </button>
               </div>
@@ -6496,21 +6581,21 @@ export default function App() {
                 <>
                 <div style={{ display: "flex", gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Cantidad mínima</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Cantidad mínima</label>
                     <input type="number" min="1" value={form.promoCantMin || ""} onChange={e => setForm(f => ({ ...f, promoCantMin: e.target.value }))} placeholder="Ej: 3" style={inp} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Precio promocional</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Precio promocional</label>
                     <input type="number" min="0" value={form.promoPrecio || ""} onChange={e => setForm(f => ({ ...f, promoPrecio: e.target.value }))} placeholder="Ej: 800" style={inp} />
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Vigente desde</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Vigente desde</label>
                     <input type="date" value={form.promoFechaInicio || ""} onChange={e => setForm(f => ({ ...f, promoFechaInicio: e.target.value }))} style={inp} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 4 }}>Vigente hasta</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Vigente hasta</label>
                     <input type="date" value={form.promoFechaFin || ""} min={form.promoFechaInicio || undefined} onChange={e => setForm(f => ({ ...f, promoFechaFin: e.target.value }))} style={inp} />
                   </div>
                 </div>
@@ -6524,8 +6609,8 @@ export default function App() {
             </div>
             </div>
             <div className="product-modal-footer" style={{ display: "flex", gap: 10, padding: "14px 24px", position: "sticky", bottom: 0, background: bgCard, borderTop: `1px solid ${borderColor}`, zIndex: 20 }}>
-              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleSaveProd} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>{modal === "add" ? "Agregar" : "Guardar"}</button>
+              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleSaveProd} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius:0, fontSize: 14 }}>{modal === "add" ? "Agregar" : "Guardar"}</button>
             </div>
           </div>
         </div>
@@ -6536,10 +6621,10 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalUsuario(null); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>Editar Usuario</h3>
-              <button onClick={() => setModalUsuario(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalUsuario(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             {[
               { label: "Nombre", key: "nombre" },
@@ -6547,12 +6632,12 @@ export default function App() {
               { label: "Empresa / Sucursal", key: "empresa" },
             ].map(({ label, key, type }) => (
               <div key={key} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>{label}</label>
+                <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>{label}</label>
                 <input type={type || "text"} value={formUsuario[key] || ""} onChange={e => setFormUsuario(f => ({ ...f, [key]: e.target.value }))} autoComplete="off" style={inp} />
               </div>
             ))}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Rol</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Rol</label>
               <select value={formUsuario.rol || "empleado"} onChange={e => setFormUsuario(f => ({ ...f, rol: e.target.value }))} style={inp}>
                 <option value="empleado">👤 Empleado</option>
                 <option value="gerente">👑 Gerente</option>
@@ -6561,17 +6646,17 @@ export default function App() {
             <div style={{ height: 1, background: borderColor2, margin: "6px 0 18px" }} />
             <p style={{ margin: "0 0 14px", fontSize: 12, fontWeight: 700, color: textMuted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Cambiar acceso (opcional)</p>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Nombre de usuario</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Nombre de usuario</label>
               <input type="text" value={formUsuario.nuevoUsuario || ""} onChange={e => setFormUsuario(f => ({ ...f, nuevoUsuario: e.target.value }))} placeholder="Dejar igual si no cambia" autoComplete="off" style={inp} />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Nueva contraseña</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Nueva contraseña</label>
               <input type="password" value={formUsuario.nuevaClave || ""} onChange={e => setFormUsuario(f => ({ ...f, nuevaClave: e.target.value }))} placeholder="Dejar vacío para no cambiar" autoComplete="new-password" style={inp} />
             </div>
-            {usuarioError && <p style={{ color: "#e03131", fontSize: 13, marginBottom: 10 }}>{usuarioError}</p>}
+            {usuarioError && <p style={{ color: "#E63946", fontSize: 13, marginBottom: 10 }}>{usuarioError}</p>}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setModalUsuario(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleGuardarUsuario} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>Guardar</button>
+              <button onClick={() => setModalUsuario(null)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleGuardarUsuario} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius:0, fontSize: 14 }}>Guardar</button>
             </div>
           </div>
         </div>
@@ -6582,10 +6667,10 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalNuevoUsuario(false); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: textPrimary }}>Crear Nuevo Usuario</h3>
-              <button onClick={() => setModalNuevoUsuario(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalNuevoUsuario(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             {[
               { label: "Nombre completo", key: "nombre", type: "text", ac: "off" },
@@ -6595,21 +6680,21 @@ export default function App() {
               { label: "Contraseña", key: "clave", type: "password", ac: "new-password" },
             ].map(({ label, key, type, ac }) => (
               <div key={key} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>{label}</label>
+                <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>{label}</label>
                 <input type={type} value={formNuevoUsuario[key] || ""} onChange={e => setFormNuevoUsuario(f => ({ ...f, [key]: e.target.value }))} autoComplete={ac} style={inp} />
               </div>
             ))}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Rol</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Rol</label>
               <select value={formNuevoUsuario.rol} onChange={e => setFormNuevoUsuario(f => ({ ...f, rol: e.target.value }))} style={inp}>
                 <option value="empleado">👤 Empleado</option>
                 <option value="gerente">👑 Gerente</option>
               </select>
             </div>
-            {nuevoUsuarioError && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 8, marginBottom: 14 }}>⚠ {nuevoUsuarioError}</div>}
+            {nuevoUsuarioError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {nuevoUsuarioError}</div>}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setModalNuevoUsuario(false)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleCrearUsuario} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>Crear Usuario</button>
+              <button onClick={() => setModalNuevoUsuario(false)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleCrearUsuario} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius:0, fontSize: 14 }}>Crear Usuario</button>
             </div>
           </div>
         </div>
@@ -6618,10 +6703,10 @@ export default function App() {
       {/* ── Modal Ícono Categoría ── */}
       {modalIconoCat && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}>
-          <div className="fade-in" style={{ background: bgCard, borderRadius: 20, padding: 24, width: "92%", maxWidth: 420, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+          <div className="fade-in" style={{ background: bgCard, borderRadius:0, padding: 24, width: "92%", maxWidth: 420, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>Cambiar Ícono: {modalIconoCat.nombre}</h3>
-              <button onClick={() => setModalIconoCat(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalIconoCat(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             <div className="emoji-grid">
               {EMOJI_LIST.map(emoji => (
@@ -6637,26 +6722,26 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalMover(null); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "70vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>🏢 Mover Producto</h3>
                 <p style={{ margin: "4px 0 0", fontSize: 13, color: textMuted }}>{modalMover.nombre}</p>
               </div>
-              <button onClick={() => setModalMover(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalMover(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             <p style={{ margin: "0 0 6px", fontSize: 12, color: textMuted }}>Empresa actual: <strong style={{ color: textPrimary }}>{modalMover.empresa || "Sin empresa"}</strong></p>
             <p style={{ margin: "0 0 16px", fontSize: 12, color: textMuted }}>Selecciona la empresa destino:</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[...new Set(products.map(p => p.empresa).filter(Boolean))].map(emp => (
                 <button key={emp} onClick={() => handleMoverProducto(modalMover, emp)}
-                  style={{ padding: "14px 16px", borderRadius: 12, border: `2px solid ${modalMover.empresa === emp ? "#7c3aed" : borderColor}`, background: modalMover.empresa === emp ? (D ? "rgba(124,58,237,0.15)" : "#f3f0ff") : bgCard2, color: modalMover.empresa === emp ? "#7c3aed" : textPrimary, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  style={{ padding: "14px 16px", borderRadius:0, border: `2px solid ${modalMover.empresa === emp ? "#8E7CC3" : borderColor}`, background: modalMover.empresa === emp ? (D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.10)") : bgCard2, color: modalMover.empresa === emp ? "#8E7CC3" : textPrimary, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span>🏢 {emp}</span>
-                  {modalMover.empresa === emp && <span style={{ fontSize: 12, color: "#7c3aed" }}>✓ Actual</span>}
+                  {modalMover.empresa === emp && <span style={{ fontSize: 12, color: "#8E7CC3" }}>✓ Actual</span>}
                 </button>
               ))}
               <button onClick={() => handleMoverProducto(modalMover, "")}
-                style={{ padding: "14px 16px", borderRadius: 12, border: `2px solid ${!modalMover.empresa ? "#7c3aed" : borderColor}`, background: !modalMover.empresa ? (D ? "rgba(124,58,237,0.15)" : "#f3f0ff") : bgCard2, color: !modalMover.empresa ? "#7c3aed" : textMuted, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                style={{ padding: "14px 16px", borderRadius:0, border: `2px solid ${!modalMover.empresa ? "#8E7CC3" : borderColor}`, background: !modalMover.empresa ? (D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.10)") : bgCard2, color: !modalMover.empresa ? "#8E7CC3" : textMuted, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
                 🚫 Sin empresa
               </button>
             </div>
@@ -6669,23 +6754,23 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalStock(null); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>Ajustar Stock</h3>
-              <button onClick={() => setModalStock(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalStock(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             <p style={{ margin: "0 0 16px", fontSize: 14, color: textSecondary }}>
-              <strong style={{ color: textPrimary }}>{modalStock.nombre}</strong> · Stock actual: <strong style={{ color: "#10b981" }}>{modalStock.stock}</strong>
+              <strong style={{ color: textPrimary }}>{modalStock.nombre}</strong> · Stock actual: <strong style={{ color: "#2EC4B6" }}>{modalStock.stock}</strong>
             </p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => setStockTipo("agregar")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `2px solid ${stockTipo === "agregar" ? "#10b981" : borderColor2}`, background: stockTipo === "agregar" ? (D ? "rgba(16,185,129,0.15)" : "#ecfdf5") : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: stockTipo === "agregar" ? "#10b981" : textSecondary, fontFamily: "inherit" }}>+ Agregar</button>
-              <button onClick={() => setStockTipo("quitar")} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `2px solid ${stockTipo === "quitar" ? "#e03131" : borderColor2}`, background: stockTipo === "quitar" ? "#fff1f2" : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: stockTipo === "quitar" ? "#e03131" : textSecondary, fontFamily: "inherit" }}>- Quitar</button>
+              <button onClick={() => setStockTipo("agregar")} style={{ flex: 1, padding: "9px", borderRadius:0, border: `2px solid ${stockTipo === "agregar" ? "#2EC4B6" : borderColor2}`, background: stockTipo === "agregar" ? (D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)") : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: stockTipo === "agregar" ? "#2EC4B6" : textSecondary, fontFamily: "inherit" }}>+ Agregar</button>
+              <button onClick={() => setStockTipo("quitar")} style={{ flex: 1, padding: "9px", borderRadius:0, border: `2px solid ${stockTipo === "quitar" ? "#E63946" : borderColor2}`, background: stockTipo === "quitar" ? "rgba(230,57,70,0.10)" : bgCard2, cursor: "pointer", fontSize: 13, fontWeight: 700, color: stockTipo === "quitar" ? "#E63946" : textSecondary, fontFamily: "inherit" }}>- Quitar</button>
             </div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Cantidad</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Cantidad</label>
             <input type="number" min="1" value={stockAjuste} onChange={e => setStockAjuste(e.target.value)} placeholder="Ej: 10" style={{ ...inp, marginBottom: 16 }} />
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setModalStock(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleAjustarStock} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius: 10, fontSize: 14 }}>Guardar</button>
+              <button onClick={() => setModalStock(null)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleAjustarStock} className="btn-primary" style={{ flex: 1, padding: "11px", borderRadius:0, fontSize: 14 }}>Guardar</button>
             </div>
           </div>
         </div>
@@ -6696,24 +6781,24 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalMerma(null); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>Registrar Merma</h3>
-              <button onClick={() => setModalMerma(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalMerma(null)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Producto</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Producto</label>
               <select value={formMerma.productoId} onChange={e => setFormMerma(f => ({ ...f, productoId: e.target.value }))} style={inp}>
                 <option value="">Seleccionar producto...</option>
                 {products.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stock})</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Cantidad</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Cantidad</label>
               <input type="number" min="1" value={formMerma.cantidad} onChange={e => setFormMerma(f => ({ ...f, cantidad: e.target.value }))} placeholder="Ej: 3" style={inp} />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#9ca3af" : "#374151", display: "block", marginBottom: 6 }}>Motivo</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Motivo</label>
               <select value={formMerma.motivo} onChange={e => setFormMerma(f => ({ ...f, motivo: e.target.value }))} style={inp}>
                 <option value="">Seleccionar motivo...</option>
                 <option value="Vencido">Vencido</option>
@@ -6723,10 +6808,10 @@ export default function App() {
                 <option value="Otro">Otro</option>
               </select>
             </div>
-            {mermaError && <div style={{ background: "#fff1f2", color: "#e03131", fontSize: 13, padding: "10px 14px", borderRadius: 8, marginBottom: 14 }}>⚠ {mermaError}</div>}
+            {mermaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "10px 14px", borderRadius:0, marginBottom: 14 }}>⚠ {mermaError}</div>}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setModalMerma(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={handleRegistrarMerma} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #e03131, #f03e3e)", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>Registrar</button>
+              <button onClick={() => setModalMerma(null)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={handleRegistrarMerma} style={{ flex: 1, padding: "11px", borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>Registrar</button>
             </div>
           </div>
         </div>
@@ -6737,12 +6822,12 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}
           onClick={e => { if (e.target === e.currentTarget) setModalPapelera(false); }}>
           <div className="fade-in mobile-bottom-sheet" style={{ background: bgCard, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 560, boxShadow: "0 -8px 40px rgba(0,0,0,0.3)", maxHeight: "88vh", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, borderRadius: 4, background: borderColor2, margin: "0 auto 20px" }} />
+            <div style={{ width: 40, height: 4, borderRadius:0, background: borderColor2, margin: "0 auto 20px" }} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary, display: "flex", alignItems: "center", gap: 8 }}>
                 <Trash2 size={18} /> Papelera
               </h3>
-              <button onClick={() => setModalPapelera(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
+              <button onClick={() => setModalPapelera(false)} style={{ background: bgCard2, border: "none", cursor: "pointer", width: 32, height: 32, borderRadius:0, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} color={textMuted} /></button>
             </div>
             <p style={{ margin: "0 0 18px", fontSize: 13, color: textMuted, lineHeight: 1.5 }}>
               Productos borrados desde este dispositivo. Puedes restaurarlos al inventario o eliminarlos para siempre.
@@ -6756,9 +6841,9 @@ export default function App() {
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
                   {papelera.map((item, i) => (
-                    <div key={`${item.nombre}-${item.eliminadoEn}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 12, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: D ? "#1e2235" : "#f4f5fb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>
-                        {item.imagenUrl ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 10 }} /> : item.img}
+                    <div key={`${item.nombre}-${item.eliminadoEn}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
+                      <div style={{ width: 40, height: 40, borderRadius:0, background: D ? "#1C1A17" : "#F2F1EC", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>
+                        {item.imagenUrl ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius:0 }} /> : item.img}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.nombre}</p>
@@ -6766,16 +6851,16 @@ export default function App() {
                           {item.categoria} · Eliminado {item.eliminadoEn ? new Date(item.eliminadoEn).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
                         </p>
                       </div>
-                      <button onClick={() => handleRestaurarProd(item)} title="Restaurar al inventario" style={{ padding: "7px 12px", borderRadius: 9, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => handleRestaurarProd(item)} title="Restaurar al inventario" style={{ padding: "7px 12px", borderRadius:0, border: "none", background: "#2EC4B6", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                         <RefreshCw size={12} /> Restaurar
                       </button>
-                      <button onClick={() => handleEliminarDefinitivo(item)} title="Eliminar definitivamente" className="btn-danger" style={{ padding: "7px 9px", borderRadius: 9, fontSize: 12, display: "flex", flexShrink: 0 }}>
+                      <button onClick={() => handleEliminarDefinitivo(item)} title="Eliminar definitivamente" className="btn-danger" style={{ padding: "7px 9px", borderRadius:0, fontSize: 12, display: "flex", flexShrink: 0 }}>
                         <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
                 </div>
-                <button onClick={handleVaciarPapelera} style={{ width: "100%", padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 13, color: "#e03131", fontWeight: 700, fontFamily: "inherit" }}>
+                <button onClick={handleVaciarPapelera} style={{ width: "100%", padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 13, color: "#E63946", fontWeight: 700, fontFamily: "inherit" }}>
                   Vaciar papelera
                 </button>
               </>
@@ -6787,10 +6872,10 @@ export default function App() {
       {/* ── Modal Confirmar Eliminar Categoría ── */}
       {confirmDeleteCat && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}>
-          <div className="fade-in" style={{ background: bgCard, borderRadius: 20, padding: 30, width: "92%", maxWidth: 390, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+          <div className="fade-in" style={{ background: bgCard, borderRadius:0, padding: 30, width: "92%", maxWidth: 390, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                <AlertTriangle size={28} color="#e03131" />
+              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(230,57,70,0.10)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <AlertTriangle size={28} color="#E63946" />
               </div>
               <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: textPrimary }}>¿Eliminar categoría?</h3>
               <p style={{ margin: 0, fontSize: 14, color: textSecondary, lineHeight: 1.5 }}>
@@ -6798,8 +6883,8 @@ export default function App() {
               </p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setConfirmDeleteCat(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
-              <button onClick={confirmarEliminarCat} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #e03131, #f03e3e)", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>Eliminar</button>
+              <button onClick={() => setConfirmDeleteCat(null)} style={{ flex: 1, padding: "11px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, cursor: "pointer", fontSize: 14, color: textSecondary, fontWeight: 600, fontFamily: "inherit" }}>Cancelar</button>
+              <button onClick={confirmarEliminarCat} style={{ flex: 1, padding: "11px", borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "inherit" }}>Eliminar</button>
             </div>
           </div>
         </div>
@@ -6808,15 +6893,15 @@ export default function App() {
       {/* ── Pantalla Bloqueada (PIN) ── */}
       {showPinLock && (
         <div style={{ position: "fixed", inset: 0, background: D ? "rgba(10,11,20,0.97)" : "rgba(30,34,54,0.97)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, backdropFilter: "blur(8px)" }}>
-          <div className="fade-in" style={{ background: bgCard, borderRadius: 24, padding: "36px 24px", width: "92%", maxWidth: 320, boxShadow: "0 30px 80px rgba(0,0,0,0.5)", textAlign: "center" }}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, #d71920, #ef2b32)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <div className="fade-in" style={{ background: bgCard, borderRadius:0, padding: "36px 24px", width: "92%", maxWidth: 320, boxShadow: "0 30px 80px rgba(0,0,0,0.5)", textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#E63946", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <Lock size={28} color="#fff" />
             </div>
             <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 800, color: textPrimary }}>Pantalla Bloqueada</h2>
             <p style={{ margin: "0 0 24px", fontSize: 13, color: textMuted }}>{currentUser.nombre}</p>
             <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 20 }}>
               {[0,1,2,3].map(i => (
-                <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: pinInput.length > i ? "#d71920" : (D ? "#2d3158" : "#e5e7eb"), transition: "background 0.15s" }} />
+                <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: pinInput.length > i ? "#E63946" : (D ? "#2A2723" : "#E4E1D6"), transition: "background 0.15s" }} />
               ))}
             </div>
             <div className="grid-3-mobile" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
@@ -6831,15 +6916,80 @@ export default function App() {
                       else { setPinError("PIN incorrecto"); setTimeout(() => { setPinInput(""); setPinError(""); }, 800); }
                     }
                   }
-                }} style={{ padding: "16px", borderRadius: 12, border: `1.5px solid ${borderColor2}`, background: k === "" ? "transparent" : bgCard2, cursor: k === "" ? "default" : "pointer", fontSize: k === "⌫" ? 18 : 20, fontWeight: 700, color: textPrimary, fontFamily: "inherit", transition: "all 0.1s" }}>
+                }} style={{ padding: "16px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: k === "" ? "transparent" : bgCard2, cursor: k === "" ? "default" : "pointer", fontSize: k === "⌫" ? 18 : 20, fontWeight: 700, color: textPrimary, fontFamily: "inherit", transition: "all 0.1s" }}>
                   {k}
                 </button>
               ))}
             </div>
-            {pinError && <p style={{ margin: "0 0 12px", fontSize: 13, color: "#e03131", fontWeight: 700 }}>{pinError}</p>}
+            {pinError && <p style={{ margin: "0 0 12px", fontSize: 13, color: "#E63946", fontWeight: 700 }}>{pinError}</p>}
             <button onClick={() => { setShowPinLock(false); setCurrentUser(null); }} style={{ background: "none", border: "none", color: textMuted, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>
               Cerrar sesión completa
             </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Fila expandible de proveedor: muestra datos de contacto y, al expandir,
+// el historial de compras registradas manualmente para ese proveedor.
+function FilaProveedor({ p, borderColor, borderColor2, bgCard2, textPrimary, textSecondary, textMuted, inp, D, fmt, onEditar, onEliminar, onRegistrarCompra, onEliminarCompra }) {
+  const [abierto, setAbierto] = useState(false);
+  const [montoNuevo, setMontoNuevo] = useState("");
+  const [detalleNuevo, setDetalleNuevo] = useState("");
+  const compras = p.compras || [];
+  const totalComprado = compras.reduce((s, c) => s + Number(c.monto || 0), 0);
+
+  const agregar = () => {
+    const m = Number(montoNuevo);
+    if (!m || m <= 0) return;
+    onRegistrarCompra(m, detalleNuevo);
+    setMontoNuevo(""); setDetalleNuevo("");
+  };
+
+  return (
+    <div style={{ borderBottom: `1px solid ${borderColor}`, padding: "12px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={() => setAbierto(o => !o)} style={{ width: 40, height: 40, borderRadius: 0, background: D ? "rgba(255,159,28,.16)" : "rgba(142,124,195,0.10)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#E63946", fontWeight: 800, flexShrink: 0 }}>
+          {(p.nombre || "?").slice(0, 1).toUpperCase()}
+        </button>
+        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setAbierto(o => !o)}>
+          <p style={{ margin: 0, color: textPrimary, fontSize: 13, fontWeight: 800 }}>{p.nombre}{p.rubro && <span style={{ fontSize: 10, color: textMuted, fontWeight: 600 }}> · {p.rubro}</span>}</p>
+          <p style={{ margin: "3px 0 0", color: textMuted, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[p.telefono, p.correo, p.direccion].filter(Boolean).join(" · ") || "Sin datos de contacto"}</p>
+        </div>
+        <div style={{ textAlign: "right", marginRight: 8 }}>
+          <p style={{ margin: 0, color: "#2EC4B6", fontSize: 12, fontWeight: 800 }}>{fmt(totalComprado)}</p>
+          <p style={{ margin: "2px 0 0", color: textMuted, fontSize: 10 }}>{compras.length} compra{compras.length === 1 ? "" : "s"}</p>
+        </div>
+        <button onClick={onEditar} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${borderColor2}`, background: bgCard2, color: textSecondary, cursor: "pointer" }}><Pencil size={13} /></button>
+        <button onClick={onEliminar} className="btn-danger" style={{ width: 32, height: 32, borderRadius: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} /></button>
+      </div>
+
+      {abierto && (
+        <div style={{ marginTop: 12, marginLeft: 52, background: bgCard2, border: `1px solid ${borderColor2}`, padding: 12 }}>
+          <p style={{ margin: "0 0 9px", fontSize: 11.5, fontWeight: 800, color: textSecondary }}>HISTORIAL DE COMPRAS</p>
+          {compras.length === 0 ? (
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: textMuted }}>Aún no hay compras registradas a este proveedor.</p>
+          ) : (
+            <div style={{ marginBottom: 12 }}>
+              {compras.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${borderColor}` }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: textPrimary, fontWeight: 700 }}>{fmt(c.monto)}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 10.5, color: textMuted }}>
+                      {new Date(c.fecha).toLocaleDateString("es-CL")}{c.detalle ? ` · ${c.detalle}` : ""}
+                    </p>
+                  </div>
+                  <button onClick={() => onEliminarCompra(c.id)} style={{ border: "none", background: "none", color: "#E63946", cursor: "pointer", padding: 4 }}><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={montoNuevo} onChange={e => setMontoNuevo(e.target.value.replace(/\D/g, ""))} placeholder="Monto" style={{ ...inp, width: 100, padding: "7px 9px", fontSize: 12 }} />
+            <input value={detalleNuevo} onChange={e => setDetalleNuevo(e.target.value)} placeholder="Detalle (opcional)" style={{ ...inp, flex: 1, padding: "7px 9px", fontSize: 12 }} />
+            <button onClick={agregar} className="btn-primary" style={{ padding: "7px 12px", borderRadius: 0, fontSize: 12, whiteSpace: "nowrap" }}>+ Compra</button>
           </div>
         </div>
       )}
