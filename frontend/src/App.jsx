@@ -1663,6 +1663,17 @@ export default function App() {
   const [boletaGenerando, setBoletaGenerando] = useState(false);
   const [filtroBoleta, setFiltroBoleta] = useState("Todos");
   const [reporteTab, setReporteTab] = useState("ventas"); // "ventas" | "inventario"
+  const [scrollAAlertaStock, setScrollAAlertaStock] = useState(false);
+  const alertaStockRef = useRef(null);
+  useEffect(() => {
+    if (activeNav === "Reportes" && reporteTab === "inventario" && scrollAAlertaStock) {
+      const id = setTimeout(() => {
+        alertaStockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setScrollAAlertaStock(false);
+      }, 80);
+      return () => clearTimeout(id);
+    }
+  }, [activeNav, reporteTab, scrollAAlertaStock]);
   const [reportePeriodo, setReportePeriodo] = useState("mes"); // "dia" | "semana" | "mes" | "todo"
   const [reporteFecha, setReporteFecha] = useState(() => new Date().toISOString().slice(0, 10)); // ancla para reportePeriodo === "dia"
 
@@ -2275,7 +2286,8 @@ export default function App() {
     if (!prod) return;
     if (!window.confirm(`¿Eliminar "${prod.nombre}"? Podrás restaurarlo desde la Papelera.`)) return;
     try {
-      await fetch(API + "/api/productos/" + id, { method: "DELETE" });
+      const res = await fetch(API + "/api/productos/" + id, { method: "DELETE" });
+      if (!res.ok) { alert(`No se pudo eliminar el producto (error ${res.status}).`); return; }
       setProducts(prev => prev.filter(p => p.id !== id));
       const nuevaPapelera = [{ ...prod, eliminadoEn: new Date().toISOString() }, ...papelera];
       setPapelera(nuevaPapelera);
@@ -2398,11 +2410,12 @@ export default function App() {
 
   const handleMoverProducto = async (prod, nuevaEmpresa) => {
     try {
-      await fetch(API + "/api/productos/" + prod.id, {
+      const res = await fetch(API + "/api/productos/" + prod.id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...prod, empresa: nuevaEmpresa }),
       });
+      if (!res.ok) { alert(`No se pudo mover el producto (error ${res.status}).`); return; }
       setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, empresa: nuevaEmpresa } : p));
       setModalMover(null);
     } catch (e) { alert("Error al mover: " + e.message); }
@@ -2413,10 +2426,12 @@ export default function App() {
     try {
       if (modal === "add") {
         const res = await fetch(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        if (!res.ok) { alert(`No se pudo crear el producto (error ${res.status}).`); return; }
         const nuevo = await res.json();
         setProducts(prev => [...prev, { ...nuevo, id: nuevo.id || nuevo._id }]);
       } else {
-        await fetch(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        const res = await fetch(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        if (!res.ok) { alert(`No se pudo guardar el producto (error ${res.status}).`); return; }
         setProducts(prev => prev.map(p => p.id === form.id ? { ...data, id: form.id } : p));
       }
       setModal(null);
@@ -2474,6 +2489,50 @@ export default function App() {
     const count = products.filter(p => p.categoria === nombre).length;
     if (count > 0) setConfirmDeleteCat({ index, nombre, count });
     else eliminarCatDirecto(index, nombre);
+  };
+  const handleEditarCat = async (index) => {
+    const nombreAnterior = categorias[index];
+    const nuevoNombre = (editandoCat?.valor || "").trim();
+    if (!nuevoNombre) { setEditandoCat(null); return; }
+    if (nuevoNombre === nombreAnterior) { setEditandoCat(null); return; }
+    if (categorias.some((c, i) => i !== index && c.toLowerCase() === nuevoNombre.toLowerCase())) {
+      alert("Ya existe una categoría con ese nombre.");
+      return;
+    }
+    try {
+      const empresaParam = currentUser?.empresa ? `?empresa=${encodeURIComponent(currentUser.empresa)}` : "?empresa=";
+      const res = await fetch(API + "/api/categorias" + empresaParam);
+      const cats = await res.json();
+      const empresa = currentUser?.empresa || "";
+      const filtradas = empresa
+        ? cats.filter(c => c.empresa === empresa)
+        : cats.filter(c => !c.empresa || c.empresa === "");
+      const cat = filtradas.find(c => c.nombre === nombreAnterior);
+      if (cat) {
+        await fetch(API + "/api/categorias/" + (cat._id || cat.id), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: nuevoNombre }),
+        });
+      }
+      // Actualiza los productos que usaban el nombre anterior, para que no queden huérfanos.
+      const productosAfectados = products.filter(p => p.categoria === nombreAnterior);
+      await Promise.all(productosAfectados.map(p =>
+        fetch(API + "/api/productos/" + p.id, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" },
+          body: JSON.stringify({ ...p, categoria: nuevoNombre }),
+        }).catch(() => {})
+      ));
+      setProducts(prev => prev.map(p => p.categoria === nombreAnterior ? { ...p, categoria: nuevoNombre } : p));
+      setCategorias(prev => prev.map((c, i) => i === index ? nuevoNombre : c));
+      const newIcons = { ...catIconos };
+      if (newIcons[nombreAnterior] !== undefined) { newIcons[nuevoNombre] = newIcons[nombreAnterior]; delete newIcons[nombreAnterior]; }
+      setCatIconos(newIcons); saveCatIcons(newIcons);
+      setEditandoCat(null);
+    } catch (e) {
+      alert("Error al renombrar la categoría: " + e.message);
+    }
   };
   const eliminarCatDirecto = async (index, nombre) => {
     try {
@@ -2565,18 +2624,20 @@ export default function App() {
     setMermaError("");
     if (!formMerma.productoId || !formMerma.cantidad || !formMerma.motivo) { setMermaError("Completa todos los campos."); return; }
     const prod = products.find(p => p.id === formMerma.productoId);
-    if (!prod) return;
+    if (!prod) { setMermaError("Selecciona un producto válido."); return; }
     const cant = +formMerma.cantidad;
+    if (!cant || cant <= 0) { setMermaError("Ingresa una cantidad válida."); return; }
     if (cant > prod.stock) { setMermaError(`Stock insuficiente. Disponible: ${prod.stock}.`); return; }
     const nuevoStock = prod.stock - cant;
     try {
-      await fetch(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
+      const res = await fetch(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
+      if (!res.ok) { setMermaError(`No se pudo actualizar el stock (error ${res.status}). Intenta de nuevo.`); return; }
       setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, stock: nuevoStock } : p));
       const nuevaMerma = { id: Date.now(), productoId: prod.id, producto: prod.nombre, cantidad: cant, motivo: formMerma.motivo, fecha: new Date().toLocaleString("es-CL"), usuario: currentUser.nombre };
       const nuevasMermas = [nuevaMerma, ...mermas];
       setMermas(nuevasMermas); saveMermas(nuevasMermas);
       setModalMerma(null); setFormMerma({ productoId: "", cantidad: "", motivo: "" });
-    } catch (e) { setMermaError("Error: " + e.message); }
+    } catch (e) { setMermaError("Error de conexión: " + e.message); }
   };
 
   // ── Carrito ──
@@ -2784,10 +2845,23 @@ export default function App() {
       const formato = current.formato === "caja" ? "caja" : "bandeja";
       const cantidad = Math.max(0, Number(current.cantidad || 0));
       const precioActual = Number(formato === "caja" ? q?.precioCaja : q?.precioBandeja) || 0;
+      const { promocionActiva, ...sinPromo } = current;
       return {
         ...prev,
-        [qualityId]: { ...current, precioManualActivo: true, precioManualTotal: String(Math.round(cantidad * precioActual)) },
+        [qualityId]: { ...sinPromo, precioManualActivo: true, precioManualTotal: String(Math.round(cantidad * precioActual)) },
       };
+    });
+  };
+
+  const alternarPromocionHuevo = (qualityId) => {
+    setFreeEggCart(prev => {
+      const current = prev[qualityId] || { formato: "bandeja", cantidad: 0 };
+      if (current.promocionActiva) {
+        const { promocionActiva, ...resto } = current;
+        return { ...prev, [qualityId]: resto };
+      }
+      const { precioManualActivo, precioManualTotal, ...sinManual } = current;
+      return { ...prev, [qualityId]: { ...sinManual, promocionActiva: true } };
     });
   };
 
@@ -2805,8 +2879,10 @@ export default function App() {
     const cantidad = Math.max(0, Number(row.cantidad || 0));
     const unidadesPorFormato = formato === "caja" ? 180 : 30;
     const precioFormato = Number(formato === "caja" ? q.precioCaja : q.precioBandeja) || 0;
+    const precioPromoFormato = Number(formato === "caja" ? q.precioPromocionCaja : q.precioPromocionBandeja) || 0;
     const precioManualActivo = Boolean(row.precioManualActivo);
-    const subtotal = precioManualActivo ? Number(row.precioManualTotal || 0) : cantidad * precioFormato;
+    const promocionActiva = Boolean(row.promocionActiva) && precioPromoFormato > 0;
+    const subtotal = precioManualActivo ? Number(row.precioManualTotal || 0) : promocionActiva ? cantidad * precioPromoFormato : cantidad * precioFormato;
     const precioEfectivo = cantidad > 0 ? subtotal / cantidad : precioFormato;
     return {
       tipoItem: "huevo", calidadId: q.id, calidad: q.nombre, nombre: `Huevos ${q.nombre} · ${formato}`,
@@ -2814,6 +2890,7 @@ export default function App() {
       precio: precioEfectivo, subtotal, costoCaja: Number(q.costoCaja || 0),
       precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: stockDeHuevo(q),
       precioManualActivo, precioManualTotal: row.precioManualTotal ?? "",
+      promocionActiva, precioPromoFormato,
     };
   }).filter(item => item.cantidadFormatos > 0);
 
@@ -4100,6 +4177,7 @@ export default function App() {
                   onMenu={() => setMoreMenuOpen(true)}
                   onNavigate={(destino) => setActiveNav(destino)}
                   onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
+                  onVerAlertaStock={() => { setReporteTab("inventario"); setActiveNav("Reportes"); setScrollAAlertaStock(true); }}
                   meta={metaDiaria}
                   onMetaChange={setMetaDiaria}
                 />
@@ -4407,7 +4485,7 @@ export default function App() {
                   {[
                     { label: "Ingresos", val: ingresosPeriodo, color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", icon: TrendingUp, prefix: "" },
                     { label: "Egresos", val: egresosPeriodo, color: "#E63946", bg: D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)", icon: TrendingDown, prefix: "-" },
-                    { label: "Balance", val: balancePeriodo, color: balancePeriodo >= 0 ? "#2EC4B6" : "#E63946", bg: balancePeriodo >= 0 ? (D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)") : (D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)"), icon: DollarSign, prefix: "" },
+                    { label: "Balance", val: balancePeriodo, color: balancePeriodo >= 0 ? "#2EC4B6" : "#E63946", bg: balancePeriodo >= 0 ? (D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)") : (D ? "rgba(230,57,70,0.15)" : "rgba(230,57,70,0.10)"), icon: DollarSign, prefix: balancePeriodo >= 0 ? "" : "-" },
                   ].map(({ label, val, color, bg, icon: Icon, prefix }) => (
                     <div key={label} style={card} className="card-hover">
                       <div style={{ width: 36, height: 36, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><Icon size={17} color={color} /></div>
@@ -4662,7 +4740,7 @@ export default function App() {
 
                     {/* Alertas stock */}
                     {(stockBajoRep.length > 0 || sinStockRep.length > 0) && (
-                      <div style={card}>
+                      <div style={card} ref={alertaStockRef}>
                         <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>⚠️ Alertas de Stock</h3>
                         <div className="grid-2-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                           <div>
@@ -4774,13 +4852,13 @@ export default function App() {
                 {mobileSaleStep === "catalogo" && <>
                 <div className="sales-total-hero">
                   <div className="sales-total-icon"><DollarSign size={24} /></div>
-                  <div><span>Total general</span><strong className="mono">{fmt(totalGeneral)}</strong></div>
+                  <div><span>Total de hoy</span><strong className="mono">{fmt(ventasHuevosHoyTotal)}</strong></div>
                 </div>
                 <div className="sales-method-summary">
                   {[
-                    { label: "Efectivo", value: totalEfectivo, icon: Banknote, cls: "cash" },
-                    { label: "Tarjeta", value: totalTarjeta, icon: CreditCard, cls: "card" },
-                    { label: "Transferencia", value: totalTransferencia, icon: CreditCard, cls: "transfer" },
+                    { label: "Efectivo", value: pagoEfectivoHoy, icon: Banknote, cls: "cash" },
+                    { label: "Tarjeta", value: pagoTarjetaHoy, icon: CreditCard, cls: "card" },
+                    { label: "Transferencia", value: pagoTransferenciaHoy, icon: CreditCard, cls: "transfer" },
                   ].map(({label,value,icon:Icon,cls}) => <div className={`sales-summary-mini ${cls}`} key={label}><Icon size={18}/><span>{label}</span><strong className="mono">{fmt(value)}</strong></div>)}
                 </div>
 
@@ -4878,10 +4956,15 @@ export default function App() {
                     <div className="sales-cart-thumb"><span>🥚</span></div>
                     <div className="sales-cart-name">
                       <b>{item.calidad}</b>
-                      <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}</small>
-                      <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{marginTop:5,border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#E63946":"#8E7CC3",fontSize:11,fontWeight:800,cursor:"pointer"}}>
-                        {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
-                      </button>
+                      <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : item.promocionActiva ? `🏷️ Promoción · ${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}</small>
+                      <div style={{display:"flex",gap:12,marginTop:5}}>
+                        <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#E63946":"#8E7CC3",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                          {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
+                        </button>
+                        {item.precioPromoFormato > 0 && <button type="button" onClick={()=>alternarPromocionHuevo(item.calidadId)} style={{border:"none",padding:0,background:"transparent",color:item.promocionActiva?"#E63946":"#FF9F1C",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                          {item.promocionActiva ? "Quitar promoción" : "🏷️ Promoción"}
+                        </button>}
+                      </div>
                       {item.precioManualActivo && <input type="number" min="0" inputMode="numeric" value={item.precioManualTotal ?? ""} onChange={e=>cambiarPrecioManualHuevo(item.calidadId,e.target.value)} placeholder="Total a cobrar" style={{marginTop:6,width:"100%",maxWidth:150,padding:"7px 9px",border:`1px solid ${borderColor2}`,borderRadius:0,background:bgCard,color:textPrimary,fontWeight:800}} />}
                     </div>
                     <strong className="mono">{fmt(item.subtotal)}</strong>
