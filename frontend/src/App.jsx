@@ -5023,6 +5023,8 @@ export default function App() {
                       {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#E63946"}}>El efectivo supera el total.</span>}
                     </div>
                   )}
+                  {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "11px 14px", borderRadius:0, marginTop: 10, fontWeight: 600 }}>⚠ {ventaError}</div>}
+                  {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginTop: 10, fontWeight: 600 }}>{ventaExito}</div>}
                   <button className="sales-finish-v2" disabled={boletaGenerando || (carrito.length===0 && freeEggItems.length===0)} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
                 </div>}
               </section>

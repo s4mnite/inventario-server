@@ -1390,6 +1390,10 @@ app.post("/api/huevos/migrar", authHuevos, async (req, res) => {
 
 // ─── PING ─────────────────────────────────────────────────────────────────────
 app.get("/ping", (req, res) => res.json({ ok: true }));
+// Endpoint de keep-alive para el cron de cron-job.org. No consulta Mongo a
+// propósito, para que responda rápido y despierte el servicio aunque la
+// base de datos esté teniendo problemas.
+app.get("/health", (req, res) => res.json({ ok: true, mongo: !!db }));
 
 // ─── UPLOAD IMÁGENES (Cloudinary) ────────────────────────────────────────────
 try {
