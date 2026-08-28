@@ -109,11 +109,27 @@ const EMOJI_LIST = [
 
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad
+// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad.
+// safeSetItem nunca lanza: si el caché local está lleno (cuota excedida), lo
+// recortamos e intentamos de nuevo; si aun así falla, seguimos sin caché en
+// vez de hacer creer al resto del código que la operación (ej. una venta)
+// falló, cuando en realidad ya se guardó bien en el servidor.
+const safeSetItem = (key, arr) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch (e) {
+    try {
+      // Nos quedamos solo con los últimos 300 registros y reintentamos una vez.
+      localStorage.setItem(key, JSON.stringify(arr.slice(0, 300)));
+    } catch (e2) {
+      console.error(`⚠️ No se pudo cachear ${key} localmente (cuota excedida):`, e2.message);
+    }
+  }
+};
 const getSales   = () => JSON.parse(localStorage.getItem("inv_sales")   || "[]");
-const saveSales  = (s) => localStorage.setItem("inv_sales",   JSON.stringify(s));
+const saveSales  = (s) => safeSetItem("inv_sales", s.slice(0, 300));
 const getBoletas = () => JSON.parse(localStorage.getItem("inv_boletas") || "[]");
-const saveBoletas= (b) => localStorage.setItem("inv_boletas", JSON.stringify(b));
+const saveBoletas= (b) => safeSetItem("inv_boletas", b.slice(0, 300));
 const getConfig  = () => JSON.parse(localStorage.getItem("inv_config") || JSON.stringify({
   negocio: "Mi Negocio", direccion: "", telefono: "", moneda: "CLP", rut: "",
   notifStockBajo: true, notifVentas: true, stockMinimo: 5, tema: "claro",
