@@ -555,7 +555,30 @@ app.post("/api/ventas", async (req, res) => {
 
     let boletaGuardada = null;
     if (boleta) {
-      const boletaDoc = { ...boleta, ventaId: ventaGuardada.id, creadoEn: new Date() };
+      // El número de boleta lo asigna el servidor de forma atómica (nunca el
+      // navegador), porque calcularlo en el frontend como "máximo actual + 1"
+      // puede chocar si dos ventas se registran casi al mismo tiempo desde
+      // dispositivos distintos (dos boletas con el mismo número).
+      const contadorExistente = await db.collection("contadores").findOne({ _id: "numeroBoleta" });
+      if (!contadorExistente) {
+        // Primera vez que corre este contador: arranca desde el número más
+        // alto que ya exista, para no repetir boletas viejas.
+        const ultimaBoleta = await db.collection("boletas").find({}).sort({ numero: -1 }).limit(1).toArray();
+        const valorInicial = Number(ultimaBoleta[0]?.numero || 0);
+        try {
+          await db.collection("contadores").insertOne({ _id: "numeroBoleta", valor: valorInicial });
+        } catch (e) {
+          // Otra petición ganó la carrera y ya lo creó justo antes; no pasa nada.
+          if (e.code !== 11000) throw e;
+        }
+      }
+      const contador = await db.collection("contadores").findOneAndUpdate(
+        { _id: "numeroBoleta" },
+        { $inc: { valor: 1 } },
+        { upsert: true, returnDocument: "after" }
+      );
+      const numeroAsignado = contador?.value?.valor ?? contador?.valor;
+      const boletaDoc = { ...boleta, numero: numeroAsignado, ventaId: ventaGuardada.id, creadoEn: new Date() };
       delete boletaDoc.id;
       const boletaResult = await db.collection("boletas").insertOne(boletaDoc);
       boletaGuardada = { ...boletaDoc, id: boletaResult.insertedId.toString() };
@@ -1426,7 +1449,5 @@ try {
 // ─── START ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 conectarDB().then(() => {
-  app.get('/health', (req, res) => res.status(200).json({status: 'ok'}));
-
-app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
 });
