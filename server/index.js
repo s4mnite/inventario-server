@@ -59,6 +59,18 @@ async function conectarDB() {
     console.log("✅ MongoDB conectado");
     client.on("close", () => console.error("⚠️  Conexión a MongoDB cerrada"));
     client.on("serverHeartbeatFailed", () => console.error("⚠️  Heartbeat de MongoDB falló"));
+    // Índices: sin esto, cada consulta escanea la colección entera en vez de
+    // ir directo al documento. Se crean una sola vez al arrancar; si ya
+    // existen, MongoDB simplemente no hace nada (operación segura de repetir).
+    try {
+      await db.collection("huevos").createIndex({ key: 1 }, { unique: true });
+      await db.collection("boletas").createIndex({ numero: -1 });
+      await db.collection("ventas").createIndex({ empresa: 1, timestamp: -1 });
+      await db.collection("productos").createIndex({ empresa: 1 });
+      console.log("✅ Índices verificados");
+    } catch (e) {
+      console.error("⚠️  No se pudieron crear los índices:", e.message);
+    }
   } catch (e) {
     console.error("❌ Error MongoDB:", e.message);
   }
@@ -1390,10 +1402,6 @@ app.post("/api/huevos/migrar", authHuevos, async (req, res) => {
 
 // ─── PING ─────────────────────────────────────────────────────────────────────
 app.get("/ping", (req, res) => res.json({ ok: true }));
-// Endpoint de keep-alive para el cron de cron-job.org. No consulta Mongo a
-// propósito, para que responda rápido y despierte el servicio aunque la
-// base de datos esté teniendo problemas.
-app.get("/health", (req, res) => res.json({ ok: true, mongo: !!db }));
 
 // ─── UPLOAD IMÁGENES (Cloudinary) ────────────────────────────────────────────
 try {

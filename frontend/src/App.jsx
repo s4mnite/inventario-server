@@ -109,27 +109,11 @@ const EMOJI_LIST = [
 
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad.
-// safeSetItem nunca lanza: si el caché local está lleno (cuota excedida), lo
-// recortamos e intentamos de nuevo; si aun así falla, seguimos sin caché en
-// vez de hacer creer al resto del código que la operación (ej. una venta)
-// falló, cuando en realidad ya se guardó bien en el servidor.
-const safeSetItem = (key, arr) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(arr));
-  } catch (e) {
-    try {
-      // Nos quedamos solo con los últimos 300 registros y reintentamos una vez.
-      localStorage.setItem(key, JSON.stringify(arr.slice(0, 300)));
-    } catch (e2) {
-      console.error(`⚠️ No se pudo cachear ${key} localmente (cuota excedida):`, e2.message);
-    }
-  }
-};
+// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad
 const getSales   = () => JSON.parse(localStorage.getItem("inv_sales")   || "[]");
-const saveSales  = (s) => safeSetItem("inv_sales", s.slice(0, 300));
+const saveSales  = (s) => localStorage.setItem("inv_sales",   JSON.stringify(s));
 const getBoletas = () => JSON.parse(localStorage.getItem("inv_boletas") || "[]");
-const saveBoletas= (b) => safeSetItem("inv_boletas", b.slice(0, 300));
+const saveBoletas= (b) => localStorage.setItem("inv_boletas", JSON.stringify(b));
 const getConfig  = () => JSON.parse(localStorage.getItem("inv_config") || JSON.stringify({
   negocio: "Mi Negocio", direccion: "", telefono: "", moneda: "CLP", rut: "",
   notifStockBajo: true, notifVentas: true, stockMinimo: 5, tema: "claro",
@@ -1669,6 +1653,9 @@ export default function App() {
     localStorage.setItem("reyDelHuevo_metaDiaria", String(n));
   };
   const [ventaError, setVentaError] = useState("");
+  // Fecha real de la venta (por si se registra atrasada, ej: una venta de
+  // ayer que se te quedó sin cargar). "" = usar la fecha/hora actual.
+  const [fechaVentaPersonalizada, setFechaVentaPersonalizada] = useState("");
   const [ventaExito, setVentaExito] = useState("");
   const [filtroPago, setFiltroPago] = useState("Todos");
   const [saleCatFilter, setSaleCatFilter] = useState("Todos");
@@ -3073,7 +3060,16 @@ export default function App() {
       return;
     }
 
-    const ahora = new Date();
+    // Si se eligió una fecha atrasada (ej: se te quedó una venta de ayer),
+    // se usa esa fecha pero con la hora de AHORA, para no perder el orden
+    // cronológico dentro del mismo día ni forzar todo a medianoche.
+    const ahora = (() => {
+      if (!fechaVentaPersonalizada) return new Date();
+      const [y, m, d] = fechaVentaPersonalizada.split("-").map(Number);
+      const base = new Date();
+      base.setFullYear(y, m - 1, d);
+      return base;
+    })();
     const ventaId = String(ahora.getTime());
     const numeroBoleta = String(generarNumeroBoleta(boletas));
 
@@ -3202,6 +3198,7 @@ export default function App() {
       setFreeEggCart({});
       setMobileSaleStep("catalogo");
       setVentaTab("productos");
+      setFechaVentaPersonalizada("");
       if (Array.isArray(data.eggInventory)) setFreeEggInventory(data.eggInventory);
       setDineroRecibido("");
       setPago("Efectivo");
@@ -5016,6 +5013,17 @@ export default function App() {
                   <div className="sales-cart-total"><span>Total a pagar</span><strong className="mono">{fmt(totalCarrito)}</strong></div>
 
                   <div style={{ marginBottom: 14, padding: 12, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
+                    <label style={{ display:"block", fontSize:12, fontWeight:800, color:textSecondary, marginBottom:7 }}>Fecha de la venta</label>
+                    <input type="date" value={fechaVentaPersonalizada || todayLocalISO()} max={todayLocalISO()} onChange={e => setFechaVentaPersonalizada(e.target.value === todayLocalISO() ? "" : e.target.value)} style={inp} />
+                    {fechaVentaPersonalizada && (
+                      <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "#FF9F1C", fontWeight: 700 }}>
+                        ⚠ Se registrará como venta atrasada de esa fecha, no de hoy.{" "}
+                        <button type="button" onClick={() => setFechaVentaPersonalizada("")} style={{ border: "none", background: "none", color: "#E63946", fontWeight: 800, padding: 0, cursor: "pointer" }}>Volver a hoy</button>
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: 14, padding: 12, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
                     <label style={{ display:"block", fontSize:12, fontWeight:800, color:textSecondary, marginBottom:7 }}>Cliente</label>
                     <select value={clienteVentaId} onChange={e => { const id=e.target.value; setClienteVentaId(id); const c=clientes.find(x=>String(x.id)===String(id)); setRequiereFactura(!!c?.solicitaFactura); }} style={{...inp, marginBottom:10}}>
                       <option value="">Consumidor final</option>
@@ -5039,8 +5047,8 @@ export default function App() {
                       {montoEfectivoMixtoNum > totalCarrito && <span style={{color:"#E63946"}}>El efectivo supera el total.</span>}
                     </div>
                   )}
-                  {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "11px 14px", borderRadius:0, marginTop: 10, fontWeight: 600 }}>⚠ {ventaError}</div>}
-                  {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginTop: 10, fontWeight: 600 }}>{ventaExito}</div>}
+                  {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", border: "2px solid #E63946", color: "#E63946", fontSize: 12.5, padding: "11px 14px", marginBottom: 12, fontWeight: 700 }}>⚠ {ventaError}</div>}
+                  {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", border: "2px solid #2EC4B6", color: "#0B3B36", fontSize: 12.5, padding: "11px 14px", marginBottom: 12, fontWeight: 700 }}>{ventaExito}</div>}
                   <button className="sales-finish-v2" disabled={boletaGenerando || (carrito.length===0 && freeEggItems.length===0)} onClick={handleVentaDirecta}>{boletaGenerando?"Guardando...":"Finalizar venta →"}</button>
                 </div>}
               </section>

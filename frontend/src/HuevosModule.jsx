@@ -285,7 +285,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     const onOnline = () => refresh();
 
     loadFromServer();
-    const timer = window.setInterval(refresh, 8000);
+    const timer = window.setInterval(refresh, 25000);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
