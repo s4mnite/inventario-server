@@ -1656,6 +1656,7 @@ export default function App() {
   // Fecha real de la venta (por si se registra atrasada, ej: una venta de
   // ayer que se te quedó sin cargar). "" = usar la fecha/hora actual.
   const [fechaVentaPersonalizada, setFechaVentaPersonalizada] = useState("");
+  const [filtroFechaRecibos, setFiltroFechaRecibos] = useState("");
   const [ventaExito, setVentaExito] = useState("");
   const [filtroPago, setFiltroPago] = useState("Todos");
   const [saleCatFilter, setSaleCatFilter] = useState("Todos");
@@ -3790,12 +3791,15 @@ export default function App() {
       if (metodo === "Mixto") {
         acc.Efectivo = (acc.Efectivo || 0) + Number(venta.montoEfectivo || 0);
         acc["Débito"] = (acc["Débito"] || 0) + Number(venta.montoTarjeta || 0);
+        acc.conteo.Efectivo = (acc.conteo.Efectivo || 0) + 1;
+        acc.conteo["Débito"] = (acc.conteo["Débito"] || 0) + 1;
         return acc;
       }
       const monto = Number(venta.total || 0);
       acc[metodo] = (acc[metodo] || 0) + monto;
+      acc.conteo[metodo] = (acc.conteo[metodo] || 0) + 1;
       return acc;
-    }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 });
+    }, { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0, conteo: { Efectivo: 0, "Débito": 0, Transferencia: 0, "Crédito": 0 } });
 
     return {
       ventasPeriodo, totalPeriodo, ticketProm, huevosVendidosPeriodo, productosVendidosPeriodo,
@@ -3817,9 +3821,9 @@ export default function App() {
   }
   const iniciales = currentUser.nombre.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
   const metodosRep = [
-    { label: "Efectivo",      color: "#2EC4B6", val: resumenPagosPeriodo.Efectivo },
-    { label: "Débito",        color: "#FF9F1C", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"] },
-    { label: "Transferencia", color: "#8E7CC3", val: resumenPagosPeriodo.Transferencia },
+    { label: "Efectivo",      color: "#2EC4B6", val: resumenPagosPeriodo.Efectivo, cantidad: resumenPagosPeriodo.conteo.Efectivo },
+    { label: "Débito",        color: "#FF9F1C", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"], cantidad: resumenPagosPeriodo.conteo["Débito"] + resumenPagosPeriodo.conteo["Crédito"] },
+    { label: "Transferencia", color: "#8E7CC3", val: resumenPagosPeriodo.Transferencia, cantidad: resumenPagosPeriodo.conteo.Transferencia },
   ];
   const totalProductos   = products.length;
   const valorInventario = products.reduce((s, p) => s + ((p.precio||0)*(p.stock||0)), 0);
@@ -4534,15 +4538,16 @@ export default function App() {
                       <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>Ventas por método de pago</h3>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 12 }}>
                         {[
-                          { label: "Efectivo", val: resumenPagosPeriodo.Efectivo, icon: "💵" },
-                          { label: "Débito", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"], icon: "💳" },
-                          { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, icon: "🏦" },
-                          { label: "Total", val: totalPeriodo, icon: "Σ" },
-                        ].map(({ label, val, icon }) => (
+                          { label: "Efectivo", val: resumenPagosPeriodo.Efectivo, cantidad: resumenPagosPeriodo.conteo.Efectivo, icon: "💵" },
+                          { label: "Débito", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"], cantidad: resumenPagosPeriodo.conteo["Débito"] + resumenPagosPeriodo.conteo["Crédito"], icon: "💳" },
+                          { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, cantidad: resumenPagosPeriodo.conteo.Transferencia, icon: "🏦" },
+                          { label: "Total", val: totalPeriodo, cantidad: ventasPeriodo.length, icon: "Σ" },
+                        ].map(({ label, val, cantidad, icon }) => (
                           <div key={label} style={{ padding: "12px 6px", borderRadius:0, background: bgCard2, textAlign: "center", minWidth: 0 }}>
                             <div style={{ fontSize: 18 }}>{icon}</div>
                             <strong style={{ display: "block", fontSize: 15, marginTop: 6, color: label === "Total" ? "#2EC4B6" : textPrimary, wordBreak: "break-word", lineHeight: 1.15 }} className="mono">{fmt(val)}</strong>
-                            <span style={{ fontSize: 11, color: textMuted }}>{label}</span>
+                            <span style={{ fontSize: 11, color: textMuted, display: "block" }}>{label}</span>
+                            <span style={{ fontSize: 10.5, color: label === "Total" ? "#2EC4B6" : "#8E7CC3", fontWeight: 700 }}>{cantidad} venta{cantidad === 1 ? "" : "s"}</span>
                           </div>
                         ))}
                       </div>
@@ -5336,7 +5341,11 @@ export default function App() {
           )}
 
           {/* ── BOLETAS ── */}
-          {activeNav === "Recibos" && (
+          {activeNav === "Recibos" && (() => {
+            const boletasVisibles = filtroFechaRecibos
+              ? boletas.filter(b => fechaLocalClave(b.timestamp || b.fecha) === filtroFechaRecibos)
+              : boletas;
+            return (
             <div className="receipts-screen">
               <div className="grid-2-mobile receipts-kpis" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
                 <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
@@ -5344,8 +5353,8 @@ export default function App() {
                     <Receipt size={20} color="#E63946" />
                   </div>
                   <div>
-                    <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: textPrimary }}>{boletas.length}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Total Boletas</p>
+                    <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: textPrimary }}>{boletasVisibles.length}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: textMuted }}>{filtroFechaRecibos ? "Boletas de ese día" : "Total Boletas"}</p>
                   </div>
                 </div>
                 <div style={{ ...card, display: "flex", alignItems: "center", gap: 14 }} className="card-hover receipts-kpi-card">
@@ -5353,15 +5362,19 @@ export default function App() {
                     <DollarSign size={20} color="#2EC4B6" />
                   </div>
                   <div>
-                    <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: textPrimary }} className="mono">{fmt(boletas.reduce((s, b) => s + b.total, 0))}</p>
+                    <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: textPrimary }} className="mono">{fmt(boletasVisibles.reduce((s, b) => s + b.total, 0))}</p>
                     <p style={{ margin: 0, fontSize: 12, color: textMuted }}>Monto Total</p>
                   </div>
                 </div>
               </div>
 
               <div style={card} className="receipts-panel">
-                <div className="receipts-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div className="receipts-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Todos los Recibos</h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="date" value={filtroFechaRecibos} max={todayLocalISO()} onChange={e => setFiltroFechaRecibos(e.target.value)} style={{ ...inp, width: "auto", padding: "7px 10px", fontSize: 12.5 }} />
+                    {filtroFechaRecibos && <button onClick={() => setFiltroFechaRecibos("")} style={{ border: "none", background: "none", color: "#E63946", fontWeight: 800, fontSize: 12, cursor: "pointer", padding: "6px 4px" }}>Ver todos</button>}
+                  </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     {boletas.length > 0 && (<>
                       <button onClick={() => {
@@ -5463,9 +5476,16 @@ export default function App() {
                     <p style={{ color: textMuted, fontSize: 14 }}>No hay recibos generados aún</p>
                     <p style={{ color: textMuted, fontSize: 12 }}>Los recibos se generan automáticamente al confirmar una venta</p>
                   </div>
-                ) : (
+                ) : (() => {
+                  const boletasFiltradas = boletasVisibles;
+                  return (
                   <div>
-                    {boletas.map(b => (
+                    {filtroFechaRecibos && boletasFiltradas.length === 0 && (
+                      <div style={{ textAlign: "center", padding: "40px 0", color: textMuted, fontSize: 13.5 }}>
+                        No hay recibos guardados en esa fecha.
+                      </div>
+                    )}
+                    {boletasFiltradas.map(b => (
                       <div key={b.numero} className="receipt-card" style={{ background: bgCard2, border: `1px solid ${borderColor}` }} onClick={() => setBoletaModal(b)}>
                         <div className="receipt-card-icon" style={{ background: D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)" }}>
                           <Receipt size={20} color="#E63946" />
@@ -5517,10 +5537,12 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
-          )}
+          );
+          })()}
 
           {/* ── CAJA ── */}
           {activeNav === "Caja" && (
