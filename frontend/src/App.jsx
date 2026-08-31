@@ -778,7 +778,8 @@ const css = `
     .mobile-topbar h1 { font-size: 15px !important; }
   }
 
-  .sales-mobile-v2 { display:none; }
+  .sales-mobile-v2 { display:block; max-width:560px; margin:0 auto; padding-bottom:90px; }
+  .sales-desktop-only{display:none!important}
   @media (max-width:1024px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
@@ -4536,18 +4537,20 @@ export default function App() {
                     {/* Ventas por método de pago (Efectivo / Débito / Transferencia / Total) */}
                     <div className="reportes-payment-methods" style={{ ...card, marginBottom: 16 }}>
                       <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: textPrimary }}>Ventas por método de pago</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 12 }}>
+                      <div style={{ border: `1px solid ${borderColor}`, borderRadius: 0 }}>
                         {[
                           { label: "Efectivo", val: resumenPagosPeriodo.Efectivo, cantidad: resumenPagosPeriodo.conteo.Efectivo, icon: "💵" },
                           { label: "Débito", val: resumenPagosPeriodo["Débito"] + resumenPagosPeriodo["Crédito"], cantidad: resumenPagosPeriodo.conteo["Débito"] + resumenPagosPeriodo.conteo["Crédito"], icon: "💳" },
                           { label: "Transferencia", val: resumenPagosPeriodo.Transferencia, cantidad: resumenPagosPeriodo.conteo.Transferencia, icon: "🏦" },
                           { label: "Total", val: totalPeriodo, cantidad: ventasPeriodo.length, icon: "Σ" },
-                        ].map(({ label, val, cantidad, icon }) => (
-                          <div key={label} style={{ padding: "12px 6px", borderRadius:0, background: bgCard2, textAlign: "center", minWidth: 0 }}>
-                            <div style={{ fontSize: 18 }}>{icon}</div>
-                            <strong style={{ display: "block", fontSize: 15, marginTop: 6, color: label === "Total" ? "#2EC4B6" : textPrimary, wordBreak: "break-word", lineHeight: 1.15 }} className="mono">{fmt(val)}</strong>
-                            <span style={{ fontSize: 11, color: textMuted, display: "block" }}>{label}</span>
-                            <span style={{ fontSize: 10.5, color: label === "Total" ? "#2EC4B6" : "#8E7CC3", fontWeight: 700 }}>{cantidad} venta{cantidad === 1 ? "" : "s"}</span>
+                        ].map(({ label, val, cantidad, icon }, i, arr) => (
+                          <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderBottom: i < arr.length - 1 ? `1px solid ${borderColor}` : "none", background: label === "Total" ? bgCard2 : "transparent" }}>
+                            <span style={{ fontSize: 19, width: 28, textAlign: "center", flexShrink: 0 }}>{icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>{label}</div>
+                              <div style={{ fontSize: 11, color: label === "Total" ? "#2EC4B6" : "#8E7CC3", fontWeight: 700, marginTop: 1 }}>{cantidad} venta{cantidad === 1 ? "" : "s"}</div>
+                            </div>
+                            <strong style={{ fontSize: 15, color: label === "Total" ? "#2EC4B6" : textPrimary, whiteSpace: "nowrap", flexShrink: 0 }} className="mono">{fmt(val)}</strong>
                           </div>
                         ))}
                       </div>
