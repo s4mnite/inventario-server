@@ -1213,6 +1213,26 @@ app.get("/api/huevos", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint temporal de diagnóstico de rendimiento — cuenta movimientos y mide
+// el tiempo real de la consulta a Mongo, sin mandar los datos completos.
+// Se puede borrar una vez resuelto el problema de carga lenta de Huevos.
+app.get("/api/huevos/diagnostico", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const t0 = Date.now();
+    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
+    const msConsulta = Date.now() - t0;
+    const movements = doc?.movements || [];
+    const pesoAprox = Buffer.byteLength(JSON.stringify(movements));
+    res.json({
+      cantidadMovimientos: movements.length,
+      cantidadCategorias: (doc?.inventory || []).length,
+      pesoMovimientosKB: Math.round(pesoAprox / 1024),
+      msConsultaMongo: msConsulta,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Se asegura de que exista el documento de huevos para esta empresa/usuario
 // ANTES de intentar una actualización atómica con arrayFilters — si el
 // documento (o el array inventory) no existe todavía, un arrayFilter no
