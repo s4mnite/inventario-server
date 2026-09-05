@@ -778,8 +778,7 @@ const css = `
     .mobile-topbar h1 { font-size: 15px !important; }
   }
 
-  .sales-mobile-v2 { display:block; max-width:560px; margin:0 auto; padding-bottom:90px; }
-  .sales-desktop-only{display:none!important}
+  .sales-mobile-v2 { display:none; }
   @media (max-width:1024px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
@@ -2883,7 +2882,14 @@ export default function App() {
     const formato = row.formato === "caja" ? "caja" : "bandeja";
     const cantidad = Math.max(0, Number(row.cantidad || 0));
     const unidadesPorFormato = formato === "caja" ? 180 : 30;
-    const precioFormato = Number(formato === "caja" ? q.precioCaja : q.precioBandeja) || 0;
+    // El precio de huevos depende del método de pago elegido en Cobrar:
+    // Efectivo/Transferencia usa "precioEfectivo*", Tarjeta y Mixto usan el
+    // precio normal ("precio*", que es el de Débito). Si no hay precio de
+    // efectivo configurado para esta calidad, se usa el normal igual.
+    const usaPrecioEfectivo = pago === "Efectivo" || pago === "Transferencia";
+    const precioDebitoFormato = Number(formato === "caja" ? q.precioCaja : q.precioBandeja) || 0;
+    const precioEfectivoConfigFormato = Number(formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) || 0;
+    const precioFormato = usaPrecioEfectivo && precioEfectivoConfigFormato > 0 ? precioEfectivoConfigFormato : precioDebitoFormato;
     const precioPromoFormato = Number(formato === "caja" ? q.precioPromocionCaja : q.precioPromocionBandeja) || 0;
     const precioManualActivo = Boolean(row.precioManualActivo);
     const promocionActiva = Boolean(row.promocionActiva) && precioPromoFormato > 0;
@@ -2895,7 +2901,7 @@ export default function App() {
       precio: precioEfectivo, subtotal, costoCaja: Number(q.costoCaja || 0),
       precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: stockDeHuevo(q),
       precioManualActivo, precioManualTotal: row.precioManualTotal ?? "",
-      promocionActiva, precioPromoFormato,
+      promocionActiva, precioPromoFormato, usaPrecioEfectivo: usaPrecioEfectivo && precioEfectivoConfigFormato > 0,
     };
   }).filter(item => item.cantidadFormatos > 0);
 
@@ -4956,7 +4962,15 @@ export default function App() {
                         return <article key={q.id} className="free-egg-card">
                           <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#E63946",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
                           <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
-                          <div className="free-egg-bottom"><strong>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong><div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div></div>
+                          <div className="free-egg-bottom">
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <strong style={{ color: "#E63946" }}>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
+                              {Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
+                                <strong style={{ color: "#2EC4B6", fontSize: 12.5 }}>{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10.5 }}>efectivo</span></strong>
+                              )}
+                            </div>
+                            <div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div>
+                          </div>
                         </article>;
                       })}
                     </div>
@@ -4977,7 +4991,7 @@ export default function App() {
                     <div className="sales-cart-thumb"><span>🥚</span></div>
                     <div className="sales-cart-name">
                       <b>{item.calidad}</b>
-                      <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : item.promocionActiva ? `🏷️ Promoción · ${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}</small>
+                      <small>{item.precioManualActivo ? `Precio manual · ${fmt(item.subtotal)}` : item.promocionActiva ? `🏷️ Promoción · ${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${fmt(item.subtotal)}` : `${item.cantidadFormatos} ${item.formato}${item.cantidadFormatos===1?"":"s"} · ${item.huevos} huevos`}{!item.precioManualActivo && !item.promocionActiva && <span style={{color: item.usaPrecioEfectivo ? "#2EC4B6" : "#E63946", fontWeight:700}}> · {item.usaPrecioEfectivo ? "precio efectivo" : "precio débito"}</span>}</small>
                       <div style={{display:"flex",gap:12,marginTop:5}}>
                         <button type="button" onClick={()=>alternarPrecioManualHuevo(item.calidadId)} style={{border:"none",padding:0,background:"transparent",color:item.precioManualActivo?"#E63946":"#8E7CC3",fontSize:11,fontWeight:800,cursor:"pointer"}}>
                           {item.precioManualActivo ? "Usar precio automático" : "✏️ Precio manual"}
