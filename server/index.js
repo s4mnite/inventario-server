@@ -1250,9 +1250,11 @@ const aplicarDeltaInventario = (update, delta) => {
     update.$inc = { "inventory.$[q].stockHuevos": Number(delta.stockDelta) };
   }
   const camposAbsolutos = {};
-  ["costoCaja", "precioVentaUnitario", "precioCaja", "precioBandeja", "stockMinimoCajas", "incrementoPct"].forEach(f => {
+  ["costoCaja", "precioVentaUnitario", "precioCaja", "precioBandeja", "stockMinimoCajas", "incrementoPct",
+   "precioEfectivoUnitario", "precioEfectivoCaja", "precioEfectivoBandeja"].forEach(f => {
     if (delta[f] !== undefined) camposAbsolutos[`inventory.$[q].${f}`] = Number(delta[f]);
   });
+  if (delta.precioEfectivoActivo !== undefined) camposAbsolutos["inventory.$[q].precioEfectivoActivo"] = Boolean(delta.precioEfectivoActivo);
   if (Object.keys(camposAbsolutos).length) update.$set = { ...(update.$set || {}), ...camposAbsolutos };
   return [{ "q.id": delta.calidadId }];
 };

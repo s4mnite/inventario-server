@@ -2889,7 +2889,7 @@ export default function App() {
     const usaPrecioEfectivo = pago === "Efectivo" || pago === "Transferencia";
     const precioDebitoFormato = Number(formato === "caja" ? q.precioCaja : q.precioBandeja) || 0;
     const precioEfectivoConfigFormato = Number(formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) || 0;
-    const precioFormato = usaPrecioEfectivo && precioEfectivoConfigFormato > 0 ? precioEfectivoConfigFormato : precioDebitoFormato;
+    const precioFormato = usaPrecioEfectivo && q.precioEfectivoActivo && precioEfectivoConfigFormato > 0 ? precioEfectivoConfigFormato : precioDebitoFormato;
     const precioPromoFormato = Number(formato === "caja" ? q.precioPromocionCaja : q.precioPromocionBandeja) || 0;
     const precioManualActivo = Boolean(row.precioManualActivo);
     const promocionActiva = Boolean(row.promocionActiva) && precioPromoFormato > 0;
@@ -2901,7 +2901,7 @@ export default function App() {
       precio: precioEfectivo, subtotal, costoCaja: Number(q.costoCaja || 0),
       precioCaja: Number(q.precioCaja || 0), precioBandeja: Number(q.precioBandeja || 0), stockHuevos: stockDeHuevo(q),
       precioManualActivo, precioManualTotal: row.precioManualTotal ?? "",
-      promocionActiva, precioPromoFormato, usaPrecioEfectivo: usaPrecioEfectivo && precioEfectivoConfigFormato > 0,
+      promocionActiva, precioPromoFormato, usaPrecioEfectivo: usaPrecioEfectivo && q.precioEfectivoActivo && precioEfectivoConfigFormato > 0,
     };
   }).filter(item => item.cantidadFormatos > 0);
 
@@ -4965,7 +4965,7 @@ export default function App() {
                           <div className="free-egg-bottom">
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                               <strong style={{ color: "#E63946" }}>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
-                              {Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
+                              {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
                                 <strong style={{ color: "#2EC4B6", fontSize: 12.5 }}>{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10.5 }}>efectivo</span></strong>
                               )}
                             </div>
