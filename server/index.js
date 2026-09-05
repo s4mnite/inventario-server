@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 require("dotenv").config();
 
 // ─── Resend (envío de correos) ────────────────────────────────────────────────
@@ -38,6 +39,7 @@ process.on("uncaughtException", (e) => console.error("❌ uncaughtException:", e
 process.on("unhandledRejection", (e) => console.error("❌ unhandledRejection:", e));
 
 const app = express();
+app.use(compression());
 app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
