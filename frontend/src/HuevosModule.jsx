@@ -847,14 +847,19 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   }, [inventory, reportMovements, movements, reportRange.start, reportRange.end]);
 
   const exportEggReport = () => {
+    // Los montos en pesos ($) del reporte se redondean acá antes de escribirlos
+    // al CSV: este export escribe los números crudos (no pasa por `fmt`), así
+    // que sin este redondeo se podían filtrar decimales de costos/ganancias
+    // calculados internamente (ej: costo por huevo = costoCaja / 180).
+    const $ = Math.round;
     const rows = [
       ["Categoría","Stock inicial","Entradas reales","Valor entradas","Traspasos","Vendidos","Ingreso ventas","Costo vendido","Ganancia","Roto","Trizados","Total perdido","Valor perdido","Stock final"],
-      ...eggReport.categories.map(c=>[c.nombre,c.stockInicial,c.entradas,c.valorEntradas,c.traspasos,c.vendidos,c.ingreso,c.costo,c.ganancia,c.roto,c.trizados,c.totalPerdido,c.valorPerdido,c.stockFinal]),
-      ["TOTAL",eggReport.totals.stockInicial,eggReport.totals.entradas,eggReport.totals.valorEntradas,eggReport.totals.traspasos,eggReport.totals.vendidos,eggReport.totals.ingreso,eggReport.totals.costo,eggReport.totals.ganancia,eggReport.totals.roto,eggReport.totals.trizados,eggReport.totals.totalPerdido,eggReport.totals.valorPerdido,eggReport.totals.stockFinal],
+      ...eggReport.categories.map(c=>[c.nombre,c.stockInicial,c.entradas,$(c.valorEntradas),c.traspasos,c.vendidos,$(c.ingreso),$(c.costo),$(c.ganancia),c.roto,c.trizados,c.totalPerdido,$(c.valorPerdido),c.stockFinal]),
+      ["TOTAL",eggReport.totals.stockInicial,eggReport.totals.entradas,$(eggReport.totals.valorEntradas),eggReport.totals.traspasos,eggReport.totals.vendidos,$(eggReport.totals.ingreso),$(eggReport.totals.costo),$(eggReport.totals.ganancia),eggReport.totals.roto,eggReport.totals.trizados,eggReport.totals.totalPerdido,$(eggReport.totals.valorPerdido),eggReport.totals.stockFinal],
       [],
       ["Ventas de huevos por método de pago"],
       ["Efectivo","Débito","Transferencia","Total"],
-      [eggReport.paymentBreakdown.efectivo,eggReport.paymentBreakdown.debito,eggReport.paymentBreakdown.transferencia,eggReport.paymentBreakdown.total]
+      [$(eggReport.paymentBreakdown.efectivo),$(eggReport.paymentBreakdown.debito),$(eggReport.paymentBreakdown.transferencia),$(eggReport.paymentBreakdown.total)]
     ];
     const csv = "\ufeff" + rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
     const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });

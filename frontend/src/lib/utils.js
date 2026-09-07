@@ -4,7 +4,12 @@
 
 export const API = import.meta.env.VITE_API_URL || "https://inventario-backend-ftw6.onrender.com";
 
-export const fmt = (n) => `$${Number(n || 0).toLocaleString("es-CL")}`;
+// El peso chileno no usa decimales: todo monto que se muestra en la UI debe
+// quedar redondeado a un número entero antes de formatear. Antes `fmt` no
+// redondeaba, así que un monto como 1999.5 se mostraba como "$1.999,5" (y en
+// algunos casos hasta con más decimales) en vez de "$2.000". Ahora todos los
+// montos ($) que pasan por acá siempre se ven como enteros.
+export const fmt = (n) => `$${Math.round(Number(n || 0)).toLocaleString("es-CL")}`;
 export const fmtIVA = (n) => `$${Math.round(Number(n || 0)).toLocaleString("es-CL")}`;
 
 export const todayLocalISO = () => {

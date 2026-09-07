@@ -82,7 +82,13 @@ const calcularPrecioProducto = (producto, cantidad, esManga = false) => {
   }
 
   subtotal += restantes * precioNormal;
-  const precioPromedio = qty > 0 ? subtotal / qty : precioNormal;
+  // El precio pesos-chilenos nunca lleva decimales: al mezclar mangas/promos/
+  // unidades sueltas en una misma línea, el promedio (subtotal / qty) puede
+  // dar un valor con decimales aunque cada componente sea un entero. Se
+  // redondea acá, en el cálculo, para que el precio unitario que queda
+  // guardado en el carrito y en la venta sea siempre un monto entero, no solo
+  // su versión formateada en pantalla.
+  const precioPromedio = qty > 0 ? Math.round(subtotal / qty) : precioNormal;
   const partes = [];
   if (mangas) partes.push(`${mangas} manga${mangas === 1 ? "" : "s"}`);
   if (promos) partes.push(`${promos} promo${promos === 1 ? "" : "s"}`);
@@ -969,7 +975,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
                 <div key={i} style={{ display: "flex", fontSize: 11, marginBottom: 3 }}>
                   <span style={{ width: "5ch", textAlign: "center", flexShrink: 0 }}>{item.cantidad}</span>
                   <span style={{ flex: 1, paddingLeft: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.nombre.toUpperCase()}</span>
-                  <span style={{ width: "10ch", textAlign: "right", flexShrink: 0, fontWeight: 700 }}>${Number(subtotal).toLocaleString("es-CL")}</span>
+                  <span style={{ width: "10ch", textAlign: "right", flexShrink: 0, fontWeight: 700 }}>${Math.round(Number(subtotal)).toLocaleString("es-CL")}</span>
                 </div>
               );
             })}
@@ -981,17 +987,17 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
           <div style={{ margin: "8px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
               <span>SUBTOTAL</span>
-              <span>${subtotalItems.toLocaleString("es-CL")}</span>
+              <span>${Math.round(subtotalItems).toLocaleString("es-CL")}</span>
             </div>
             {descuento > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
                 <span>DESCUENTOS</span>
-                <span>-${descuento.toLocaleString("es-CL")}</span>
+                <span>-${Math.round(descuento).toLocaleString("es-CL")}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 900, marginTop: 4, letterSpacing: 0.5 }}>
               <span>TOTAL</span>
-              <span>${total.toLocaleString("es-CL")}</span>
+              <span>${Math.round(total).toLocaleString("es-CL")}</span>
             </div>
           </div>
 
@@ -1007,23 +1013,23 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                   <span>EFECTIVO:</span>
-                  <span>${Number(boleta.montoEfectivo || 0).toLocaleString("es-CL")}</span>
+                  <span>${Math.round(Number(boleta.montoEfectivo || 0)).toLocaleString("es-CL")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                   <span>TARJETA:</span>
-                  <span>${Number(boleta.montoTarjeta || 0).toLocaleString("es-CL")}</span>
+                  <span>${Math.round(Number(boleta.montoTarjeta || 0)).toLocaleString("es-CL")}</span>
                 </div>
               </>
             ) : (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span>MONTO PAGADO:</span>
-                <span>${(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
+                <span>${Math.round(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
               </div>
             )}
             {boleta.vuelto > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span>VUELTO:</span>
-                <span style={{ fontWeight: 700 }}>${boleta.vuelto.toLocaleString("es-CL")}</span>
+                <span style={{ fontWeight: 700 }}>${Math.round(boleta.vuelto).toLocaleString("es-CL")}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -5621,13 +5627,13 @@ export default function App() {
                           </div>
                           <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Efectivo contado en caja (opcional)</label>
                           <input type="number" min="0" value={montoContado} onChange={e => setMontoContado(e.target.value)}
-                            placeholder={`Esperado: $${(cajaData.montoApertura + ef).toLocaleString("es-CL")}`}
+                            placeholder={`Esperado: $${Math.round(cajaData.montoApertura + ef).toLocaleString("es-CL")}`}
                             style={{ ...inp, marginBottom: 4 }} />
                           {montoContado !== "" && (
                             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700,
                               color: (+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "#2EC4B6" : "#E63946" }}>
                               Diferencia: {(+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "+" : ""}
-                              ${(+montoContado - (cajaData.montoApertura + ef)).toLocaleString("es-CL")}
+                              ${Math.round(+montoContado - (cajaData.montoApertura + ef)).toLocaleString("es-CL")}
                             </p>
                           )}
                           <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Notas del cierre (opcional)</label>

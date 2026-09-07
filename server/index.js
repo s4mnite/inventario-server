@@ -636,8 +636,12 @@ app.post("/api/ventas", async (req, res) => {
         return soldUnits ? { ...q, stockHuevos: Number(q.stockHuevos || 0) - soldUnits } : q;
       });
       const eggMovements = eggItems.map((item, index) => {
-        const ingreso = Number(item.subtotal || 0);
-        const costo = (Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0);
+        const ingreso = Math.round(Number(item.subtotal || 0));
+        // El peso chileno no tiene decimales: se redondea el costo (y por lo
+        // tanto la ganancia) al guardarlo, no solo al mostrarlo en pantalla.
+        // Antes quedaba guardado con decimales (ej: huevos/180 * costoCaja),
+        // y esos decimales se filtraban a reportes, estadísticas y al CSV.
+        const costo = Math.round((Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0));
         return {
           id: Number(`${Date.now()}${index}`),
           fechaIngreso: chileDate,
@@ -659,7 +663,7 @@ app.post("/api/ventas", async (req, res) => {
           ganancia: ingreso - costo,
           precioCaja: Number(item.precioCaja || 0),
           precioBandeja: Number(item.precioBandeja || 0),
-          precioUnidad: Number(item.huevos || 0) > 0 ? ingreso / Number(item.huevos || 0) : 0,
+          precioUnidad: Number(item.huevos || 0) > 0 ? Math.round(ingreso / Number(item.huevos || 0)) : 0,
           descuento: 0,
           metodoPago: venta.pago || "Efectivo",
           ventaId: ventaGuardada.id,
@@ -1032,7 +1036,7 @@ app.post("/api/gastos", authGastos, async (req, res) => {
         const costoAnterior = Math.max(0, Number(producto.costo || 0));
         const stockNuevo = stockAnterior + cantidad;
         const costoNuevo = stockNuevo > 0
-          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          ? Math.round(((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo)
           : costoUnitario;
         await db.collection("productos").updateOne(
           { _id: oid },
@@ -1098,7 +1102,7 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
       const stockRevertido = Math.max(0, stockActual - cantidadVieja);
       const valorTotalActual = stockActual * costoActualProd;
       const valorRevertido = Math.max(0, valorTotalActual - (cantidadVieja * costoViejo));
-      const costoRevertido = stockRevertido > 0 ? valorRevertido / stockRevertido : 0;
+      const costoRevertido = stockRevertido > 0 ? Math.round(valorRevertido / stockRevertido) : 0;
       await db.collection("productos").updateOne(
         { _id: poid },
         { $set: { stock: stockRevertido, costo: costoRevertido, actualizadoEn: new Date() } }
@@ -1124,7 +1128,7 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
         const costoAnterior = Math.max(0, Number(producto.costo || 0));
         const stockNuevo = stockAnterior + cantidad;
         const costoNuevo = stockNuevo > 0
-          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          ? Math.round(((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo)
           : costoUnitario;
         await db.collection("productos").updateOne(
           { _id: poid },
