@@ -3341,6 +3341,16 @@ export default function App() {
 
   // Datos reales del inicio móvil: ventas menos costo de los productos.
   const fechaLocalClave = (value) => {
+    // Un string "YYYY-MM-DD" (sin hora) ya es una fecha local — por ejemplo,
+    // el campo `fecha` de un gasto se guarda así. Pero new Date("2026-09-05")
+    // lo interpreta como MEDIANOCHE UTC (a diferencia de un datetime completo,
+    // que si se interpreta en hora local). En Chile (detrás de UTC), esa
+    // medianoche UTC cae en el día ANTERIOR en hora local, así que
+    // recalcularla con getFullYear/getMonth/getDate corría la fecha un día
+    // hacia atrás — un gasto fechado "2026-09-05" no aparecía en Reportes ni
+    // en el resumen de Inicio al filtrar por ese mismo día. Para un valor así
+    // no hace falta convertir nada: ya es la clave que buscamos.
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
     const d = value ? new Date(value) : null;
     if (!d || Number.isNaN(d.getTime())) return "";
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
