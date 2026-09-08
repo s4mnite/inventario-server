@@ -778,8 +778,8 @@ const css = `
     .mobile-topbar h1 { font-size: 15px !important; }
   }
 
-  .sales-mobile-v2 { display:none; }
-  @media (max-width:1024px){
+  .sales-mobile-v2 { display:block; }
+  @media (min-width:0px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
     .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:0;background:#FF9F1C;color:#14120E;box-shadow:none;margin-bottom:3px}
