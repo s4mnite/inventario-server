@@ -5024,7 +5024,13 @@ export default function App() {
                   </>}
 
                   {ventaTab === "huevos" && saleFlowType === "free" && (
-                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
+                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> :
+                    (!freeEggInventory.length && ventaError) ? (
+                      <div className="sales-error-v2">
+                        ⚠ {ventaError}
+                        <button onClick={()=>window.location.reload()} style={{marginLeft:10,border:"none",background:"none",color:"#E63946",fontWeight:800,textDecoration:"underline",cursor:"pointer"}}>Recargar página para reintentar</button>
+                      </div>
+                    ) : <div className="free-eggs-grid">
                       {freeEggInventory.map(q => {
                         const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
                         return <article key={q.id} className="free-egg-card">
