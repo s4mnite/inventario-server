@@ -1042,7 +1042,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
     </div>
 
     {tab === "dashboard" && <>
-      <div className="dashboard-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:16 }}>
+      <div className="stats-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:16 }}>
         {[
           ["Cajas completas", totalBreakdown.cajas, "📦", D?"#2EC4B6":"#2EC4B6"],
           ["Bandejas sueltas", totalBreakdown.bandejas, "🥚", D?"#FF9F1C":"#FF9F1C"],
@@ -1050,7 +1050,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
           ["Merma acumulada", `${wasteUnits.toLocaleString("es-CL")} huevos`, "⚠️", D?"#E63946":"#E63946"],
         ].map(([label,value,icon,color]) => <div key={label} style={card} className="card-hover"><div style={{ fontSize:23, marginBottom:10 }}>{icon}</div><p style={{ margin:0, color:textMuted, fontSize:12 }}>{label}</p><p style={{ margin:"5px 0 0", color:textPrimary, fontSize:23, fontWeight:800 }}>{value}</p><div style={{ width:34, height:3, borderRadius:0, background:color, marginTop:12 }}/></div>)}
       </div>
-      <div className="dashboard-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:18 }}>
+      <div className="stats-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:18 }}>
         {[
           ["Ventas huevos", fmt(revenue), "Ingresos exclusivos de huevos", D?"#2EC4B6":"#2EC4B6"],
           ["Ganancia huevos", fmt(profit), "Sin mezclar otros productos", D?"#2EC4B6":"#2EC4B6"],
@@ -1158,7 +1158,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       </div>;
     })()}
 
-    {tab === "merma" && <><div className="dashboard-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:16 }}>{[["Huevos perdidos",wasteUnits.toLocaleString("es-CL")],["Costo perdido",fmt(wasteCost)],["% sobre salidas",`${((wasteUnits/(wasteUnits+sales.reduce((s,m)=>s+m.huevos,0)||1))*100).toFixed(1)}%`]].map(([l,v])=><div key={l} style={card}><p style={{margin:0,color:textMuted,fontSize:12}}>{l}</p><p style={{margin:"6px 0 0",color:D?"#E63946":"#E63946",fontWeight:800,fontSize:22}}>{v}</p></div>)}</div><div style={card}>{wastes.length===0?<p style={{margin:0,textAlign:"center",padding:28,color:textMuted}}>No hay merma registrada.</p>:wastes.map((m,i)=><div key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<wastes.length-1?`1px solid ${borderColor}`:"none"}}><div style={{width:38,height:38,borderRadius:0,background:D?"rgba(230,57,70,.16)":"rgba(230,57,70,0.10)",display:"flex",alignItems:"center",justifyContent:"center"}}><TrendingDown size={17} color={D?"#E63946":"#E63946"}/></div><div style={{flex:1}}><p style={{margin:0,color:textPrimary,fontWeight:700,fontSize:13}}>{m.calidad} · {m.huevos} huevos</p><p style={{margin:"3px 0 0",color:textMuted,fontSize:11}}>{m.motivo} · {new Date(m.fecha).toLocaleString("es-CL")}</p></div><strong style={{color:D?"#E63946":"#E63946",fontSize:13}}>{fmt(m.costo)}</strong></div>)}</div></>}
+    {tab === "merma" && <><div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:16 }}>{[["Huevos perdidos",wasteUnits.toLocaleString("es-CL")],["Costo perdido",fmt(wasteCost)],["% sobre salidas",`${((wasteUnits/(wasteUnits+sales.reduce((s,m)=>s+m.huevos,0)||1))*100).toFixed(1)}%`]].map(([l,v])=><div key={l} style={card}><p style={{margin:0,color:textMuted,fontSize:12}}>{l}</p><p style={{margin:"6px 0 0",color:D?"#E63946":"#E63946",fontWeight:800,fontSize:22}}>{v}</p></div>)}</div><div style={card}>{wastes.length===0?<p style={{margin:0,textAlign:"center",padding:28,color:textMuted}}>No hay merma registrada.</p>:wastes.map((m,i)=><div key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<wastes.length-1?`1px solid ${borderColor}`:"none"}}><div style={{width:38,height:38,borderRadius:0,background:D?"rgba(230,57,70,.16)":"rgba(230,57,70,0.10)",display:"flex",alignItems:"center",justifyContent:"center"}}><TrendingDown size={17} color={D?"#E63946":"#E63946"}/></div><div style={{flex:1}}><p style={{margin:0,color:textPrimary,fontWeight:700,fontSize:13}}>{m.calidad} · {m.huevos} huevos</p><p style={{margin:"3px 0 0",color:textMuted,fontSize:11}}>{m.motivo} · {new Date(m.fecha).toLocaleString("es-CL")}</p></div><strong style={{color:D?"#E63946":"#E63946",fontSize:13}}>{fmt(m.costo)}</strong></div>)}</div></>}
 
     {tab === "reportes" && <div className="egg-report-page" style={{display:"grid",gap:16}}>
       <div style={{...card,borderRadius:0,padding:16}}>
