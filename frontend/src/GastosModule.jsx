@@ -346,7 +346,15 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
         movementsNuevos.push({
           id: Date.now() + idx,
           fechaIngreso: fechaMovimiento,
-          fecha: new Date().toISOString(),
+          // BUG FIX: antes esto siempre usaba `new Date().toISOString()` (el
+          // instante en que se guarda el gasto), sin importar qué fecha se
+          // haya elegido para la compra. Si registrabas un gasto de huevos
+          // con fecha atrasada, el movimiento vinculado quedaba con
+          // `fechaIngreso` correcta (el día) pero `fecha` (la hora exacta)
+          // de HOY — inconsistente. Ahora se arma con la fecha elegida y la
+          // hora actual, igual que el mismo caso ya corregido en el módulo
+          // Huevos.
+          fecha: new Date(`${fechaMovimiento}T${new Date().toTimeString().slice(0, 8)}`).toISOString(),
           tipo: "entrada",
           calidadId: q.id, calidad: q.nombre,
           cajas: 0, bandejas: 0, unidades: units, huevos: units,
