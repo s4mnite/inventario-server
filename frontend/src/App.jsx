@@ -824,6 +824,20 @@ const css = `
     .mobile-product-card{align-items:flex-start!important;padding:12px!important;gap:10px!important}.mobile-product-card>div:nth-child(2)>p:first-child{padding-right:25px!important}.mobile-product-card>div:nth-child(2)>p:nth-child(3){color:#E63946!important}.mobile-product-card button{white-space:nowrap}
   }
 
+  /* Misma mecánica de Ventas (huevos y productos juntos, mismo carrito) en
+     pantallas grandes, pero sin la columna angosta de teléfono — se estira y
+     usa grillas de más columnas para no verse apretado. */
+  @media (min-width:701px){
+    .sales-mobile-v2{max-width:1100px;padding-bottom:40px}
+    .sales-product-grid-v2{grid-template-columns:repeat(4,1fr)!important}
+    .free-eggs-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+    .sales-method-summary,.sales-pay-v2{grid-template-columns:repeat(3,minmax(0,220px))!important;justify-content:start}
+  }
+  @media (min-width:1025px){
+    .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
+  }
+
+
 `;
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
