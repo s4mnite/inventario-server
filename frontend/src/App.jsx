@@ -17,7 +17,7 @@ import {
 import EggModule from "./HuevosModule";
 import GastosModule from "./GastosModule";
 import ReyDelHuevoInicio from "./ReyDelHuevoInicio";
-import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes } from "./lib/utils";
+import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes, setAuthCredentials } from "./lib/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const APP_VERSION = "4.0.1";
@@ -1094,7 +1094,7 @@ function RenombrarEmpresa({ empresaActual, products, currentUser, setCurrentUser
     // Actualizar empresa en todos los productos del backend
     for (const p of products) {
       try {
-        const res = await fetch(`${API}/api/productos/${p.id}`, {
+        const res = await fetchConTimeout(`${API}/api/productos/${p.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...p, empresa: nombre }),
@@ -1207,12 +1207,12 @@ function AdminPanel({ onBack, darkMode }) {
     setAccionMsg("Reseteando...");
     try {
       const _ep = `?empresa=${encodeURIComponent(empresa)}`;
-      await fetch(`${API}/api/ventas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
-      await fetch(`${API}/api/boletas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
+      await fetchConTimeout(`${API}/api/ventas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
+      await fetchConTimeout(`${API}/api/boletas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
       // Borrar productos de esa empresa
-      const prods = await fetch(`${API}/api/productos`).then(r => r.json());
+      const prods = await fetchConTimeout(`${API}/api/productos`).then(r => r.json());
       for (const p of prods.filter(p => p.empresa === empresa)) {
-        await fetch(`${API}/api/productos/${p.id || p._id}`, { method: "DELETE" });
+        await fetchConTimeout(`${API}/api/productos/${p.id || p._id}`, { method: "DELETE" });
       }
       setAccionMsg(`✅ Empresa "${empresa}" reseteada`);
       setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg: `🗑️  Reset empresa: ${empresa}`, type: "warn" }]);
@@ -1611,6 +1611,7 @@ export default function App() {
   const [currentUser, setCurrentUserRaw] = useState(() => {
     try { const u = localStorage.getItem("inv_session"); return u ? JSON.parse(u) : null; } catch { return null; }
   });
+  setAuthCredentials(currentUser?.usuario, currentUser?._clave);
   const setCurrentUser = (user) => {
     // Esta pantalla tiene hooks exclusivos del área autenticada. Cambiar la
     // sesión dentro del mismo render altera el orden de hooks (React #310).
@@ -1880,7 +1881,7 @@ export default function App() {
       notas: "",
     };
     try {
-      const r = await fetch(API + "/api/caja/abrir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...nueva, empresa: empresaCaja }) });
+      const r = await fetchConTimeout(API + "/api/caja/abrir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...nueva, empresa: empresaCaja }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "No se pudo abrir caja");
       const cajaConfirmada = d?.caja || nueva;
@@ -1903,7 +1904,7 @@ export default function App() {
       // Siempre consultamos primero la caja realmente abierta en MongoDB.
       // Así un ID viejo guardado en este navegador no impide el cierre.
       const cajaRespaldoId = cajaData?.id || cajaData?._id || "";
-      const actualRes = await fetch(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(cajaRespaldoId)}&_=${Date.now()}`, { cache: "no-store" });
+      const actualRes = await fetchConTimeout(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(cajaRespaldoId)}&_=${Date.now()}`, { cache: "no-store" });
       const actualType = actualRes.headers.get("content-type") || "";
       const actualData = actualType.includes("application/json") ? await actualRes.json() : null;
       if (!actualRes.ok) throw new Error(actualData?.error || "No se pudo consultar la caja abierta.");
@@ -1939,7 +1940,7 @@ export default function App() {
         abiertaPor: cajaReal.abiertaPor || "Usuario",
       };
 
-      const r = await fetch(`${API}/api/caja/cerrar`, {
+      const r = await fetchConTimeout(`${API}/api/caja/cerrar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1949,7 +1950,7 @@ export default function App() {
       if (!r.ok) throw new Error(d?.error || "No se pudo cerrar caja");
 
       // Confirmación final: el servidor ya no debe devolver una caja abierta.
-      const verifyRes = await fetch(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(payload.id || "")}&_=${Date.now()}`, { cache: "no-store" });
+      const verifyRes = await fetchConTimeout(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(payload.id || "")}&_=${Date.now()}`, { cache: "no-store" });
       const verify = (verifyRes.headers.get("content-type") || "").includes("application/json") ? await verifyRes.json() : null;
       if (!verifyRes.ok) throw new Error(verify?.error || "No se pudo confirmar el cierre.");
       if (verify?.apertura && !verify?.cierre) throw new Error("El servidor todavía informa una caja abierta. Intenta nuevamente.");
@@ -2171,7 +2172,7 @@ export default function App() {
     if (!currentUser) return;
     const empresa = empresaActiva;
 
-    fetch(API + "/api/productos").then(r => r.json()).then(data => {
+    fetchConTimeout(API + "/api/productos").then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
         const empresa = currentUser?.empresa || "";
         let filtered;
@@ -2188,7 +2189,7 @@ export default function App() {
     }).catch(() => {});
 
     const empresaParam = `?empresa=${encodeURIComponent(empresaActiva)}`;
-    fetch(API + "/api/categorias" + empresaParam).then(r => r.json()).then(data => {
+    fetchConTimeout(API + "/api/categorias" + empresaParam).then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
         const empresa = currentUser?.empresa || "";
         const filtradas = empresa
@@ -2202,7 +2203,7 @@ export default function App() {
     }).catch(() => {});
 
     // Cargar ventas desde backend (sincronizado entre dispositivos)
-    fetch(API + "/api/ventas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    fetchConTimeout(API + "/api/ventas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
@@ -2227,7 +2228,7 @@ export default function App() {
       });
 
     // Cargar boletas desde backend
-    fetch(API + "/api/boletas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    fetchConTimeout(API + "/api/boletas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
@@ -2314,7 +2315,7 @@ export default function App() {
     if (!prod) return;
     if (!window.confirm(`¿Eliminar "${prod.nombre}"? Podrás restaurarlo desde la Papelera.`)) return;
     try {
-      const res = await fetch(API + "/api/productos/" + id, { method: "DELETE" });
+      const res = await fetchConTimeout(API + "/api/productos/" + id, { method: "DELETE" });
       if (!res.ok) { alert(`No se pudo eliminar el producto (error ${res.status}).`); return; }
       setProducts(prev => prev.filter(p => p.id !== id));
       const nuevaPapelera = [{ ...prod, eliminadoEn: new Date().toISOString() }, ...papelera];
@@ -2327,7 +2328,7 @@ export default function App() {
   const handleRestaurarProd = async (item) => {
     const { id, _id, eliminadoEn, ...data } = item;
     try {
-      const res = await fetch(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const res = await fetchConTimeout(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const nuevo = await res.json();
       setProducts(prev => [...prev, { ...nuevo, id: nuevo.id || nuevo._id }]);
       const nuevaPapelera = papelera.filter(p => p !== item);
@@ -2438,7 +2439,7 @@ export default function App() {
 
   const handleMoverProducto = async (prod, nuevaEmpresa) => {
     try {
-      const res = await fetch(API + "/api/productos/" + prod.id, {
+      const res = await fetchConTimeout(API + "/api/productos/" + prod.id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...prod, empresa: nuevaEmpresa }),
@@ -2453,12 +2454,12 @@ export default function App() {
     const data = { ...form, precio: +form.precio, costo: +(form.costo || 0), incrementoPct: Number(form.incrementoPct || calcIncrementPct(form.costo, form.precio) || 0), stock: +form.stock, empresa: currentUser?.empresa || "" };
     try {
       if (modal === "add") {
-        const res = await fetch(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        const res = await fetchConTimeout(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         if (!res.ok) { alert(`No se pudo crear el producto (error ${res.status}).`); return; }
         const nuevo = await res.json();
         setProducts(prev => [...prev, { ...nuevo, id: nuevo.id || nuevo._id }]);
       } else {
-        const res = await fetch(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        const res = await fetchConTimeout(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         if (!res.ok) { alert(`No se pudo guardar el producto (error ${res.status}).`); return; }
         setProducts(prev => prev.map(p => p.id === form.id ? { ...data, id: form.id } : p));
       }
@@ -2471,7 +2472,7 @@ export default function App() {
     const formData = new FormData();
     formData.append("imagen", file);
     try {
-      const res = await fetch(`${API}/api/productos/upload-imagen`, { method: "POST", body: formData });
+      const res = await fetchConTimeout(`${API}/api/productos/upload-imagen`, { method: "POST", body: formData });
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         // El servidor devolvió HTML (ruta no existe, servidor caído, etc.)
@@ -2503,7 +2504,7 @@ export default function App() {
     if (!nombre) { setCatError("Escribe un nombre."); return; }
     if (categorias.map(c => c.toLowerCase()).includes(nombre.toLowerCase())) { setCatError("Ya existe."); return; }
     try {
-      const res = await fetch(API + "/api/categorias", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre, icono: "📦", empresa: currentUser?.empresa || "" }) });
+      const res = await fetchConTimeout(API + "/api/categorias", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre, icono: "📦", empresa: currentUser?.empresa || "" }) });
       const data = await res.json();
       if (!res.ok) { setCatError(data.error || "Error"); return; }
       setCategorias(prev => [...prev, nombre]);
@@ -2529,7 +2530,7 @@ export default function App() {
     }
     try {
       const empresaParam = currentUser?.empresa ? `?empresa=${encodeURIComponent(currentUser.empresa)}` : "?empresa=";
-      const res = await fetch(API + "/api/categorias" + empresaParam);
+      const res = await fetchConTimeout(API + "/api/categorias" + empresaParam);
       const cats = await res.json();
       const empresa = currentUser?.empresa || "";
       const filtradas = empresa
@@ -2537,7 +2538,7 @@ export default function App() {
         : cats.filter(c => !c.empresa || c.empresa === "");
       const cat = filtradas.find(c => c.nombre === nombreAnterior);
       if (cat) {
-        await fetch(API + "/api/categorias/" + (cat._id || cat.id), {
+        await fetchConTimeout(API + "/api/categorias/" + (cat._id || cat.id), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nombre: nuevoNombre }),
@@ -2546,7 +2547,7 @@ export default function App() {
       // Actualiza los productos que usaban el nombre anterior, para que no queden huérfanos.
       const productosAfectados = products.filter(p => p.categoria === nombreAnterior);
       await Promise.all(productosAfectados.map(p =>
-        fetch(API + "/api/productos/" + p.id, {
+        fetchConTimeout(API + "/api/productos/" + p.id, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" },
           body: JSON.stringify({ ...p, categoria: nuevoNombre }),
@@ -2565,14 +2566,14 @@ export default function App() {
   const eliminarCatDirecto = async (index, nombre) => {
     try {
       const empresaParam = currentUser?.empresa ? `?empresa=${encodeURIComponent(currentUser.empresa)}` : "?empresa=";
-      const res = await fetch(API + "/api/categorias" + empresaParam);
+      const res = await fetchConTimeout(API + "/api/categorias" + empresaParam);
       const cats = await res.json();
       const empresa = currentUser?.empresa || "";
       const filtradas = empresa
         ? cats.filter(c => c.empresa === empresa)
         : cats.filter(c => !c.empresa || c.empresa === "");
       const cat = filtradas.find(c => c.nombre === nombre);
-      if (cat) await fetch(API + "/api/categorias/" + (cat._id || cat.id), { method: "DELETE" });
+      if (cat) await fetchConTimeout(API + "/api/categorias/" + (cat._id || cat.id), { method: "DELETE" });
       setCategorias(prev => prev.filter((_, i) => i !== index));
       const newIcons = { ...catIconos }; delete newIcons[nombre];
       setCatIconos(newIcons); saveCatIcons(newIcons);
@@ -2625,7 +2626,7 @@ export default function App() {
         await registrarCompraInventario(modalStock, cantidad, costoTotal);
       } else {
         const nuevoStock = Math.max(0, modalStock.stock - cantidad);
-        const res = await fetch(API + "/api/productos/" + modalStock.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" }, body: JSON.stringify({ ...modalStock, stock: nuevoStock }) });
+        const res = await fetchConTimeout(API + "/api/productos/" + modalStock.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" }, body: JSON.stringify({ ...modalStock, stock: nuevoStock }) });
         if (!res.ok) throw new Error((await res.json()).error || "No se pudo ajustar el stock.");
         setProducts(prev => prev.map(p => p.id === modalStock.id ? { ...p, stock: nuevoStock } : p));
       }
@@ -2658,7 +2659,7 @@ export default function App() {
     if (cant > prod.stock) { setMermaError(`Stock insuficiente. Disponible: ${prod.stock}.`); return; }
     const nuevoStock = prod.stock - cant;
     try {
-      const res = await fetch(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
+      const res = await fetchConTimeout(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
       if (!res.ok) { setMermaError(`No se pudo actualizar el stock (error ${res.status}). Intenta de nuevo.`); return; }
       setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, stock: nuevoStock } : p));
       const nuevaMerma = { id: Date.now(), productoId: prod.id, producto: prod.nombre, cantidad: cant, motivo: formMerma.motivo, fecha: new Date().toLocaleString("es-CL"), usuario: currentUser.nombre };
@@ -3171,7 +3172,7 @@ export default function App() {
       const timeoutId = window.setTimeout(() => controller.abort(), 30000);
       let res;
       try {
-        res = await fetch(API + "/api/ventas", {
+        res = await fetchConTimeout(API + "/api/ventas", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3287,7 +3288,7 @@ export default function App() {
 
     let boletaGuardada = { ...boletaLocal };
     try {
-      const res = await fetch(API + "/api/boletas", {
+      const res = await fetchConTimeout(API + "/api/boletas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(boletaLocal),
@@ -3601,7 +3602,7 @@ export default function App() {
     setReconciliando(true);
     setResultReconciliacion(null);
     try {
-      const res = await fetch(`${API}/api/productos/reconciliar-stock`, {
+      const res = await fetchConTimeout(`${API}/api/productos/reconciliar-stock`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3614,7 +3615,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || "No se pudo reconciliar el stock.");
       setResultReconciliacion(data);
       // Refrescar productos para ver el stock ya corregido
-      const productosRes = await fetch(API + "/api/productos");
+      const productosRes = await fetchConTimeout(API + "/api/productos");
       const productosData = await productosRes.json();
       if (Array.isArray(productosData)) {
         const empresa = currentUser?.empresa || "";
@@ -3639,7 +3640,7 @@ export default function App() {
     setRevirtiendo(true);
     setResultReversion(null);
     try {
-      const res = await fetch(`${API}/api/productos/revertir-reconciliacion`, {
+      const res = await fetchConTimeout(`${API}/api/productos/revertir-reconciliacion`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3652,7 +3653,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || "No se pudo revertir la reconciliación.");
       setResultReversion(data);
       // Refrescar productos para ver el stock ya corregido
-      const productosRes = await fetch(API + "/api/productos");
+      const productosRes = await fetchConTimeout(API + "/api/productos");
       const productosData = await productosRes.json();
       if (Array.isArray(productosData)) {
         const empresa = currentUser?.empresa || "";
@@ -5398,7 +5399,7 @@ export default function App() {
                           <button onClick={async () => {
                             if (!window.confirm("¿Eliminar esta venta? El stock de los productos vendidos se devolverá automáticamente al inventario.")) return;
                             try {
-                              const res = await fetch(`${API}/api/ventas/${v.id}`, {
+                              const res = await fetchConTimeout(`${API}/api/ventas/${v.id}`, {
                                 method: "DELETE",
                                 headers: { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" },
                               });
@@ -5596,7 +5597,7 @@ export default function App() {
                               e.stopPropagation();
                               if (!window.confirm(`¿Eliminar la venta #${String(b.numero).padStart(6,"0")}? El stock de los productos vendidos se devolverá automáticamente al inventario.`)) return;
                               try {
-                                const res = await fetch(`${API}/api/ventas/${b.ventaId}`, {
+                                const res = await fetchConTimeout(`${API}/api/ventas/${b.ventaId}`, {
                                   method: "DELETE",
                                   headers: { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" },
                                 });

@@ -96,6 +96,20 @@ const authAdmin = (req, res, next) => {
   next();
 };
 
+// Middleware genérico: exige que la petición venga de un usuario válido
+// (cualquier rol, no bloqueado). Protege datos del negocio (productos,
+// categorías, caja, ventas, boletas) que antes no tenían NINGÚN control de
+// acceso — cualquiera con la URL del backend podía leer, modificar o borrar
+// todo sin loguearse.
+const authUsuario = (req, res, next) => {
+  const usuario = String(req.headers["x-usuario"] || "").trim();
+  const clave = String(req.headers["x-clave"] || "");
+  const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+  if (!user) return res.status(401).json({ error: "No autorizado" });
+  req.usuarioActual = user;
+  next();
+};
+
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 app.post("/api/auth/login", (req, res) => {
   const { usuario, clave } = req.body;
@@ -231,7 +245,7 @@ app.post("/api/users", authAdmin, (req, res) => {
 });
 
 // ─── PRODUCTOS (MongoDB) ──────────────────────────────────────────────────────
-app.get("/api/productos", async (req, res) => {
+app.get("/api/productos", authUsuario, async (req, res) => {
   try {
     if (!db) return res.json([]);
     const productos = await db.collection("productos").find().toArray();
@@ -239,7 +253,7 @@ app.get("/api/productos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/productos", async (req, res) => {
+app.post("/api/productos", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const producto = { ...req.body, creadoEn: new Date() };
@@ -248,7 +262,7 @@ app.post("/api/productos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/productos/:id", async (req, res) => {
+app.put("/api/productos/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { _id, id, ...data } = req.body;
@@ -257,7 +271,7 @@ app.put("/api/productos/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/productos/:id", async (req, res) => {
+app.delete("/api/productos/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("productos").deleteOne({ _id: new ObjectId(req.params.id) });
@@ -266,7 +280,7 @@ app.delete("/api/productos/:id", async (req, res) => {
 });
 
 // ─── CATEGORÍAS (MongoDB) ─────────────────────────────────────────────────────
-app.get("/api/categorias", async (req, res) => {
+app.get("/api/categorias", authUsuario, async (req, res) => {
   try {
     if (!db) return res.json([]);
     const cats = await db.collection("categorias").find().toArray();
@@ -274,7 +288,7 @@ app.get("/api/categorias", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/categorias", async (req, res) => {
+app.post("/api/categorias", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { nombre, icono } = req.body;
@@ -285,7 +299,7 @@ app.post("/api/categorias", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/categorias/:id", async (req, res) => {
+app.put("/api/categorias/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("categorias").updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body });
@@ -293,7 +307,7 @@ app.put("/api/categorias/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/categorias/:id", async (req, res) => {
+app.delete("/api/categorias/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("categorias").deleteOne({ _id: new ObjectId(req.params.id) });
@@ -331,7 +345,7 @@ const obtenerUsuarioPeticion = req => {
 const obtenerClaveHuevos = user => String((user?.empresa && String(user.empresa).trim()) || user?.usuario || "").trim();
 
 // ─── CAJA Y CLIENTES DE FACTURACIÓN ─────────────────────────────────────────
-app.get("/api/caja/actual", async (req, res) => {
+app.get("/api/caja/actual", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const empresa = obtenerEmpresa(req.query.empresa);
@@ -356,7 +370,7 @@ app.get("/api/caja/actual", async (req, res) => {
     res.json(caja ? { ...caja, id: caja._id.toString() } : null);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.get("/api/caja/historial", async (req, res) => {
+app.get("/api/caja/historial", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const empresa = obtenerEmpresa(req.query.empresa);
@@ -371,7 +385,7 @@ app.get("/api/caja/historial", async (req, res) => {
     res.json(cajas.map(c => ({ ...c, id: c._id.toString() })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post("/api/caja/abrir", async (req, res) => {
+app.post("/api/caja/abrir", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const empresa = obtenerEmpresa(req.body.empresa);
@@ -384,7 +398,7 @@ app.post("/api/caja/abrir", async (req, res) => {
     res.json({ caja: { ...doc, id: r.insertedId.toString() } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post("/api/caja/cerrar", async (req, res) => {
+app.post("/api/caja/cerrar", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const empresa = obtenerEmpresa(req.body?.empresa);
@@ -490,7 +504,7 @@ app.post("/api/caja/cerrar", async (req, res) => {
 });
 
 // ─── VENTAS (MongoDB) ─────────────────────────────────────────────────────────
-app.get("/api/ventas", async (req, res) => {
+app.get("/api/ventas", authUsuario, async (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   try {
     if (!db) return res.json([]);
@@ -501,7 +515,7 @@ app.get("/api/ventas", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/ventas", async (req, res) => {
+app.post("/api/ventas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
 
@@ -732,7 +746,7 @@ app.post("/api/ventas", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/ventas/:id", async (req, res) => {
+app.delete("/api/ventas/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
 
@@ -949,7 +963,7 @@ app.post("/api/productos/revertir-reconciliacion", authAdmin, async (req, res) =
 });
 
 // ─── BOLETAS (MongoDB) ────────────────────────────────────────────────────────
-app.get("/api/boletas", async (req, res) => {
+app.get("/api/boletas", authUsuario, async (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   try {
     if (!db) return res.json([]);
@@ -959,7 +973,7 @@ app.get("/api/boletas", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/boletas", async (req, res) => {
+app.post("/api/boletas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const boleta = { ...req.body, creadoEn: new Date() };
@@ -968,7 +982,7 @@ app.post("/api/boletas", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/boletas/:id", async (req, res) => {
+app.delete("/api/boletas/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { ObjectId } = require("mongodb");

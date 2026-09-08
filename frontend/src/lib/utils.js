@@ -23,10 +23,25 @@ export const todayLocalISO = () => {
 // helper la aborta a los `ms` y lanza un error claro, para que las pantallas
 // de sincronización (caja, ventas, productos) puedan reintentar solas en vez
 // de quedar pegadas esperando una respuesta que no va a llegar.
+// Credenciales del usuario logueado, actualizadas por App.jsx en cada login /
+// cambio de sesión. fetchConTimeout las manda automáticamente en cada pedido
+// al backend (a menos que la llamada ya traiga sus propios headers de auth),
+// así ningún endpoint nuevo queda desprotegido por un fetch que se olvidó de
+// mandar las credenciales a mano.
+let _authCreds = { usuario: "", clave: "" };
+export const setAuthCredentials = (usuario, clave) => {
+  _authCreds = { usuario: String(usuario || ""), clave: String(clave || "") };
+};
+
 export const fetchConTimeout = (url, options = {}, ms = 12000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+  const esBackend = typeof url === "string" && url.startsWith(API);
+  const headersYaTienenAuth = options.headers && (options.headers["x-usuario"] || options.headers["x-admin-user"]);
+  const headers = (esBackend && !headersYaTienenAuth)
+    ? { ...(options.headers || {}), "x-usuario": _authCreds.usuario, "x-clave": _authCreds.clave }
+    : options.headers;
+  return fetch(url, { ...options, headers, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 };
 
 
