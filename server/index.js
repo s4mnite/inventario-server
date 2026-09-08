@@ -627,25 +627,52 @@ app.post("/api/ventas", async (req, res) => {
     let eggInventory = null;
     if (eggItems.length) {
       const now = new Date();
-      const chileDateParts = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit"
-      }).formatToParts(now).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
-      const chileDate = `${chileDateParts.year}-${chileDateParts.month}-${chileDateParts.day}`;
-      eggInventory = eggInventoryActual.map(q => {
-        const soldUnits = eggItems.filter(item => String(item.calidadId) === String(q.id)).reduce((sum, item) => sum + Number(item.huevos || 0), 0);
-        return soldUnits ? { ...q, stockHuevos: Number(q.stockHuevos || 0) - soldUnits } : q;
+      // Si la venta se registró con una fecha atrasada (fechaVentaPersonalizada
+      // en el frontend), venta.timestamp ya refleja esa fecha elegida — el
+      // movimiento de huevos vinculado a esta venta debe quedar con la MISMA
+      // fecha, no con la fecha de hoy. Antes esto siempre usaba `now`, así que
+      // una venta de huevos ingresada con fecha atrasada aparecía en el
+      // módulo Huevos (lotes/movimientos/reportes) con la fecha de hoy en vez
+      // de la fecha real de la venta.
+      const ventaInstant = Number(venta.timestamp) > 0 ? new Date(Number(venta.timestamp)) : now;
+      const chileDate = fechaEnChile(ventaInstant);
+
+      // BUG FIX: antes se calculaba el inventario y los movimientos completos
+      // en JS a partir de `eggInventoryActual`/`eggDoc.movements` — una copia
+      // leída AL PRINCIPIO de este request — y se escribían con un solo
+      // $set que reemplazaba el array entero. Si en el medio (mientras se
+      // guardaba la venta, la boleta, el stock de productos, etc.) llegaba
+      // otra venta con huevos, o un movimiento desde el módulo Huevos, esa
+      // otra escritura quedaba pisada por esta (o al revés): se perdían
+      // movimientos y el stock de huevos quedaba mal. Ahora se actualiza de
+      // forma atómica igual que /api/huevos/movimientos: $inc por categoría
+      // para el stock y $push para los movimientos, así dos ventas casi
+      // simultáneas nunca se pisan entre sí.
+      const unidadesPorCalidad = {};
+      eggItems.forEach(item => {
+        const id = String(item.calidadId);
+        unidadesPorCalidad[id] = (unidadesPorCalidad[id] || 0) + Number(item.huevos || 0);
       });
+      await ensureHuevosDoc(eggKey);
+      for (const [calidadId, unidades] of Object.entries(unidadesPorCalidad)) {
+        if (!unidades) continue;
+        await asegurarCategoriaHuevos(eggKey, calidadId, eggInventoryActual.find(q => String(q.id) === calidadId)?.nombre);
+        await db.collection("huevos").updateOne(
+          { key: eggKey },
+          {
+            $inc: { "inventory.$[q].stockHuevos": -unidades },
+            $set: { usuario: usuarioVenta.usuario, empresa: usuarioVenta.empresa || empresaConfirmada, actualizadoEn: new Date() },
+          },
+          { arrayFilters: [{ "q.id": calidadId }] }
+        );
+      }
       const eggMovements = eggItems.map((item, index) => {
-        const ingreso = Math.round(Number(item.subtotal || 0));
-        // El peso chileno no tiene decimales: se redondea el costo (y por lo
-        // tanto la ganancia) al guardarlo, no solo al mostrarlo en pantalla.
-        // Antes quedaba guardado con decimales (ej: huevos/180 * costoCaja),
-        // y esos decimales se filtraban a reportes, estadísticas y al CSV.
-        const costo = Math.round((Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0));
+        const ingreso = Number(item.subtotal || 0);
+        const costo = (Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0);
         return {
           id: Number(`${Date.now()}${index}`),
           fechaIngreso: chileDate,
-          fecha: now.toISOString(),
+          fecha: ventaInstant.toISOString(),
           tipo: "venta",
           calidadId: item.calidadId,
           calidad: item.calidad,
@@ -663,7 +690,7 @@ app.post("/api/ventas", async (req, res) => {
           ganancia: ingreso - costo,
           precioCaja: Number(item.precioCaja || 0),
           precioBandeja: Number(item.precioBandeja || 0),
-          precioUnidad: Number(item.huevos || 0) > 0 ? Math.round(ingreso / Number(item.huevos || 0)) : 0,
+          precioUnidad: Number(item.huevos || 0) > 0 ? ingreso / Number(item.huevos || 0) : 0,
           descuento: 0,
           metodoPago: venta.pago || "Efectivo",
           ventaId: ventaGuardada.id,
@@ -671,13 +698,12 @@ app.post("/api/ventas", async (req, res) => {
           guardadoEn: now.toISOString(),
         };
       });
-      const previousMovements = Array.isArray(eggDoc?.movements) ? eggDoc.movements : [];
-      const movements = [...eggMovements, ...previousMovements].slice(0, 5000);
-      await db.collection("huevos").updateOne(
+      const eggDocFinal = await db.collection("huevos").findOneAndUpdate(
         { key: eggKey },
-        { $set: { inventory: eggInventory, movements, usuario: usuarioVenta.usuario, empresa: usuarioVenta.empresa || empresaConfirmada, actualizadoEn: new Date() }, $setOnInsert: { creadoEn: new Date() } },
-        { upsert: true }
+        { $push: { movements: { $each: eggMovements, $position: 0, $slice: 5000 } } },
+        { returnDocument: "after" }
       );
+      eggInventory = eggDocFinal?.inventory || null;
     }
 
     console.log(`🛒 Venta ${ventaGuardada.id} guardada — stock descontado en ${stockActualizados}/${items.length} productos y ${eggItems.length} categorías de huevos.`);
@@ -978,9 +1004,25 @@ const authGastos = (req, res, next) => {
   next();
 };
 
+// Fecha de un instante dado, en zona horaria de Chile (America/Santiago),
+// como "YYYY-MM-DD". Recibe cualquier valor aceptado por `new Date(...)`
+// (por defecto, el momento actual).
+const fechaEnChile = (fecha = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date(fecha)).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+// Fecha de HOY en zona horaria de Chile. El servidor corre en un host cuyo
+// reloj está en UTC, así que usar new Date().toISOString().slice(0,10) desde
+// media tarde en adelante (hora de Chile) guardaba la fecha del día
+// SIGUIENTE. Se usa en cualquier lugar del backend donde haga falta "la
+// fecha de hoy" por defecto.
+const fechaHoyChile = () => fechaEnChile(new Date());
+
 const normalizarGasto = (body = {}) => ({
   comercio: String(body.comercio || "").trim(),
-  fecha: String(body.fecha || new Date().toISOString().slice(0, 10)).slice(0, 10),
+  fecha: String(body.fecha || fechaHoyChile()).slice(0, 10),
   total: Math.max(0, Number(body.total || 0)),
   iva: Math.max(0, Number(body.iva || 0)),
   categoria: String(body.categoria || "otros"),
@@ -1036,7 +1078,7 @@ app.post("/api/gastos", authGastos, async (req, res) => {
         const costoAnterior = Math.max(0, Number(producto.costo || 0));
         const stockNuevo = stockAnterior + cantidad;
         const costoNuevo = stockNuevo > 0
-          ? Math.round(((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo)
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
           : costoUnitario;
         await db.collection("productos").updateOne(
           { _id: oid },
@@ -1102,7 +1144,7 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
       const stockRevertido = Math.max(0, stockActual - cantidadVieja);
       const valorTotalActual = stockActual * costoActualProd;
       const valorRevertido = Math.max(0, valorTotalActual - (cantidadVieja * costoViejo));
-      const costoRevertido = stockRevertido > 0 ? Math.round(valorRevertido / stockRevertido) : 0;
+      const costoRevertido = stockRevertido > 0 ? valorRevertido / stockRevertido : 0;
       await db.collection("productos").updateOne(
         { _id: poid },
         { $set: { stock: stockRevertido, costo: costoRevertido, actualizadoEn: new Date() } }
@@ -1128,7 +1170,7 @@ app.put("/api/gastos/:id", authGastos, async (req, res) => {
         const costoAnterior = Math.max(0, Number(producto.costo || 0));
         const stockNuevo = stockAnterior + cantidad;
         const costoNuevo = stockNuevo > 0
-          ? Math.round(((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo)
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
           : costoUnitario;
         await db.collection("productos").updateOne(
           { _id: poid },

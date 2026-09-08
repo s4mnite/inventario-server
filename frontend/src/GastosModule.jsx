@@ -4,7 +4,7 @@ import {
   ShoppingBag, Fuel, Lightbulb, Home, Sparkles, MoreHorizontal,
   CheckCircle, AlertCircle, X, Package, ChevronDown,
 } from "lucide-react";
-import { API, fmt } from "./lib/utils";
+import { API, fmt, todayLocalISO } from "./lib/utils";
 
 // Debe coincidir con las mismas constantes usadas en HuevosModule.jsx:
 // una caja de huevos tiene 180 unidades y una bandeja 30.
@@ -34,7 +34,7 @@ async function leerJsonSeguro(res, mensaje) {
 }
 
 const emptyForm = () => ({
-  comercio: "", fecha: new Date().toISOString().slice(0, 10), total: "", iva: "",
+  comercio: "", fecha: todayLocalISO(), total: "", iva: "",
   categoria: "huevos", metodoPago: "Efectivo", numeroDocumento: "", notas: "",
   itemsInventario: [],
 });
@@ -146,7 +146,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     return () => { cancelled = true; };
   }, [currentUser?.usuario]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = todayLocalISO();
   const mes = hoy.slice(0, 7);
   const resumen = useMemo(() => ({
     hoy: gastos.filter(g => String(g.fecha || "").slice(0, 10) === hoy).reduce((a, g) => a + Number(g.total || 0), 0),
@@ -297,7 +297,7 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
     });
     setForm({
       comercio: g.comercio || "",
-      fecha: String(g.fecha || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
+      fecha: String(g.fecha || "").slice(0, 10) || todayLocalISO(),
       total: String(g.total ?? ""),
       iva: String(g.iva ?? ""),
       categoria: g.categoria || "otros",
@@ -442,8 +442,10 @@ export default function GastosModule({ currentUser, products = [], categoriasPro
 
   const etiquetaDia = fecha => {
     if (fecha === hoy) return "Hoy";
-    const ayer = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    if (fecha === ayer) return "Ayer";
+    const ahora = new Date();
+    const ayer = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 1);
+    const ayerLocal = `${ayer.getFullYear()}-${String(ayer.getMonth() + 1).padStart(2, "0")}-${String(ayer.getDate()).padStart(2, "0")}`;
+    if (fecha === ayerLocal) return "Ayer";
     const d = new Date(`${fecha}T00:00:00`);
     if (Number.isNaN(d.getTime())) return fecha;
     return d.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });

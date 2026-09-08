@@ -82,13 +82,7 @@ const calcularPrecioProducto = (producto, cantidad, esManga = false) => {
   }
 
   subtotal += restantes * precioNormal;
-  // El precio pesos-chilenos nunca lleva decimales: al mezclar mangas/promos/
-  // unidades sueltas en una misma línea, el promedio (subtotal / qty) puede
-  // dar un valor con decimales aunque cada componente sea un entero. Se
-  // redondea acá, en el cálculo, para que el precio unitario que queda
-  // guardado en el carrito y en la venta sea siempre un monto entero, no solo
-  // su versión formateada en pantalla.
-  const precioPromedio = qty > 0 ? Math.round(subtotal / qty) : precioNormal;
+  const precioPromedio = qty > 0 ? subtotal / qty : precioNormal;
   const partes = [];
   if (mangas) partes.push(`${mangas} manga${mangas === 1 ? "" : "s"}`);
   if (promos) partes.push(`${promos} promo${promos === 1 ? "" : "s"}`);
@@ -975,7 +969,7 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
                 <div key={i} style={{ display: "flex", fontSize: 11, marginBottom: 3 }}>
                   <span style={{ width: "5ch", textAlign: "center", flexShrink: 0 }}>{item.cantidad}</span>
                   <span style={{ flex: 1, paddingLeft: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.nombre.toUpperCase()}</span>
-                  <span style={{ width: "10ch", textAlign: "right", flexShrink: 0, fontWeight: 700 }}>${Math.round(Number(subtotal)).toLocaleString("es-CL")}</span>
+                  <span style={{ width: "10ch", textAlign: "right", flexShrink: 0, fontWeight: 700 }}>${Number(subtotal).toLocaleString("es-CL")}</span>
                 </div>
               );
             })}
@@ -987,17 +981,17 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
           <div style={{ margin: "8px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
               <span>SUBTOTAL</span>
-              <span>${Math.round(subtotalItems).toLocaleString("es-CL")}</span>
+              <span>${subtotalItems.toLocaleString("es-CL")}</span>
             </div>
             {descuento > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
                 <span>DESCUENTOS</span>
-                <span>-${Math.round(descuento).toLocaleString("es-CL")}</span>
+                <span>-${descuento.toLocaleString("es-CL")}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 900, marginTop: 4, letterSpacing: 0.5 }}>
               <span>TOTAL</span>
-              <span>${Math.round(total).toLocaleString("es-CL")}</span>
+              <span>${total.toLocaleString("es-CL")}</span>
             </div>
           </div>
 
@@ -1013,23 +1007,23 @@ function BoletaModal({ boleta, config, darkMode, onClose }) {
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                   <span>EFECTIVO:</span>
-                  <span>${Math.round(Number(boleta.montoEfectivo || 0)).toLocaleString("es-CL")}</span>
+                  <span>${Number(boleta.montoEfectivo || 0).toLocaleString("es-CL")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                   <span>TARJETA:</span>
-                  <span>${Math.round(Number(boleta.montoTarjeta || 0)).toLocaleString("es-CL")}</span>
+                  <span>${Number(boleta.montoTarjeta || 0).toLocaleString("es-CL")}</span>
                 </div>
               </>
             ) : (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span>MONTO PAGADO:</span>
-                <span>${Math.round(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
+                <span>${(boleta.dineroRecibido || total).toLocaleString("es-CL")}</span>
               </div>
             )}
             {boleta.vuelto > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span>VUELTO:</span>
-                <span style={{ fontWeight: 700 }}>${Math.round(boleta.vuelto).toLocaleString("es-CL")}</span>
+                <span style={{ fontWeight: 700 }}>${boleta.vuelto.toLocaleString("es-CL")}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -1636,6 +1630,14 @@ export default function App() {
   // Ventas & Carrito
   const [ventas, setVentas] = useState(getSales);
   const [boletas, setBoletas] = useState(getBoletas);
+  // IDs de ventas borradas localmente hace poco. Una sincronización periódica
+  // (cada 8s, o al cambiar de pestaña) puede haber salido a buscar datos al
+  // servidor ANTES de que termine un DELETE en curso; si esa respuesta llega
+  // DESPUÉS de que el borrado ya actualizó el estado local, "revivía" la
+  // venta eliminada en pantalla (Dashboard/Historial) hasta el siguiente
+  // ciclo de sincronización. Se guardan acá para filtrarlas de cualquier
+  // respuesta del servidor que todavía las incluya.
+  const ventasEliminadasRef = useRef(new Set());
   const [gastosReporte, setGastosReporte] = useState([]); // usados solo por el bloque Ingresos/Egresos/Balance de Reportes
   const [carrito, setCarrito] = useState([]);
   const [mobileSaleStep, setMobileSaleStep] = useState("catalogo"); // catalogo | cobro (flujo móvil de Ventas)
@@ -1685,7 +1687,7 @@ export default function App() {
     }
   }, [activeNav, reporteTab, scrollAAlertaStock]);
   const [reportePeriodo, setReportePeriodo] = useState("mes"); // "dia" | "semana" | "mes" | "todo"
-  const [reporteFecha, setReporteFecha] = useState(() => new Date().toISOString().slice(0, 10)); // ancla para reportePeriodo === "dia"
+  const [reporteFecha, setReporteFecha] = useState(() => todayLocalISO()); // ancla para reportePeriodo === "dia"
 
   // Categorías
   const [nuevaCat, setNuevaCat] = useState("");
@@ -2020,8 +2022,10 @@ export default function App() {
       const [ventasData, boletasData] = await Promise.all([rv.json(), rb.json()]);
       if (!rv.ok) throw new Error(ventasData?.error || "No se pudieron sincronizar las ventas.");
       if (!rb.ok) throw new Error(boletasData?.error || "No se pudieron sincronizar las boletas.");
-      const ventasServidor = Array.isArray(ventasData) ? ventasData.map(v => ({ ...v, id: v.id || v._id })) : [];
-      const boletasServidor = Array.isArray(boletasData) ? boletasData.map(b => ({ ...b, id: b.id || b._id })) : [];
+      const ventasServidor = (Array.isArray(ventasData) ? ventasData.map(v => ({ ...v, id: v.id || v._id })) : [])
+        .filter(v => !ventasEliminadasRef.current.has(String(v.id)));
+      const boletasServidor = (Array.isArray(boletasData) ? boletasData.map(b => ({ ...b, id: b.id || b._id })) : [])
+        .filter(b => !ventasEliminadasRef.current.has(String(b.ventaId)));
       setVentas(ventasServidor);
       setBoletas(boletasServidor);
       saveSales(ventasServidor);
@@ -2580,7 +2584,7 @@ export default function App() {
       headers: { "Content-Type": "application/json", "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" },
       body: JSON.stringify({
         comercio: `Compra de ${prod.nombre}`,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: todayLocalISO(),
         total: Number(costoTotal || 0),
         categoria: "mercaderia",
         metodoPago: "Efectivo",
@@ -2683,6 +2687,10 @@ export default function App() {
     const nuevoItem = {
       productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
       precio: pricing.precio, precioNormal: Number(prod.precio || 0),
+      // Se guarda el costo vigente del producto AL MOMENTO de la venta, para
+      // que la ganancia de esta venta quede fija y no cambie después si el
+      // costo del producto se edita o el producto se elimina más adelante.
+      costo: Number(prod.costo || 0),
       cantidad: nuevaCantidad, subtotal: pricing.subtotal,
       enPromo: pricing.enPromo, aplicoManga: pricing.aplicoManga,
       promoLabel: pricing.promoLabel, esManga, mangaLabel: pricing.mangaLabel,
@@ -2709,6 +2717,7 @@ export default function App() {
     const nuevoItem = {
       productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
       precio: pricing.precio, precioNormal: Number(prod.precio || 0),
+      costo: Number(prod.costo || 0),
       cantidad: nuevaCantidad, subtotal: pricing.subtotal,
       enPromo: pricing.enPromo, aplicoManga: pricing.aplicoManga,
       promoLabel: pricing.promoLabel, mangaLabel: pricing.mangaLabel, pricingLabel: pricing.pricingLabel,
@@ -2982,6 +2991,7 @@ export default function App() {
     const nuevoItem = {
       productoId: prod.id, nombre: prod.nombre, img: prod.img, imagenUrl: prod.imagenUrl,
       precio: pricing.precio, precioNormal: Number(prod.precio || 0),
+      costo: Number(prod.costo || 0),
       cantidad: nuevaCant, subtotal: pricing.subtotal,
       enPromo: pricing.enPromo, aplicoManga: pricing.aplicoManga,
       promoLabel: pricing.promoLabel, mangaLabel: pricing.mangaLabel, pricingLabel: pricing.pricingLabel,
@@ -3340,7 +3350,15 @@ export default function App() {
   ayerDate.setDate(hoyDate.getDate() - 1);
   const hoyClave = fechaLocalClave(hoyDate);
   const ayerClave = fechaLocalClave(ayerDate);
+  const costoProductoPorId = new Map(products.map(p => [String(p.id), Number(p.costo || 0)]));
   const costoProductoPorNombre = new Map(products.map(p => [String(p.nombre || "").trim().toLowerCase(), Number(p.costo || 0)]));
+  // Ganancia = precio de venta - costo. El costo se toma, en orden de
+  // prioridad: (1) el costo guardado en el propio ítem al momento de la
+  // venta (snapshot fijo, no cambia si luego se edita o elimina el
+  // producto — así la ganancia de una venta pasada nunca se recalcula sola),
+  // (2) para ventas antiguas que no guardaron ese snapshot, el producto
+  // actual por id, y (3) como último recurso, por nombre (compatibilidad
+  // con ventas muy antiguas sin productoId).
   const gananciaVenta = (venta) => (venta.items || []).reduce((acc, item) => {
     const cantidad = Number(item.cantidad || item.cantidadFormatos || 0);
     const ingreso = Number(item.subtotal ?? (Number(item.precio || 0) * cantidad));
@@ -3349,7 +3367,12 @@ export default function App() {
       const costoCaja = Number(item.costoCaja || 0);
       return acc + ingreso - ((huevos / 180) * costoCaja);
     }
-    const costoUnitario = Number(item.costo ?? item.precioCosto ?? costoProductoPorNombre.get(String(item.nombre || "").trim().toLowerCase()) ?? 0);
+    const costoUnitario = Number(
+      item.costo ?? item.precioCosto
+      ?? costoProductoPorId.get(String(item.productoId))
+      ?? costoProductoPorNombre.get(String(item.nombre || "").trim().toLowerCase())
+      ?? 0
+    );
     const unidades = cantidad * Number(item.unidadesPorManga || 1);
     return acc + ingreso - (costoUnitario * unidades);
   }, 0);
@@ -3453,7 +3476,7 @@ export default function App() {
   const ventasFiltradas = ventas.filter(v => {
     if (filtroPago !== "Todos" && v.pago !== filtroPago) return false;
     if (fechaHistorial) {
-      const fechaV = v.timestamp ? new Date(v.timestamp).toISOString().slice(0, 10) : "";
+      const fechaV = v.timestamp ? fechaLocalClave(v.timestamp) : "";
       if (fechaV !== fechaHistorial) return false;
     }
     if (busquedaHistorial) {
@@ -3733,15 +3756,28 @@ export default function App() {
     const graficoDias = Object.values(ventasPorDia).slice(-14);
     const repProdMap = {};
     ventasPeriodo.forEach(v => v.items?.forEach(i => {
-      if (!repProdMap[i.nombre]) repProdMap[i.nombre] = { nombre: i.nombre, cantidad: 0, ingresos: 0 };
+      if (!repProdMap[i.nombre]) repProdMap[i.nombre] = { nombre: i.nombre, cantidad: 0, ingresos: 0, costoTotal: 0 };
       repProdMap[i.nombre].cantidad += i.cantidad;
       repProdMap[i.nombre].ingresos += i.subtotal || 0;
+      // Mismo criterio que gananciaVenta/costosPeriodo: costo guardado en el
+      // ítem al momento de la venta, con el producto actual como respaldo
+      // solo para ventas antiguas que no lo tenían.
+      if (i.tipoItem === "huevo") {
+        const huevosVendidos = Number(i.huevos || 0);
+        repProdMap[i.nombre].costoTotal += (huevosVendidos / 180) * Number(i.costoCaja || 0);
+      } else {
+        const prod = products.find(pr => String(pr.id) === String(i.productoId)) || products.find(pr => pr.nombre === i.nombre);
+        const costoUnitario = Number(i.costo ?? i.precioCosto ?? prod?.costo ?? 0);
+        const unidades = Number(i.cantidad || i.cantidadFormatos || 1) * Number(i.unidadesPorManga || 1);
+        repProdMap[i.nombre].costoTotal += costoUnitario * unidades;
+      }
     }));
     const topProductosRep = Object.values(repProdMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 8);
 
     const costosPeriodo = (() => {
-      const prodMap = {};
-      products.forEach(p => { prodMap[p.nombre] = p.costo || 0; });
+      const prodMapId = {};
+      const prodMapNombre = {};
+      products.forEach(p => { prodMapId[String(p.id)] = p.costo || 0; prodMapNombre[p.nombre] = p.costo || 0; });
       let costoTotal = 0;
       ventasPeriodo.forEach(v => v.items?.forEach(i => {
         if (i.tipoItem === "huevo") {
@@ -3750,7 +3786,9 @@ export default function App() {
           costoTotal += (huevosVendidos / 180) * costoCajaCompra;
           return;
         }
-        const costoUnitario = Number(i.costo ?? i.precioCosto ?? prodMap[i.nombre] ?? 0);
+        // Mismo orden de prioridad que gananciaVenta: costo guardado en la
+        // venta primero, luego producto actual por id, luego por nombre.
+        const costoUnitario = Number(i.costo ?? i.precioCosto ?? prodMapId[String(i.productoId)] ?? prodMapNombre[i.nombre] ?? 0);
         const unidades = Number(i.cantidad || i.cantidadFormatos || 1) * Number(i.unidadesPorManga || 1);
         costoTotal += costoUnitario * unidades;
       }));
@@ -3796,7 +3834,7 @@ export default function App() {
     const balancePeriodo = ingresosPeriodo - egresosPeriodo;
     const margenPct         = costosPeriodo > 0 ? Math.round((gananciaPeriodo / costosPeriodo) * 100) : 0;
     const topGananciaProd   = Object.values(repProdMap).map(p => {
-      const costo = (products.find(pr => pr.nombre === p.nombre)?.costo || 0) * p.cantidad;
+      const costo = p.costoTotal || 0;
       return { ...p, costo, ganancia: p.ingresos - costo, margen: costo > 0 ? Math.round(((p.ingresos - costo) / costo) * 100) : 0 };
     }).sort((a, b) => b.ganancia - a.ganancia).slice(0, 8);
     const resumenPagosPeriodo = ventasPeriodo.reduce((acc, venta) => {
@@ -5337,6 +5375,7 @@ export default function App() {
                               const data = await res.json();
                               if (!res.ok) throw new Error(data.error || "No se pudo eliminar la venta.");
 
+                              ventasEliminadasRef.current.add(String(v.id));
                               const updatedVentas = ventas.filter(x => String(x.id) !== String(v.id));
                               setVentas(updatedVentas); saveSales(updatedVentas);
                               const boletaAsociada = boletas.find(b => b.ventaId === v.id);
@@ -5534,6 +5573,7 @@ export default function App() {
                                 const data = await res.json();
                                 if (!res.ok) throw new Error(data.error || "No se pudo eliminar la venta.");
 
+                                ventasEliminadasRef.current.add(String(b.ventaId));
                                 const updatedBoletas = boletas.filter(x => x.numero !== b.numero);
                                 setBoletas(updatedBoletas); saveBoletas(updatedBoletas);
                                 const updatedVentas = ventas.filter(v => String(v.id) !== String(b.ventaId));
@@ -5627,13 +5667,13 @@ export default function App() {
                           </div>
                           <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Efectivo contado en caja (opcional)</label>
                           <input type="number" min="0" value={montoContado} onChange={e => setMontoContado(e.target.value)}
-                            placeholder={`Esperado: $${Math.round(cajaData.montoApertura + ef).toLocaleString("es-CL")}`}
+                            placeholder={`Esperado: $${(cajaData.montoApertura + ef).toLocaleString("es-CL")}`}
                             style={{ ...inp, marginBottom: 4 }} />
                           {montoContado !== "" && (
                             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700,
                               color: (+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "#2EC4B6" : "#E63946" }}>
                               Diferencia: {(+montoContado - (cajaData.montoApertura + ef)) >= 0 ? "+" : ""}
-                              ${Math.round(+montoContado - (cajaData.montoApertura + ef)).toLocaleString("es-CL")}
+                              ${(+montoContado - (cajaData.montoApertura + ef)).toLocaleString("es-CL")}
                             </p>
                           )}
                           <label style={{ fontSize: 12, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 6 }}>Notas del cierre (opcional)</label>
