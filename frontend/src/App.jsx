@@ -17,7 +17,7 @@ import {
 import EggModule from "./HuevosModule";
 import GastosModule from "./GastosModule";
 import ReyDelHuevoInicio from "./ReyDelHuevoInicio";
-import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes, setAuthCredentials } from "./lib/utils";
+import { API, fmt, fmtIVA, calcIncrementPct, priceFromIncrement, todayLocalISO, fetchConTimeout, computeEggLots, stockPorCalidadDeLotes } from "./lib/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const APP_VERSION = "4.0.1";
@@ -417,7 +417,7 @@ const css = `
   .config-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 0; cursor: pointer; transition: all 0.15s; font-size: 14px; font-weight: 600; color: var(--text-secondary); border: none; background: transparent; width: 100%; text-align: left; }
   .config-nav-item:hover { background: var(--bg-hover); color: var(--accent); }
   .config-nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 800; }
-  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--text-primary); border-radius: 0; box-shadow: 0 8px 24px var(--shadow); z-index: 50; overflow: hidden; margin-top: 4px; }
+  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--text-primary); border-radius: 0; box-shadow: 0 8px 24px var(--shadow); z-index: 50; overflow-y: auto; max-height: 340px; margin-top: 4px; }
   .search-dropdown-item { padding: 10px 14px; cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
   .search-dropdown-item:hover { background: var(--bg-hover); }
   .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-height: 240px; overflow-y: auto; padding: 4px; }
@@ -778,8 +778,8 @@ const css = `
     .mobile-topbar h1 { font-size: 15px !important; }
   }
 
-  .sales-mobile-v2 { display:block; }
-  @media (min-width:0px){
+  .sales-mobile-v2 { display:none; }
+  @media (max-width:1024px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
     .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:0;background:#FF9F1C;color:#14120E;box-shadow:none;margin-bottom:3px}
@@ -823,20 +823,6 @@ const css = `
     .sales-cash-v2{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-top:10px}.sales-cash-v2 label{grid-column:1/-1;font-size:10px;font-weight:800}.sales-cash-v2 input{height:39px;border:2px solid var(--border);border-radius:0;padding:0 10px;background:var(--bg-card-2);color:var(--text-primary);min-width:0}.sales-cash-v2 span{font-size:10px;color:#2EC4B6;font-weight:800}.sales-finish-v2{width:100%;border:0;border-radius:0;background:#E63946;color:#fff;padding:14px;margin-top:12px;font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:.3px;box-shadow:none}
     .mobile-product-card{align-items:flex-start!important;padding:12px!important;gap:10px!important}.mobile-product-card>div:nth-child(2)>p:first-child{padding-right:25px!important}.mobile-product-card>div:nth-child(2)>p:nth-child(3){color:#E63946!important}.mobile-product-card button{white-space:nowrap}
   }
-
-  /* Misma mecánica de Ventas (huevos y productos juntos, mismo carrito) en
-     pantallas grandes, pero sin la columna angosta de teléfono — se estira y
-     usa grillas de más columnas para no verse apretado. */
-  @media (min-width:701px){
-    .sales-mobile-v2{max-width:1100px;padding-bottom:40px}
-    .sales-product-grid-v2{grid-template-columns:repeat(4,1fr)!important}
-    .free-eggs-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
-    .sales-method-summary,.sales-pay-v2{grid-template-columns:repeat(3,minmax(0,220px))!important;justify-content:start}
-  }
-  @media (min-width:1025px){
-    .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
-  }
-
 
 `;
 
@@ -1094,7 +1080,7 @@ function RenombrarEmpresa({ empresaActual, products, currentUser, setCurrentUser
     // Actualizar empresa en todos los productos del backend
     for (const p of products) {
       try {
-        const res = await fetchConTimeout(`${API}/api/productos/${p.id}`, {
+        const res = await fetch(`${API}/api/productos/${p.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...p, empresa: nombre }),
@@ -1207,12 +1193,12 @@ function AdminPanel({ onBack, darkMode }) {
     setAccionMsg("Reseteando...");
     try {
       const _ep = `?empresa=${encodeURIComponent(empresa)}`;
-      await fetchConTimeout(`${API}/api/ventas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
-      await fetchConTimeout(`${API}/api/boletas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
+      await fetch(`${API}/api/ventas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
+      await fetch(`${API}/api/boletas${_ep}`, { method: "DELETE", headers: { "x-admin-user": adminUser.usuario, "x-admin-clave": adminClave } });
       // Borrar productos de esa empresa
-      const prods = await fetchConTimeout(`${API}/api/productos`).then(r => r.json());
+      const prods = await fetch(`${API}/api/productos`).then(r => r.json());
       for (const p of prods.filter(p => p.empresa === empresa)) {
-        await fetchConTimeout(`${API}/api/productos/${p.id || p._id}`, { method: "DELETE" });
+        await fetch(`${API}/api/productos/${p.id || p._id}`, { method: "DELETE" });
       }
       setAccionMsg(`✅ Empresa "${empresa}" reseteada`);
       setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg: `🗑️  Reset empresa: ${empresa}`, type: "warn" }]);
@@ -1611,7 +1597,6 @@ export default function App() {
   const [currentUser, setCurrentUserRaw] = useState(() => {
     try { const u = localStorage.getItem("inv_session"); return u ? JSON.parse(u) : null; } catch { return null; }
   });
-  setAuthCredentials(currentUser?.usuario, currentUser?._clave);
   const setCurrentUser = (user) => {
     // Esta pantalla tiene hooks exclusivos del área autenticada. Cambiar la
     // sesión dentro del mismo render altera el orden de hooks (React #310).
@@ -1881,7 +1866,7 @@ export default function App() {
       notas: "",
     };
     try {
-      const r = await fetchConTimeout(API + "/api/caja/abrir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...nueva, empresa: empresaCaja }) });
+      const r = await fetch(API + "/api/caja/abrir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...nueva, empresa: empresaCaja }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "No se pudo abrir caja");
       const cajaConfirmada = d?.caja || nueva;
@@ -1904,7 +1889,7 @@ export default function App() {
       // Siempre consultamos primero la caja realmente abierta en MongoDB.
       // Así un ID viejo guardado en este navegador no impide el cierre.
       const cajaRespaldoId = cajaData?.id || cajaData?._id || "";
-      const actualRes = await fetchConTimeout(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(cajaRespaldoId)}&_=${Date.now()}`, { cache: "no-store" });
+      const actualRes = await fetch(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(cajaRespaldoId)}&_=${Date.now()}`, { cache: "no-store" });
       const actualType = actualRes.headers.get("content-type") || "";
       const actualData = actualType.includes("application/json") ? await actualRes.json() : null;
       if (!actualRes.ok) throw new Error(actualData?.error || "No se pudo consultar la caja abierta.");
@@ -1940,7 +1925,7 @@ export default function App() {
         abiertaPor: cajaReal.abiertaPor || "Usuario",
       };
 
-      const r = await fetchConTimeout(`${API}/api/caja/cerrar`, {
+      const r = await fetch(`${API}/api/caja/cerrar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1950,7 +1935,7 @@ export default function App() {
       if (!r.ok) throw new Error(d?.error || "No se pudo cerrar caja");
 
       // Confirmación final: el servidor ya no debe devolver una caja abierta.
-      const verifyRes = await fetchConTimeout(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(payload.id || "")}&_=${Date.now()}`, { cache: "no-store" });
+      const verifyRes = await fetch(`${API}/api/caja/actual?empresa=${encodeURIComponent(empresa)}&id=${encodeURIComponent(payload.id || "")}&_=${Date.now()}`, { cache: "no-store" });
       const verify = (verifyRes.headers.get("content-type") || "").includes("application/json") ? await verifyRes.json() : null;
       if (!verifyRes.ok) throw new Error(verify?.error || "No se pudo confirmar el cierre.");
       if (verify?.apertura && !verify?.cierre) throw new Error("El servidor todavía informa una caja abierta. Intenta nuevamente.");
@@ -2172,7 +2157,7 @@ export default function App() {
     if (!currentUser) return;
     const empresa = empresaActiva;
 
-    fetchConTimeout(API + "/api/productos").then(r => r.json()).then(data => {
+    fetch(API + "/api/productos").then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
         const empresa = currentUser?.empresa || "";
         let filtered;
@@ -2189,7 +2174,7 @@ export default function App() {
     }).catch(() => {});
 
     const empresaParam = `?empresa=${encodeURIComponent(empresaActiva)}`;
-    fetchConTimeout(API + "/api/categorias" + empresaParam).then(r => r.json()).then(data => {
+    fetch(API + "/api/categorias" + empresaParam).then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
         const empresa = currentUser?.empresa || "";
         const filtradas = empresa
@@ -2203,7 +2188,7 @@ export default function App() {
     }).catch(() => {});
 
     // Cargar ventas desde backend (sincronizado entre dispositivos)
-    fetchConTimeout(API + "/api/ventas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    fetch(API + "/api/ventas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
@@ -2228,7 +2213,7 @@ export default function App() {
       });
 
     // Cargar boletas desde backend
-    fetchConTimeout(API + "/api/boletas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    fetch(API + "/api/boletas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
@@ -2315,7 +2300,7 @@ export default function App() {
     if (!prod) return;
     if (!window.confirm(`¿Eliminar "${prod.nombre}"? Podrás restaurarlo desde la Papelera.`)) return;
     try {
-      const res = await fetchConTimeout(API + "/api/productos/" + id, { method: "DELETE" });
+      const res = await fetch(API + "/api/productos/" + id, { method: "DELETE" });
       if (!res.ok) { alert(`No se pudo eliminar el producto (error ${res.status}).`); return; }
       setProducts(prev => prev.filter(p => p.id !== id));
       const nuevaPapelera = [{ ...prod, eliminadoEn: new Date().toISOString() }, ...papelera];
@@ -2328,7 +2313,7 @@ export default function App() {
   const handleRestaurarProd = async (item) => {
     const { id, _id, eliminadoEn, ...data } = item;
     try {
-      const res = await fetchConTimeout(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const res = await fetch(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const nuevo = await res.json();
       setProducts(prev => [...prev, { ...nuevo, id: nuevo.id || nuevo._id }]);
       const nuevaPapelera = papelera.filter(p => p !== item);
@@ -2439,7 +2424,7 @@ export default function App() {
 
   const handleMoverProducto = async (prod, nuevaEmpresa) => {
     try {
-      const res = await fetchConTimeout(API + "/api/productos/" + prod.id, {
+      const res = await fetch(API + "/api/productos/" + prod.id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...prod, empresa: nuevaEmpresa }),
@@ -2454,12 +2439,12 @@ export default function App() {
     const data = { ...form, precio: +form.precio, costo: +(form.costo || 0), incrementoPct: Number(form.incrementoPct || calcIncrementPct(form.costo, form.precio) || 0), stock: +form.stock, empresa: currentUser?.empresa || "" };
     try {
       if (modal === "add") {
-        const res = await fetchConTimeout(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        const res = await fetch(API + "/api/productos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         if (!res.ok) { alert(`No se pudo crear el producto (error ${res.status}).`); return; }
         const nuevo = await res.json();
         setProducts(prev => [...prev, { ...nuevo, id: nuevo.id || nuevo._id }]);
       } else {
-        const res = await fetchConTimeout(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        const res = await fetch(API + "/api/productos/" + form.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         if (!res.ok) { alert(`No se pudo guardar el producto (error ${res.status}).`); return; }
         setProducts(prev => prev.map(p => p.id === form.id ? { ...data, id: form.id } : p));
       }
@@ -2472,7 +2457,7 @@ export default function App() {
     const formData = new FormData();
     formData.append("imagen", file);
     try {
-      const res = await fetchConTimeout(`${API}/api/productos/upload-imagen`, { method: "POST", body: formData });
+      const res = await fetch(`${API}/api/productos/upload-imagen`, { method: "POST", body: formData });
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         // El servidor devolvió HTML (ruta no existe, servidor caído, etc.)
@@ -2504,7 +2489,7 @@ export default function App() {
     if (!nombre) { setCatError("Escribe un nombre."); return; }
     if (categorias.map(c => c.toLowerCase()).includes(nombre.toLowerCase())) { setCatError("Ya existe."); return; }
     try {
-      const res = await fetchConTimeout(API + "/api/categorias", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre, icono: "📦", empresa: currentUser?.empresa || "" }) });
+      const res = await fetch(API + "/api/categorias", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre, icono: "📦", empresa: currentUser?.empresa || "" }) });
       const data = await res.json();
       if (!res.ok) { setCatError(data.error || "Error"); return; }
       setCategorias(prev => [...prev, nombre]);
@@ -2530,7 +2515,7 @@ export default function App() {
     }
     try {
       const empresaParam = currentUser?.empresa ? `?empresa=${encodeURIComponent(currentUser.empresa)}` : "?empresa=";
-      const res = await fetchConTimeout(API + "/api/categorias" + empresaParam);
+      const res = await fetch(API + "/api/categorias" + empresaParam);
       const cats = await res.json();
       const empresa = currentUser?.empresa || "";
       const filtradas = empresa
@@ -2538,7 +2523,7 @@ export default function App() {
         : cats.filter(c => !c.empresa || c.empresa === "");
       const cat = filtradas.find(c => c.nombre === nombreAnterior);
       if (cat) {
-        await fetchConTimeout(API + "/api/categorias/" + (cat._id || cat.id), {
+        await fetch(API + "/api/categorias/" + (cat._id || cat.id), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nombre: nuevoNombre }),
@@ -2547,7 +2532,7 @@ export default function App() {
       // Actualiza los productos que usaban el nombre anterior, para que no queden huérfanos.
       const productosAfectados = products.filter(p => p.categoria === nombreAnterior);
       await Promise.all(productosAfectados.map(p =>
-        fetchConTimeout(API + "/api/productos/" + p.id, {
+        fetch(API + "/api/productos/" + p.id, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" },
           body: JSON.stringify({ ...p, categoria: nuevoNombre }),
@@ -2566,14 +2551,14 @@ export default function App() {
   const eliminarCatDirecto = async (index, nombre) => {
     try {
       const empresaParam = currentUser?.empresa ? `?empresa=${encodeURIComponent(currentUser.empresa)}` : "?empresa=";
-      const res = await fetchConTimeout(API + "/api/categorias" + empresaParam);
+      const res = await fetch(API + "/api/categorias" + empresaParam);
       const cats = await res.json();
       const empresa = currentUser?.empresa || "";
       const filtradas = empresa
         ? cats.filter(c => c.empresa === empresa)
         : cats.filter(c => !c.empresa || c.empresa === "");
       const cat = filtradas.find(c => c.nombre === nombre);
-      if (cat) await fetchConTimeout(API + "/api/categorias/" + (cat._id || cat.id), { method: "DELETE" });
+      if (cat) await fetch(API + "/api/categorias/" + (cat._id || cat.id), { method: "DELETE" });
       setCategorias(prev => prev.filter((_, i) => i !== index));
       const newIcons = { ...catIconos }; delete newIcons[nombre];
       setCatIconos(newIcons); saveCatIcons(newIcons);
@@ -2626,7 +2611,7 @@ export default function App() {
         await registrarCompraInventario(modalStock, cantidad, costoTotal);
       } else {
         const nuevoStock = Math.max(0, modalStock.stock - cantidad);
-        const res = await fetchConTimeout(API + "/api/productos/" + modalStock.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" }, body: JSON.stringify({ ...modalStock, stock: nuevoStock }) });
+        const res = await fetch(API + "/api/productos/" + modalStock.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" }, body: JSON.stringify({ ...modalStock, stock: nuevoStock }) });
         if (!res.ok) throw new Error((await res.json()).error || "No se pudo ajustar el stock.");
         setProducts(prev => prev.map(p => p.id === modalStock.id ? { ...p, stock: nuevoStock } : p));
       }
@@ -2659,7 +2644,7 @@ export default function App() {
     if (cant > prod.stock) { setMermaError(`Stock insuficiente. Disponible: ${prod.stock}.`); return; }
     const nuevoStock = prod.stock - cant;
     try {
-      const res = await fetchConTimeout(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
+      const res = await fetch(API + "/api/productos/" + prod.id, { method: "PUT", headers: { "Content-Type": "application/json", "x-usuario": currentUser?.usuario || "", "x-clave": currentUser?._clave || "" }, body: JSON.stringify({ ...prod, stock: nuevoStock }) });
       if (!res.ok) { setMermaError(`No se pudo actualizar el stock (error ${res.status}). Intenta de nuevo.`); return; }
       setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, stock: nuevoStock } : p));
       const nuevaMerma = { id: Date.now(), productoId: prod.id, producto: prod.nombre, cantidad: cant, motivo: formMerma.motivo, fecha: new Date().toLocaleString("es-CL"), usuario: currentUser.nombre };
@@ -2673,7 +2658,7 @@ export default function App() {
   // El stock ya no filtra qué productos son "vendibles": se puede vender aunque
   // no haya stock disponible, así que estos productos deben poder buscarse igual.
   const productosBusqueda = busquedaVenta.length > 0
-    ? products.filter(p => p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase())).slice(0, 6)
+    ? products.filter(p => p.nombre.toLowerCase().includes(busquedaVenta.toLowerCase())).slice(0, 30)
     : products.slice(0, 6);
 
   const seleccionarProductoVenta = (prod) => {
@@ -3172,7 +3157,7 @@ export default function App() {
       const timeoutId = window.setTimeout(() => controller.abort(), 30000);
       let res;
       try {
-        res = await fetchConTimeout(API + "/api/ventas", {
+        res = await fetch(API + "/api/ventas", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3288,7 +3273,7 @@ export default function App() {
 
     let boletaGuardada = { ...boletaLocal };
     try {
-      const res = await fetchConTimeout(API + "/api/boletas", {
+      const res = await fetch(API + "/api/boletas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(boletaLocal),
@@ -3602,7 +3587,7 @@ export default function App() {
     setReconciliando(true);
     setResultReconciliacion(null);
     try {
-      const res = await fetchConTimeout(`${API}/api/productos/reconciliar-stock`, {
+      const res = await fetch(`${API}/api/productos/reconciliar-stock`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3615,7 +3600,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || "No se pudo reconciliar el stock.");
       setResultReconciliacion(data);
       // Refrescar productos para ver el stock ya corregido
-      const productosRes = await fetchConTimeout(API + "/api/productos");
+      const productosRes = await fetch(API + "/api/productos");
       const productosData = await productosRes.json();
       if (Array.isArray(productosData)) {
         const empresa = currentUser?.empresa || "";
@@ -3640,7 +3625,7 @@ export default function App() {
     setRevirtiendo(true);
     setResultReversion(null);
     try {
-      const res = await fetchConTimeout(`${API}/api/productos/revertir-reconciliacion`, {
+      const res = await fetch(`${API}/api/productos/revertir-reconciliacion`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3653,7 +3638,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || "No se pudo revertir la reconciliación.");
       setResultReversion(data);
       // Refrescar productos para ver el stock ya corregido
-      const productosRes = await fetchConTimeout(API + "/api/productos");
+      const productosRes = await fetch(API + "/api/productos");
       const productosData = await productosRes.json();
       if (Array.isArray(productosData)) {
         const empresa = currentUser?.empresa || "";
@@ -5025,13 +5010,7 @@ export default function App() {
                   </>}
 
                   {ventaTab === "huevos" && saleFlowType === "free" && (
-                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> :
-                    (!freeEggInventory.length && ventaError) ? (
-                      <div className="sales-error-v2">
-                        ⚠ {ventaError}
-                        <button onClick={()=>window.location.reload()} style={{marginLeft:10,border:"none",background:"none",color:"#E63946",fontWeight:800,textDecoration:"underline",cursor:"pointer"}}>Recargar página para reintentar</button>
-                      </div>
-                    ) : <div className="free-eggs-grid">
+                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
                       {freeEggInventory.map(q => {
                         const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
                         return <article key={q.id} className="free-egg-card">
@@ -5172,6 +5151,50 @@ export default function App() {
                   {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>{ventaExito}</div>}
                   {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>⚠ {ventaError}</div>}
 
+                  {/* Pestañas Productos / Huevos, igual que en la app */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                    <button onClick={() => setVentaTab("productos")} style={{ padding: "10px 6px", borderRadius:0, border: `1.5px solid ${ventaTab === "productos" ? "#E63946" : borderColor2}`, background: ventaTab === "productos" ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, color: ventaTab === "productos" ? "#E63946" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>📦 Productos</button>
+                    <button onClick={() => { setVentaTab("huevos"); setSaleFlowType("free"); }} style={{ padding: "10px 6px", borderRadius:0, border: `1.5px solid ${ventaTab === "huevos" ? "#E63946" : borderColor2}`, background: ventaTab === "huevos" ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, color: ventaTab === "huevos" ? "#E63946" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>🥚 Huevos</button>
+                  </div>
+
+                  {ventaTab === "huevos" ? (
+                    freeEggLoading ? <p style={{ color: textMuted, fontSize: 13 }}>Cargando inventario de huevos…</p> : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto", paddingRight: 4 }}>
+                        {freeEggInventory.map(q => {
+                          const row = freeEggCart[q.id] || { formato: "bandeja", cantidad: 0 };
+                          return (
+                            <div key={q.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 0, background: bgCard2, padding: 12 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                <span style={{ fontSize: 22 }}>🥚</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>{q.nombre}</p>
+                                  <p style={{ margin: 0, fontSize: 11, color: stockDeHuevo(q) < 0 ? "#E63946" : textMuted, fontWeight: stockDeHuevo(q) < 0 ? 700 : 400 }}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</p>
+                                </div>
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+                                <button onClick={() => setFreeEggFormat(q, "bandeja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato !== "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato !== "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato !== "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Bandeja 30</button>
+                                <button onClick={() => setFreeEggFormat(q, "caja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato === "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato === "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato === "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Caja 180</button>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                  <strong style={{ color: "#E63946", fontSize: 15 }} className="mono">{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
+                                  {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
+                                    <strong style={{ color: "#2EC4B6", fontSize: 11.5 }} className="mono">{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10 }}>efectivo</span></strong>
+                                  )}
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <button disabled={!row.cantidad} onClick={() => changeFreeEgg(q, -1)} style={{ width: 26, height: 26, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, fontSize: 15 }}>−</button>
+                                  <input type="number" min="0" inputMode="numeric" value={row.cantidad || 0} onFocus={e => e.target.select()} onChange={e => setFreeEggCantidad(q, e.target.value)} style={{ width: 36, textAlign: "center", border: "none", background: "transparent", fontWeight: 800, fontSize: 14, color: textPrimary, padding: 0 }} />
+                                  <button onClick={() => changeFreeEgg(q, 1)} style={{ width: 26, height: 26, borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", color: "#fff", fontSize: 15 }}>+</button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )
+                  ) : (
+                  <>
                   {/* Buscador */}
                   <div style={{ background: bgCard2, borderRadius:0, padding: "14px 16px", marginBottom: 16, border: `1px solid ${borderColor}` }}>
                     <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Buscar producto</p>
@@ -5255,6 +5278,27 @@ export default function App() {
                     {carritoError && <p style={{ color: "#E63946", fontSize: 12, margin: "6px 0 0", fontWeight: 500 }}>⚠ {carritoError}</p>}
                     {stockWarning && <p style={{ color: "#FF9F1C", fontSize: 12, margin: "6px 0 0", fontWeight: 500, background: "rgba(255,159,28,0.12)", padding: "6px 10px", borderRadius:0 }}>{stockWarning}</p>}
                   </div>
+                  </>
+                  )}
+
+                  {/* Carrito de huevos (venta libre) */}
+                  {freeEggItems.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Huevos ({freeEggItems.length})</p>
+                      {freeEggItems.map(item => (
+                        <div key={`egg-${item.calidadId}`} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 12px", background: bgCard2, borderRadius:0, marginBottom: 6, border: `1px solid ${borderColor}` }}>
+                          <span style={{ fontSize: 18 }}>🥚</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: textPrimary }}>{item.calidad}</p>
+                            <p style={{ margin: 0, fontSize: 11, color: item.usaPrecioEfectivo ? "#2EC4B6" : "#E63946", fontWeight: 700 }}>
+                              {item.precioManualActivo ? "Precio manual" : item.promocionActiva ? "🏷️ Promoción" : (item.usaPrecioEfectivo ? "precio efectivo" : "precio débito")} · {item.cantidadFormatos} {item.formato}{item.cantidadFormatos === 1 ? "" : "s"} · {item.huevos} huevos
+                            </p>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: "#2EC4B6", minWidth: 70, textAlign: "right" }} className="mono">{fmt(item.subtotal)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Carrito */}
                   {carrito.length > 0 && (
@@ -5293,10 +5337,13 @@ export default function App() {
                           <button onClick={() => quitarDelCarrito(item.productoId, item.esManga)} style={{ background: "none", border: "none", cursor: "pointer", color: "#E63946", padding: 2 }}><X size={14} /></button>
                         </div>
                       ))}
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", borderRadius:0, marginTop: 6 }}>
-                        <span style={{ fontWeight: 700, color: textPrimary }}>Total</span>
-                        <span style={{ fontWeight: 800, fontSize: 18, color: "#2EC4B6" }} className="mono">{fmt(totalCarrito)}</span>
-                      </div>
+                    </div>
+                  )}
+
+                  {(carrito.length > 0 || freeEggItems.length > 0) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)", borderRadius:0, marginBottom: 16 }}>
+                      <span style={{ fontWeight: 700, color: textPrimary }}>Total</span>
+                      <span style={{ fontWeight: 800, fontSize: 18, color: "#2EC4B6" }} className="mono">{fmt(totalCarrito)}</span>
                     </div>
                   )}
 
@@ -5399,7 +5446,7 @@ export default function App() {
                           <button onClick={async () => {
                             if (!window.confirm("¿Eliminar esta venta? El stock de los productos vendidos se devolverá automáticamente al inventario.")) return;
                             try {
-                              const res = await fetchConTimeout(`${API}/api/ventas/${v.id}`, {
+                              const res = await fetch(`${API}/api/ventas/${v.id}`, {
                                 method: "DELETE",
                                 headers: { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" },
                               });
@@ -5597,7 +5644,7 @@ export default function App() {
                               e.stopPropagation();
                               if (!window.confirm(`¿Eliminar la venta #${String(b.numero).padStart(6,"0")}? El stock de los productos vendidos se devolverá automáticamente al inventario.`)) return;
                               try {
-                                const res = await fetchConTimeout(`${API}/api/ventas/${b.ventaId}`, {
+                                const res = await fetch(`${API}/api/ventas/${b.ventaId}`, {
                                   method: "DELETE",
                                   headers: { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" },
                                 });
