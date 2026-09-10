@@ -109,11 +109,27 @@ const EMOJI_LIST = [
 
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad
+// ventas/boletas: localStorage solo como caché offline, el backend es la fuente de verdad.
+// safeSetItem nunca lanza: si el caché local está lleno (cuota excedida), lo
+// recortamos e intentamos de nuevo; si aun así falla, seguimos sin caché en
+// vez de hacer creer al resto del código que la operación (ej. una venta)
+// falló, cuando en realidad ya se guardó bien en el servidor.
+const safeSetItem = (key, arr) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch (e) {
+    try {
+      // Nos quedamos solo con los últimos 300 registros y reintentamos una vez.
+      localStorage.setItem(key, JSON.stringify(arr.slice(0, 300)));
+    } catch (e2) {
+      console.error(`⚠️ No se pudo cachear ${key} localmente (cuota excedida):`, e2.message);
+    }
+  }
+};
 const getSales   = () => JSON.parse(localStorage.getItem("inv_sales")   || "[]");
-const saveSales  = (s) => localStorage.setItem("inv_sales",   JSON.stringify(s));
+const saveSales  = (s) => safeSetItem("inv_sales", s.slice(0, 300));
 const getBoletas = () => JSON.parse(localStorage.getItem("inv_boletas") || "[]");
-const saveBoletas= (b) => localStorage.setItem("inv_boletas", JSON.stringify(b));
+const saveBoletas= (b) => safeSetItem("inv_boletas", b.slice(0, 300));
 const getConfig  = () => JSON.parse(localStorage.getItem("inv_config") || JSON.stringify({
   negocio: "Mi Negocio", direccion: "", telefono: "", moneda: "CLP", rut: "",
   notifStockBajo: true, notifVentas: true, stockMinimo: 5, tema: "claro",
@@ -778,8 +794,8 @@ const css = `
     .mobile-topbar h1 { font-size: 15px !important; }
   }
 
-  .sales-mobile-v2 { display:none; }
-  @media (max-width:1024px){
+  .sales-mobile-v2 { display:block; }
+  @media (min-width:0px){
     .sales-desktop-only{display:none!important}
     .sales-mobile-v2{display:block;max-width:560px;margin:0 auto;padding-bottom:90px}
     .sales-total-hero{display:flex;align-items:center;gap:14px;padding:20px;border-radius:0;background:#FF9F1C;color:#14120E;box-shadow:none;margin-bottom:3px}
@@ -823,6 +839,20 @@ const css = `
     .sales-cash-v2{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-top:10px}.sales-cash-v2 label{grid-column:1/-1;font-size:10px;font-weight:800}.sales-cash-v2 input{height:39px;border:2px solid var(--border);border-radius:0;padding:0 10px;background:var(--bg-card-2);color:var(--text-primary);min-width:0}.sales-cash-v2 span{font-size:10px;color:#2EC4B6;font-weight:800}.sales-finish-v2{width:100%;border:0;border-radius:0;background:#E63946;color:#fff;padding:14px;margin-top:12px;font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:.3px;box-shadow:none}
     .mobile-product-card{align-items:flex-start!important;padding:12px!important;gap:10px!important}.mobile-product-card>div:nth-child(2)>p:first-child{padding-right:25px!important}.mobile-product-card>div:nth-child(2)>p:nth-child(3){color:#E63946!important}.mobile-product-card button{white-space:nowrap}
   }
+
+  /* Misma mecánica de Ventas (huevos y productos juntos, mismo carrito) en
+     pantallas grandes, pero sin la columna angosta de teléfono — se estira y
+     usa grillas de más columnas para no verse apretado. */
+  @media (min-width:701px){
+    .sales-mobile-v2{max-width:1100px;padding-bottom:40px}
+    .sales-product-grid-v2{grid-template-columns:repeat(4,1fr)!important}
+    .free-eggs-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+    .sales-method-summary,.sales-pay-v2{grid-template-columns:repeat(3,minmax(0,220px))!important;justify-content:start}
+  }
+  @media (min-width:1025px){
+    .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
+  }
+
 
 `;
 
@@ -5024,7 +5054,13 @@ export default function App() {
                   </>}
 
                   {ventaTab === "huevos" && saleFlowType === "free" && (
-                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> : <div className="free-eggs-grid">
+                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> :
+                    (!freeEggInventory.length && ventaError) ? (
+                      <div className="sales-error-v2">
+                        ⚠ {ventaError}
+                        <button onClick={()=>window.location.reload()} style={{marginLeft:10,border:"none",background:"none",color:"#E63946",fontWeight:800,textDecoration:"underline",cursor:"pointer"}}>Recargar página para reintentar</button>
+                      </div>
+                    ) : <div className="free-eggs-grid">
                       {freeEggInventory.map(q => {
                         const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
                         return <article key={q.id} className="free-egg-card">
