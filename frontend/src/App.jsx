@@ -1673,6 +1673,13 @@ export default function App() {
   // Boletas / Facturas
   const [boletaModal, setBoletaModal] = useState(null);
   const [boletaGenerando, setBoletaGenerando] = useState(false);
+  // Se genera una sola vez por intento de cobro y se reusa si el pedido falla
+  // y el usuario vuelve a apretar "Finalizar venta" — así el servidor puede
+  // reconocer que es un reintento del mismo cobro y no duplicar la venta.
+  // Se limpia (ventaIdempotencyRef.current = null) después de guardar con
+  // éxito, o al vaciar el carrito, para que la próxima venta tenga su propia
+  // clave nueva.
+  const ventaIdempotencyRef = useRef(null);
   const [filtroBoleta, setFiltroBoleta] = useState("Todos");
   const [reporteTab, setReporteTab] = useState("ventas"); // "ventas" | "inventario"
   const [scrollAAlertaStock, setScrollAAlertaStock] = useState(false);
@@ -3095,6 +3102,10 @@ export default function App() {
       return base;
     })();
     const ventaId = String(ahora.getTime());
+    if (!ventaIdempotencyRef.current) {
+      ventaIdempotencyRef.current = `${ventaId}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    const idempotencyKey = ventaIdempotencyRef.current;
     const numeroBoleta = String(generarNumeroBoleta(boletas));
 
     const itemsVenta = [
@@ -3104,6 +3115,7 @@ export default function App() {
 
     const venta = {
       id: ventaId,
+      idempotencyKey,
       items: itemsVenta,
       eggItems: freeEggItems,
       tipoVenta: saleFlowType === "free" ? "libre" : "productos",
@@ -3154,7 +3166,7 @@ export default function App() {
 
     try {
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 60000);
       let res;
       try {
         res = await fetch(API + "/api/ventas", {
@@ -3220,6 +3232,7 @@ export default function App() {
 
       setCarrito([]);
       setFreeEggCart({});
+      ventaIdempotencyRef.current = null;
       setMobileSaleStep("catalogo");
       setVentaTab("productos");
       setFechaVentaPersonalizada("");
@@ -5040,7 +5053,7 @@ export default function App() {
 
                 {mobileSaleStep === "cobro" && <div className="sales-cart-v2 sales-checkout-v2">
                   <button type="button" className="sales-back-v2" onClick={()=>setMobileSaleStep("catalogo")}><ChevronLeft size={18}/> Seguir agregando productos</button>
-                  <div className="sales-cart-title"><h3>Cobrar</h3><button onClick={()=>{setCarrito([]);setFreeEggCart({});}}>Vaciar</button></div>
+                  <div className="sales-cart-title"><h3>Cobrar</h3><button onClick={()=>{setCarrito([]);setFreeEggCart({});ventaIdempotencyRef.current=null;}}>Vaciar</button></div>
                   {freeEggItems.map(item=><div className="sales-cart-row" key={`egg-${item.calidadId}`}>
                     <div className="sales-cart-thumb"><span>🥚</span></div>
                     <div className="sales-cart-name">

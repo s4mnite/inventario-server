@@ -545,6 +545,24 @@ app.post("/api/ventas", authUsuario, async (req, res) => {
     }
     if (!cajaAbierta) return res.status(409).json({ error: "Debes abrir caja antes de registrar una venta" });
 
+    // Si esta venta ya se guardó antes con la misma clave de idempotencia
+    // (el celular reintentó porque el pedido anterior se cortó por timeout,
+    // aunque en realidad sí se había guardado), devolvemos la venta y boleta
+    // ya existentes en vez de crear una copia duplicada.
+    const idempotencyKey = String(venta.idempotencyKey || "").trim();
+    if (idempotencyKey) {
+      const ventaExistente = await db.collection("ventas").findOne({ idempotencyKey, empresa: obtenerEmpresa(cajaAbierta.empresa || empresaVenta) });
+      if (ventaExistente) {
+        const boletaExistente = await db.collection("boletas").findOne({ ventaId: ventaExistente._id.toString() });
+        return res.json({
+          venta: { ...ventaExistente, id: ventaExistente._id.toString() },
+          boleta: boletaExistente ? { ...boletaExistente, id: boletaExistente._id.toString() } : null,
+          eggInventory: null,
+          reintentoDetectado: true,
+        });
+      }
+    }
+
     venta.empresa = cajaAbierta.empresa || empresaVenta;
     venta.cajaId = cajaAbierta._id.toString();
     if (venta.requiereFactura) {
