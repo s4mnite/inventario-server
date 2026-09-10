@@ -515,6 +515,46 @@ app.get("/api/ventas", authUsuario, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint de solo lectura (no borra nada): agrupa ventas con el mismo total,
+// mismo método de pago y misma cantidad de items, guardadas a pocos minutos
+// una de otra — el patrón típico de cuando el celular reintentaba una venta
+// porque el servidor tardaba en responder y no se veía ningún aviso de éxito.
+app.get("/api/ventas/duplicados", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.json({ grupos: [] });
+    const empresa = obtenerEmpresa(req.query.empresa);
+    const filtro = empresa ? { empresa: empresaQuery(empresa) } : {};
+    const ventanaMinutos = Number(req.query.minutos || 10);
+    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: 1 }).toArray();
+    const firmaDe = v => JSON.stringify({
+      total: Number(v.total || 0),
+      pago: v.pago || "",
+      nItems: (v.items || []).length,
+    });
+    const grupos = [];
+    let actual = null;
+    for (const v of ventas) {
+      const firma = firmaDe(v);
+      const t = new Date(v.timestamp || v.fecha || v.creadoEn || 0).getTime();
+      if (actual && actual.firma === firma && (t - actual.ultimoTs) <= ventanaMinutos * 60 * 1000) {
+        actual.miembros.push(v);
+        actual.ultimoTs = t;
+      } else {
+        if (actual && actual.miembros.length > 1) grupos.push(actual.miembros);
+        actual = { firma, ultimoTs: t, miembros: [v] };
+      }
+    }
+    if (actual && actual.miembros.length > 1) grupos.push(actual.miembros);
+    const gruposFormateados = grupos.map(g => ({
+      total: Number(g[0].total || 0),
+      pago: g[0].pago || "",
+      cantidad: g.length,
+      ventas: g.map(v => ({ id: v._id.toString(), timestamp: v.timestamp || v.fecha || v.creadoEn, cliente: v.cliente || null })),
+    }));
+    res.json({ grupos: gruposFormateados, totalVentasRevisadas: ventas.length, gruposEncontrados: gruposFormateados.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/ventas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });

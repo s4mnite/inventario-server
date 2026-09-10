@@ -1713,6 +1713,40 @@ export default function App() {
   const ventaIdempotencyRef = useRef(null);
   const [filtroBoleta, setFiltroBoleta] = useState("Todos");
   const [reporteTab, setReporteTab] = useState("ventas"); // "ventas" | "inventario"
+  const [duplicadosGrupos, setDuplicadosGrupos] = useState(null); // null = todavía no se buscó
+  const [duplicadosLoading, setDuplicadosLoading] = useState(false);
+  const [duplicadosError, setDuplicadosError] = useState("");
+  const [duplicadosBorrando, setDuplicadosBorrando] = useState({}); // { [ventaId]: true } mientras se borra
+  const buscarVentasDuplicadas = async () => {
+    setDuplicadosLoading(true);
+    setDuplicadosError("");
+    try {
+      const res = await fetchConTimeout(`${API}/api/ventas/duplicados?empresa=${encodeURIComponent(empresaActiva)}`, {}, 30000);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo buscar duplicados.");
+      setDuplicadosGrupos(data.grupos || []);
+    } catch (e) {
+      setDuplicadosError(e.name === "AbortError" ? "La búsqueda tardó demasiado, probá de nuevo." : (e.message || "Error de conexión."));
+    } finally {
+      setDuplicadosLoading(false);
+    }
+  };
+  const borrarVentaDuplicada = async (ventaId) => {
+    if (!window.confirm("¿Borrar esta venta duplicada? Se devuelve el stock que había descontado y no se puede deshacer.")) return;
+    setDuplicadosBorrando(prev => ({ ...prev, [ventaId]: true }));
+    try {
+      const res = await fetchConTimeout(`${API}/api/ventas/${ventaId}`, { method: "DELETE" }, 30000);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo borrar.");
+      setDuplicadosGrupos(prev => (prev || [])
+        .map(g => ({ ...g, ventas: g.ventas.filter(v => v.id !== ventaId) }))
+        .filter(g => g.ventas.length > 1));
+    } catch (e) {
+      alert("No se pudo borrar: " + (e.message || "Error de conexión."));
+    } finally {
+      setDuplicadosBorrando(prev => { const n = { ...prev }; delete n[ventaId]; return n; });
+    }
+  };
   const [scrollAAlertaStock, setScrollAAlertaStock] = useState(false);
   const alertaStockRef = useRef(null);
   useEffect(() => {
@@ -4590,6 +4624,43 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Detección de ventas duplicadas */}
+                <div style={{ border: `1.5px solid ${borderColor2}`, borderRadius: 0, padding: 14, marginBottom: 20, background: bgCard2 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <strong style={{ fontSize: 13.5 }}>🔍 Ventas duplicadas</strong>
+                      <p style={{ margin: "2px 0 0", fontSize: 12, color: textMuted }}>Busca ventas con el mismo total, mismo pago y guardadas a pocos minutos una de otra.</p>
+                    </div>
+                    <button onClick={buscarVentasDuplicadas} disabled={duplicadosLoading} style={{ padding: "9px 16px", borderRadius: 0, border: "none", background: "#E63946", color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: duplicadosLoading ? "default" : "pointer", opacity: duplicadosLoading ? 0.7 : 1, fontFamily: "inherit" }}>
+                      {duplicadosLoading ? "Buscando…" : "Buscar duplicados"}
+                    </button>
+                  </div>
+                  {duplicadosError && <div className="sales-error-v2" style={{ marginTop: 10 }}>⚠ {duplicadosError}</div>}
+                  {duplicadosGrupos && !duplicadosError && (
+                    duplicadosGrupos.length === 0 ? (
+                      <p style={{ marginTop: 10, fontSize: 12.5, color: "#2EC4B6", fontWeight: 700 }}>✓ No se encontraron ventas duplicadas.</p>
+                    ) : (
+                      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                        {duplicadosGrupos.map((g, gi) => (
+                          <div key={gi} style={{ border: "1.5px solid #E63946", background: "rgba(230,57,70,0.06)", padding: 10 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>{fmt(g.total)} · {g.pago || "sin pago"} · {g.cantidad} ventas iguales</div>
+                            {g.ventas.map((v, vi) => (
+                              <div key={v.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderTop: vi > 0 ? `1px solid ${borderColor2}` : "none" }}>
+                                <span>{vi === 0 ? "🟢 Mantener — " : "🔴 "}{new Date(v.timestamp).toLocaleString("es-CL")}{v.cliente ? ` · ${v.cliente}` : ""}</span>
+                                {vi > 0 && (
+                                  <button onClick={() => borrarVentaDuplicada(v.id)} disabled={!!duplicadosBorrando[v.id]} style={{ border: "none", background: "none", color: "#E63946", fontWeight: 700, cursor: duplicadosBorrando[v.id] ? "default" : "pointer", fontSize: 12, textDecoration: "underline", fontFamily: "inherit" }}>
+                                    {duplicadosBorrando[v.id] ? "Borrando…" : "Borrar"}
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
                 </div>
 
                 {/* Tabs */}
