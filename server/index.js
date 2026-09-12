@@ -1331,6 +1331,27 @@ app.get("/api/huevos", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint de solo lectura para diagnosticar problemas de stock: devuelve el
+// historial crudo de movimientos de UNA calidad (por nombre), ordenado
+// cronológicamente, para poder rastrear a mano dónde se desarma la cuenta.
+app.get("/api/huevos/movimientos-crudos", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const calidad = String(req.query.calidad || "").trim().toLowerCase();
+    if (!calidad) return res.status(400).json({ error: "Falta el parámetro calidad" });
+    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
+    const movements = (doc?.movements || [])
+      .filter(m => String(m.calidad || "").trim().toLowerCase() === calidad)
+      .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+      .map(m => ({
+        id: m.id, tipo: m.tipo, huevos: m.huevos, fecha: m.fecha, fechaIngreso: m.fechaIngreso,
+        loteOrigenId: m.loteOrigenId, loteDestinoId: m.loteDestinoId, ingreso: m.ingreso,
+        valorUnitarioCompra: m.valorUnitarioCompra, totalCompra: m.totalCompra, calidadId: m.calidadId,
+      }));
+    res.json({ calidad, cantidadMovimientos: movements.length, movimientos: movements });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Endpoint temporal de diagnóstico de rendimiento — cuenta movimientos y mide
 // el tiempo real de la consulta a Mongo, sin mandar los datos completos.
 // Se puede borrar una vez resuelto el problema de carga lenta de Huevos.
