@@ -2896,7 +2896,8 @@ export default function App() {
     () => stockPorCalidadDeLotes(computeEggLots(freeEggMovimientos, freeEggInventory)),
     [freeEggMovimientos, freeEggInventory]
   );
-  const stockDeHuevo = q => Number(stockHuevosPorCalidad[q.id] ?? q.stockHuevos ?? 0);
+  // stockHuevos es la fuente principal ahora (mismo criterio que HuevosModule.jsx).
+  const stockDeHuevo = q => Number(q.stockHuevos ?? stockHuevosPorCalidad[q.id] ?? 0);
 
   // El stock de huevos ya no limita la cantidad máxima seleccionable: se puede
   // vender aunque no haya stock suficiente y el inventario queda en negativo.

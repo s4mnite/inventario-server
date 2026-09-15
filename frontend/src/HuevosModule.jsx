@@ -617,7 +617,10 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   // los movimientos guardados) queda conectado a la misma fuente de verdad
   // que "Lotes por fecha".
   const stockPorCalidad = useMemo(() => stockPorCalidadDeLotes(eggLots), [eggLots]);
-  const stockDe = q => q ? Number(stockPorCalidad[q.id] ?? q.stockHuevos ?? 0) : 0;
+  // stockHuevos es la fuente principal ahora: un número simple que se puede
+  // corregir a mano de forma confiable. El cálculo por lotes quedó como
+  // respaldo únicamente si stockHuevos no está definido (categoría nueva).
+  const stockDe = q => q ? Number(q.stockHuevos ?? stockPorCalidad[q.id] ?? 0) : 0;
 
   const totalEggs = inventory.reduce((s, q) => s + stockDe(q), 0);
   const totalBreakdown = eggBreakdown(totalEggs);
