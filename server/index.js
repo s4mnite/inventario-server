@@ -1451,6 +1451,24 @@ app.put("/api/huevos/inventario", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint de recuperación: fija stockHuevos a un valor EXACTO (no lo suma
+// ni lo resta), para corregir manualmente el inventario tras un incidente.
+// A diferencia de un ajuste normal, llamarlo varias veces con los mismos
+// datos no duplica nada — el resultado final es siempre el mismo valor.
+app.post("/api/huevos/fijar-stock", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const { calidadId, stockHuevos } = req.body || {};
+    if (!calidadId || typeof stockHuevos !== "number") return res.status(400).json({ error: "Faltan calidadId o stockHuevos (número)" });
+    const result = await db.collection("huevos").updateOne(
+      { key: req.eggKey },
+      { $set: { "inventory.$[q].stockHuevos": stockHuevos } },
+      { arrayFilters: [{ "q.id": calidadId }] }
+    );
+    res.json({ ok: true, calidadId, stockHuevos, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/huevos/movimientos", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
