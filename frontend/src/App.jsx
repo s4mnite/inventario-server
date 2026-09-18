@@ -5060,17 +5060,44 @@ export default function App() {
                 </div>
 
                 <div className="sales-products-v2">
+                  {saleFlowType === "free" && <>
+                    <div className="sales-products-head">
+                      <h3>🥚 Huevos</h3>
+                      <span>{freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos</span>
+                    </div>
+                    {freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> :
+                      (!freeEggInventory.length && ventaError) ? (
+                        <div className="sales-error-v2">
+                          ⚠ {ventaError}
+                          <button onClick={()=>window.location.reload()} style={{marginLeft:10,border:"none",background:"none",color:"#E63946",fontWeight:800,textDecoration:"underline",cursor:"pointer"}}>Recargar página para reintentar</button>
+                        </div>
+                      ) : <div className="free-eggs-grid">
+                        {freeEggInventory.map(q => {
+                          const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
+                          return <article key={q.id} className="free-egg-card">
+                            <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#E63946",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
+                            <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
+                            <div className="free-egg-bottom">
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                <strong style={{ color: "#E63946" }}>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
+                                {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
+                                  <strong style={{ color: "#2EC4B6", fontSize: 12.5 }}>{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10.5 }}>efectivo</span></strong>
+                                )}
+                              </div>
+                              <div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div>
+                            </div>
+                          </article>;
+                        })}
+                      </div>
+                    }
+                  </>}
+
                   <div className="sales-products-head">
-                    <h3>{ventaTab === "huevos" ? "Huevos" : "Productos"}</h3>
-                    <span>{ventaTab === "huevos" ? `${freeEggItems.reduce((s,i)=>s+i.cantidadFormatos,0)} formatos` : `${carrito.reduce((s,i)=>s+i.cantidad,0)} en carrito`}</span>
+                    <h3>Productos</h3>
+                    <span>{carrito.reduce((s,i)=>s+i.cantidad,0)} en carrito</span>
                   </div>
 
-                  {saleFlowType === "free" && <div className="sales-venta-tabs">
-                    <button type="button" className={ventaTab==="productos"?"active":""} onClick={()=>setVentaTab("productos")}>📦 Productos</button>
-                    <button type="button" className={ventaTab==="huevos"?"active":""} onClick={()=>setVentaTab("huevos")}>🥚 Huevos</button>
-                  </div>}
-
-                  {ventaTab === "productos" && <>
+                  <>
                     <div className="sales-search-sticky-v2">
                       <div className="sales-search-v2">
                         <Search size={18}/>
@@ -5123,34 +5150,7 @@ export default function App() {
                         </article>;
                       })}
                     </div>
-                  </>}
-
-                  {ventaTab === "huevos" && saleFlowType === "free" && (
-                    freeEggLoading ? <p style={{color:textMuted}}>Cargando inventario de huevos…</p> :
-                    (!freeEggInventory.length && ventaError) ? (
-                      <div className="sales-error-v2">
-                        ⚠ {ventaError}
-                        <button onClick={()=>window.location.reload()} style={{marginLeft:10,border:"none",background:"none",color:"#E63946",fontWeight:800,textDecoration:"underline",cursor:"pointer"}}>Recargar página para reintentar</button>
-                      </div>
-                    ) : <div className="free-eggs-grid">
-                      {freeEggInventory.map(q => {
-                        const row = freeEggCart[q.id] || { formato:"bandeja", cantidad:0 };
-                        return <article key={q.id} className="free-egg-card">
-                          <div><span className="free-egg-icon">🥚</span><div><h4>{q.nombre}</h4><small style={stockDeHuevo(q) < 0 ? {color:"#E63946",fontWeight:700} : undefined}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</small></div></div>
-                          <div className="free-egg-format"><button className={row.formato!=="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"bandeja")}>Bandeja 30</button><button className={row.formato==="caja"?"active":""} onClick={()=>setFreeEggFormat(q,"caja")}>Caja 180</button></div>
-                          <div className="free-egg-bottom">
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                              <strong style={{ color: "#E63946" }}>{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
-                              {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
-                                <strong style={{ color: "#2EC4B6", fontSize: 12.5 }}>{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10.5 }}>efectivo</span></strong>
-                              )}
-                            </div>
-                            <div className="sales-prod-controls"><button disabled={!row.cantidad} onClick={()=>changeFreeEgg(q,-1)}>−</button><input type="number" min="0" inputMode="numeric" value={row.cantidad||0} onFocus={e=>e.target.select()} onChange={e=>setFreeEggCantidad(q,e.target.value)} style={{width:36,textAlign:"center",border:"none",background:"transparent",fontWeight:800,fontSize:14,color:"inherit",padding:0}} /><button onClick={()=>changeFreeEgg(q,1)}>+</button></div>
-                          </div>
-                        </article>;
-                      })}
-                    </div>
-                  )}
+                  </>
                 </div>
 
                 <div className="sales-choice-v2 sale-mode-summary">
@@ -5273,50 +5273,47 @@ export default function App() {
                   {ventaExito && <div style={{ background: "rgba(46,196,182,0.12)", color: "#2EC4B6", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>{ventaExito}</div>}
                   {ventaError && <div style={{ background: "rgba(230,57,70,0.10)", color: "#E63946", fontSize: 13, padding: "11px 14px", borderRadius:0, marginBottom: 14, fontWeight: 600 }}>⚠ {ventaError}</div>}
 
-                  {/* Pestañas Productos / Huevos, igual que en la app */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                    <button onClick={() => setVentaTab("productos")} style={{ padding: "10px 6px", borderRadius:0, border: `1.5px solid ${ventaTab === "productos" ? "#E63946" : borderColor2}`, background: ventaTab === "productos" ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, color: ventaTab === "productos" ? "#E63946" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>📦 Productos</button>
-                    <button onClick={() => { setVentaTab("huevos"); setSaleFlowType("free"); }} style={{ padding: "10px 6px", borderRadius:0, border: `1.5px solid ${ventaTab === "huevos" ? "#E63946" : borderColor2}`, background: ventaTab === "huevos" ? (D ? "rgba(230,57,70,0.15)" : "rgba(255,159,28,0.15)") : bgCard2, color: ventaTab === "huevos" ? "#E63946" : textSecondary, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>🥚 Huevos</button>
-                  </div>
+                  {saleFlowType === "free" && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>🥚 Huevos</p>
+                      {freeEggLoading ? <p style={{ color: textMuted, fontSize: 13 }}>Cargando inventario de huevos…</p> : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
+                          {freeEggInventory.map(q => {
+                            const row = freeEggCart[q.id] || { formato: "bandeja", cantidad: 0 };
+                            return (
+                              <div key={q.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 0, background: bgCard2, padding: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                  <span style={{ fontSize: 22 }}>🥚</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>{q.nombre}</p>
+                                    <p style={{ margin: 0, fontSize: 11, color: stockDeHuevo(q) < 0 ? "#E63946" : textMuted, fontWeight: stockDeHuevo(q) < 0 ? 700 : 400 }}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</p>
+                                  </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+                                  <button onClick={() => setFreeEggFormat(q, "bandeja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato !== "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato !== "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato !== "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Bandeja 30</button>
+                                  <button onClick={() => setFreeEggFormat(q, "caja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato === "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato === "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato === "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Caja 180</button>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <strong style={{ color: "#E63946", fontSize: 15 }} className="mono">{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
+                                    {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
+                                      <strong style={{ color: "#2EC4B6", fontSize: 11.5 }} className="mono">{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10 }}>efectivo</span></strong>
+                                    )}
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <button disabled={!row.cantidad} onClick={() => changeFreeEgg(q, -1)} style={{ width: 26, height: 26, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, fontSize: 15 }}>−</button>
+                                    <input type="number" min="0" inputMode="numeric" value={row.cantidad || 0} onFocus={e => e.target.select()} onChange={e => setFreeEggCantidad(q, e.target.value)} style={{ width: 36, textAlign: "center", border: "none", background: "transparent", fontWeight: 800, fontSize: 14, color: textPrimary, padding: 0 }} />
+                                    <button onClick={() => changeFreeEgg(q, 1)} style={{ width: 26, height: 26, borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", color: "#fff", fontSize: 15 }}>+</button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  {ventaTab === "huevos" ? (
-                    freeEggLoading ? <p style={{ color: textMuted, fontSize: 13 }}>Cargando inventario de huevos…</p> : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto", paddingRight: 4 }}>
-                        {freeEggInventory.map(q => {
-                          const row = freeEggCart[q.id] || { formato: "bandeja", cantidad: 0 };
-                          return (
-                            <div key={q.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 0, background: bgCard2, padding: 12 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                                <span style={{ fontSize: 22 }}>🥚</span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textPrimary }}>{q.nombre}</p>
-                                  <p style={{ margin: 0, fontSize: 11, color: stockDeHuevo(q) < 0 ? "#E63946" : textMuted, fontWeight: stockDeHuevo(q) < 0 ? 700 : 400 }}>{stockDeHuevo(q).toLocaleString("es-CL")} huevos disponibles</p>
-                                </div>
-                              </div>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
-                                <button onClick={() => setFreeEggFormat(q, "bandeja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato !== "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato !== "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato !== "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Bandeja 30</button>
-                                <button onClick={() => setFreeEggFormat(q, "caja")} style={{ padding: "7px 6px", borderRadius:0, border: `1.5px solid ${row.formato === "caja" ? "#2EC4B6" : borderColor2}`, background: row.formato === "caja" ? "rgba(46,196,182,0.15)" : bgCard, color: row.formato === "caja" ? "#2EC4B6" : textSecondary, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Caja 180</button>
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                  <strong style={{ color: "#E63946", fontSize: 15 }} className="mono">{fmt(row.formato === "caja" ? q.precioCaja : q.precioBandeja)}</strong>
-                                  {q.precioEfectivoActivo && Number(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja) > 0 && (
-                                    <strong style={{ color: "#2EC4B6", fontSize: 11.5 }} className="mono">{fmt(row.formato === "caja" ? q.precioEfectivoCaja : q.precioEfectivoBandeja)} <span style={{ fontWeight: 500, color: textMuted, fontSize: 10 }}>efectivo</span></strong>
-                                  )}
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                  <button disabled={!row.cantidad} onClick={() => changeFreeEgg(q, -1)} style={{ width: 26, height: 26, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard, cursor: "pointer", color: textSecondary, fontSize: 15 }}>−</button>
-                                  <input type="number" min="0" inputMode="numeric" value={row.cantidad || 0} onFocus={e => e.target.select()} onChange={e => setFreeEggCantidad(q, e.target.value)} style={{ width: 36, textAlign: "center", border: "none", background: "transparent", fontWeight: 800, fontSize: 14, color: textPrimary, padding: 0 }} />
-                                  <button onClick={() => changeFreeEgg(q, 1)} style={{ width: 26, height: 26, borderRadius:0, border: "none", background: "#E63946", cursor: "pointer", color: "#fff", fontSize: 15 }}>+</button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )
-                  ) : (
-                  <>
                   {/* Buscador */}
                   <div style={{ background: bgCard2, borderRadius:0, padding: "14px 16px", marginBottom: 16, border: `1px solid ${borderColor}` }}>
                     <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Buscar producto</p>
@@ -5400,8 +5397,6 @@ export default function App() {
                     {carritoError && <p style={{ color: "#E63946", fontSize: 12, margin: "6px 0 0", fontWeight: 500 }}>⚠ {carritoError}</p>}
                     {stockWarning && <p style={{ color: "#FF9F1C", fontSize: 12, margin: "6px 0 0", fontWeight: 500, background: "rgba(255,159,28,0.12)", padding: "6px 10px", borderRadius:0 }}>{stockWarning}</p>}
                   </div>
-                  </>
-                  )}
 
                   {/* Carrito de huevos (venta libre) */}
                   {freeEggItems.length > 0 && (
