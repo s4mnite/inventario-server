@@ -849,7 +849,7 @@ const css = `
     .free-eggs-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
     .sales-method-summary,.sales-pay-v2{grid-template-columns:repeat(3,minmax(0,220px))!important;justify-content:start}
   }
-  @media (min-width:1025px){
+  @media (min-width:960px){
     .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
     .sales-mobile-v2{display:none!important}
     .sales-desktop-only{display:grid!important}
