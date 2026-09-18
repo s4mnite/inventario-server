@@ -4264,7 +4264,7 @@ export default function App() {
                 <section className="desktop-section">
                   <div className="desktop-section-title"><h3>Ventas rápidas</h3></div>
                   <div className="desktop-quick-grid">
-                    <button className="desktop-quick-card egg" onClick={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}><span>🥚</span><b>Nueva venta</b><small>Vender huevos</small></button>
+                    <button className="desktop-quick-card egg" onClick={() => { setEggSaleMode(false); setSaleFlowType("free"); setVentaTab("huevos"); setMobileSaleStep("catalogo"); setActiveNav("Ventas"); }}><span>🥚</span><b>Nueva venta</b><small>Vender huevos</small></button>
                     <button className="desktop-quick-card red" onClick={() => setActiveNav("Ventas")}><span>🛒</span><b>Ver ventas</b><small>Historial y caja</small></button>
                     <button className="desktop-quick-card blue" onClick={() => setActiveNav("Productos")}><span>▦</span><b>Inventario</b><small>Buscar productos</small></button>
                     <button className="desktop-quick-card green" onClick={() => setActiveNav("Reportes")}><span>＋</span><b>Más opciones</b><small>Reportes y gestión</small></button>
@@ -4333,7 +4333,7 @@ export default function App() {
                   onNotifications={() => {}}
                   onMenu={() => setMoreMenuOpen(true)}
                   onNavigate={(destino) => setActiveNav(destino)}
-                  onVentaHuevos={() => { setEggSaleMode(true); setActiveNav("Huevos"); }}
+                  onVentaHuevos={() => { setEggSaleMode(false); setSaleFlowType("free"); setVentaTab("huevos"); setMobileSaleStep("catalogo"); setActiveNav("Ventas"); }}
                   onVerAlertaStock={() => { setReporteTab("inventario"); setActiveNav("Reportes"); setScrollAAlertaStock(true); }}
                   meta={metaDiaria}
                   onMetaChange={setMetaDiaria}
