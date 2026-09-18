@@ -851,6 +851,8 @@ const css = `
   }
   @media (min-width:1025px){
     .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
+    .sales-mobile-v2{display:none!important}
+    .sales-desktop-only{display:grid!important}
   }
 
 
@@ -1640,7 +1642,7 @@ export default function App() {
   const [activeNav, setActiveNav] = useState("Dashboard");
   const [eggSaleMode, setEggSaleMode] = useState(false);
   const [saleChooserOpen, setSaleChooserOpen] = useState(false);
-  const [saleFlowType, setSaleFlowType] = useState("products"); // products | free
+  const [saleFlowType, setSaleFlowType] = useState("free"); // products | free
   const [freeEggInventory, setFreeEggInventory] = useState([]);
   const [freeEggMovimientos, setFreeEggMovimientos] = useState([]);
   const [freeEggCart, setFreeEggCart] = useState({});
@@ -2870,7 +2872,7 @@ export default function App() {
         "x-usuario": currentUser?.usuario || "",
         "x-clave": currentUser?._clave || "",
       },
-    })
+    }, 30000)
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "No se pudo cargar el inventario de huevos.");
