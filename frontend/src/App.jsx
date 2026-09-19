@@ -851,14 +851,64 @@ const css = `
   }
   @media (min-width:960px){
     .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
-    .sales-mobile-v2{display:none!important}
     .sales-desktop-only{display:grid!important}
-    .ventas-grid{grid-template-columns:440px 1fr!important}
     .rey-mobile-home{display:none!important}
     .rey-desktop-dashboard{display:block!important}
     .sidebar-desktop{display:flex!important}
     .bottom-nav{display:none!important}
   }
+  .ventas-grid-legacy-hidden{display:none!important}
+
+  /* ── DASHBOARD DE ESCRITORIO ── */
+  .rey-desktop-dashboard{max-width:1180px;margin:0 auto;padding:26px 30px 60px;display:flex;flex-direction:column;gap:22px}
+  .desktop-overview-head h2{margin:0 0 4px;font-size:22px;font-weight:800;color:var(--text-primary)}
+  .desktop-overview-head p{margin:0;font-size:13px;color:var(--text-muted);text-transform:capitalize}
+
+  .desktop-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .desktop-kpi-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:0;padding:16px}
+  .desktop-kpi-icon{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;border-radius:0}
+  .desktop-kpi-icon.yellow{background:rgba(255,159,28,0.18);color:#B8860B}
+  .desktop-kpi-icon.green{background:rgba(46,196,182,0.18);color:#1E8E80}
+  .desktop-kpi-icon.blue{background:rgba(55,138,221,0.18);color:#2569AC}
+  .desktop-kpi-icon.purple{background:rgba(122,90,220,0.18);color:#6A4FC4}
+  .desktop-kpi-card small{display:block;font-size:11.5px;color:var(--text-muted);font-weight:600;margin-bottom:3px}
+  .desktop-kpi-card strong{display:block;font-size:19px;font-weight:800;color:var(--text-primary);font-family:'JetBrains Mono',monospace}
+  .desktop-kpi-card em{display:block;font-style:normal;font-size:11px;color:var(--text-muted);margin-top:3px}
+  .desktop-kpi-card em.up{color:#1E8E80}
+  .desktop-kpi-card em.down{color:#E63946}
+
+  .desktop-section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .desktop-section-title h3{margin:0;font-size:14px;font-weight:800;color:var(--text-primary)}
+  .desktop-section-title button{border:none;background:none;color:#E63946;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:0}
+
+  .desktop-quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .desktop-quick-card{border:none;border-radius:0;padding:16px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;cursor:pointer;font-family:inherit;color:#fff}
+  .desktop-quick-card span{font-size:20px;margin-bottom:2px}
+  .desktop-quick-card b{font-size:13px;font-weight:800}
+  .desktop-quick-card small{font-size:11px;opacity:0.85}
+  .desktop-quick-card.egg{background:#FF9F1C;color:#1C1A17}
+  .desktop-quick-card.egg small{color:#4A3A0C;opacity:1}
+  .desktop-quick-card.red{background:#E63946}
+  .desktop-quick-card.blue{background:#378ADD}
+  .desktop-quick-card.green{background:#639922}
+
+  .desktop-featured-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .desktop-feature-card{background:var(--bg-card);border:1px solid var(--border);border-radius:0;padding:12px;display:flex;flex-direction:column;gap:4px}
+  .desktop-product-image{width:100%;aspect-ratio:1;background:var(--bg-card2);display:flex;align-items:center;justify-content:center;color:var(--text-muted);overflow:hidden;margin-bottom:6px}
+  .desktop-product-image img{width:100%;height:100%;object-fit:cover}
+  .desktop-feature-card h4{margin:0;font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .desktop-feature-card strong{font-size:14px;color:#E63946;font-family:'JetBrains Mono',monospace}
+  .desktop-feature-card small{font-size:11px;color:var(--text-muted)}
+  .desktop-feature-card button{margin-top:6px;border:1.5px solid var(--border2);background:transparent;color:var(--text-secondary);font-size:11px;font-weight:700;padding:6px;cursor:pointer;font-family:inherit;border-radius:0}
+  .desktop-empty-products{grid-column:1/-1;padding:30px;text-align:center;color:var(--text-muted);font-size:13px;border:1.5px dashed var(--border2)}
+
+  .desktop-sales-table{display:flex;flex-direction:column;gap:2px}
+  .desktop-sale-row{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--border)}
+  .desktop-sale-dot{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,159,28,0.15);font-size:15px}
+  .desktop-sale-row div{flex:1;min-width:0}
+  .desktop-sale-row b{display:block;font-size:12.5px;font-weight:700;color:var(--text-primary)}
+  .desktop-sale-row small{font-size:11px;color:var(--text-muted)}
+  .desktop-sale-row strong{font-size:13.5px;color:#1E8E80;font-family:'JetBrains Mono',monospace}
 
 
 `;
@@ -5035,10 +5085,9 @@ export default function App() {
 
               <div className="dashboard-grid sales-desktop-only" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
                 {[
-                  { icon: DollarSign, label: "Total General", value: fmt(totalGeneral), color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
-                  { icon: Banknote, label: "Efectivo", value: fmt(totalEfectivo), color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
-                  { icon: CreditCard, label: "Tarjeta", value: fmt(totalTarjeta), color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
-                  { icon: CreditCard, label: "Transferencia", value: fmt(totalTransferencia), color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.10)" },
+                  { icon: DollarSign, label: "Total de hoy", value: fmt(ventasHuevosHoyTotal), color: "#E63946", bg: D ? "rgba(255,159,28,0.15)" : "rgba(255,159,28,0.15)" },
+                  { icon: Banknote, label: "Efectivo", value: fmt(pagoEfectivoHoy), color: "#2EC4B6", bg: D ? "rgba(46,196,182,0.15)" : "rgba(46,196,182,0.12)" },
+                  { icon: CreditCard, label: "Tarjeta", value: fmt(pagoTarjetaHoy), color: "#8E7CC3", bg: D ? "rgba(142,124,195,0.15)" : "rgba(142,124,195,0.12)" },
                 ].map(({ icon: Icon, label, value, color, bg }) => (
                   <div key={label} style={{ ...card, display: "flex", alignItems: "center", gap: 16 }} className="card-hover">
                     <div style={{ width: 46, height: 46, borderRadius:0, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -5266,7 +5315,7 @@ export default function App() {
                 </button>
               )}
 
-              <div className="ventas-grid sales-desktop-only" style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 18 }}>
+              <div className="ventas-grid ventas-grid-legacy-hidden" style={{ display: "grid", gridTemplateColumns: "440px minmax(0,1fr)", gap: 18 }}>
                 {/* ── Formulario Nueva Venta ── */}
                 <div style={{ ...card, height: "fit-content" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
@@ -5525,7 +5574,7 @@ export default function App() {
                 <div style={card}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Historial de Ventas</h3>
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {["Todos", "Efectivo", "Tarjeta", "Transferencia"].map(f => (
                         <button key={f} onClick={() => setFiltroPago(f)}
                           style={{ padding: "5px 12px", borderRadius:0, border: `1.5px solid ${filtroPago === f ? "#E63946" : borderColor2}`, background: filtroPago === f ? "#E63946" : bgCard2, color: filtroPago === f ? "#fff" : textSecondary, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
