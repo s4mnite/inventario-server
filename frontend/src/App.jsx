@@ -853,6 +853,11 @@ const css = `
     .sales-product-grid-v2{grid-template-columns:repeat(5,1fr)!important}
     .sales-mobile-v2{display:none!important}
     .sales-desktop-only{display:grid!important}
+    .ventas-grid{grid-template-columns:440px 1fr!important}
+    .rey-mobile-home{display:none!important}
+    .rey-desktop-dashboard{display:block!important}
+    .sidebar-desktop{display:flex!important}
+    .bottom-nav{display:none!important}
   }
 
 
