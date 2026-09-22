@@ -66,6 +66,14 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
   const [showEdit, setShowEdit] = useState(null);
   const [error, setError] = useState("");
   const [guardandoMov, setGuardandoMov] = useState(false); // evita doble envío (doble tap) mientras se guarda el movimiento
+  // Edición directa del stock real (conteo físico): el usuario escribe cuántas
+  // cajas/bandejas/huevos sueltos existen AHORA y el sistema calcula solo el
+  // ajuste (ajuste_entrada o ajuste_salida) necesario para llegar a ese total,
+  // reutilizando el mismo endpoint/lote que ya usa "Registrar movimiento".
+  const [showStockEdit, setShowStockEdit] = useState(null); // calidad (objeto) que se está editando, o null
+  const [stockEditForm, setStockEditForm] = useState({ cajas: "", bandejas: "", unidades: "" });
+  const [guardandoStockEdit, setGuardandoStockEdit] = useState(false);
+  const [stockEditError, setStockEditError] = useState("");
   const [form, setForm] = useState({
     tipo: "entrada", calidadId: "super", cantidad: "",
     motivo: "Compra de mercadería", observaciones: "", descuento: "",
@@ -351,6 +359,64 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       fechaIngreso: todayLocalISO(),
     }));
     setShowMovement(true);
+  };
+
+  // Abre el modal de "Editar stock real" precargado con el desglose actual
+  // (cajas/bandejas/sueltos) de esa calidad, para que el usuario corrija
+  // solo lo que no coincide con el conteo físico.
+  const openStockEdit = quality => {
+    const b = eggBreakdown(Math.max(0, stockDe(quality)));
+    setStockEditForm({ cajas: String(b.cajas), bandejas: String(b.bandejas), unidades: String(b.unidades) });
+    setStockEditError("");
+    setShowStockEdit(quality);
+  };
+
+  const stockEditTarget =
+    (Number(stockEditForm.cajas || 0) * EGG_BOX_UNITS) +
+    (Number(stockEditForm.bandejas || 0) * EGG_TRAY_UNITS) +
+    Number(stockEditForm.unidades || 0);
+  const stockEditCurrent = showStockEdit ? stockDe(showStockEdit) : 0;
+  const stockEditDiff = stockEditTarget - stockEditCurrent;
+
+  // Aplica el ajuste calculado (diferencia entre el total real ingresado y
+  // el stock actual) usando el mismo endpoint atómico ($inc) que ya usan
+  // las entradas/ventas/ajustes manuales — no se manda el inventario
+  // completo, solo el delta, para evitar pisar cambios de otro dispositivo.
+  const applyStockEdit = async () => {
+    if (guardandoStockEdit || !showStockEdit) return;
+    setStockEditError("");
+    if (stockEditTarget < 0) { setStockEditError("El total no puede quedar negativo."); return; }
+    if (stockEditDiff === 0) { setShowStockEdit(null); return; }
+
+    const quality = showStockEdit;
+    const tipo = stockEditDiff > 0 ? "ajuste_entrada" : "ajuste_salida";
+    const formUnitsAjuste = Math.abs(stockEditDiff);
+    const inventoryDelta = { calidadId: quality.id, nombre: quality.nombre, stockDelta: stockEditDiff };
+    const movement = {
+      id: Date.now(),
+      fechaIngreso: "",
+      fecha: new Date().toISOString(),
+      tipo, calidadId: quality.id, calidad: quality.nombre,
+      cajas: 0, bandejas: 0, unidades: formUnitsAjuste,
+      huevos: formUnitsAjuste,
+      motivo: "Conteo físico / corrección de inventario",
+      observaciones: `Editado a mano: ${stockEditForm.cajas || 0} cajas · ${stockEditForm.bandejas || 0} bandejas · ${stockEditForm.unidades || 0} sueltos (total ${stockEditTarget.toLocaleString("es-CL")} huevos).`,
+      usuario: currentUser?.nombre || "Usuario",
+      ingreso: 0, costo: 0, ganancia: 0,
+      precioCaja: 0, precioBandeja: 0, precioUnidad: 0,
+      valorUnitarioCompra: 0, totalCompra: 0, precioVentaUnitario: 0,
+      ventaEsperada: 0, gananciaEstimada: 0, descuento: 0, metodoPago: "",
+    };
+
+    setGuardandoStockEdit(true);
+    try {
+      await syncEggState(inventoryDelta, [movement]);
+      setShowStockEdit(null);
+    } catch (e) {
+      setStockEditError(e.message || "No se pudo guardar el ajuste.");
+    } finally {
+      setGuardandoStockEdit(false);
+    }
   };
 
   const registerMovement = async () => {
@@ -1067,7 +1133,7 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       </div>
     </>}
 
-    {tab === "inventario" && <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:14 }}>{inventory.map(q => { const b=eggBreakdown(stockDe(q)); return <div key={q.id} style={{...card, borderRadius:0}} className="card-hover"><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}><div><p style={{ margin:0, color:textPrimary, fontSize:17, fontWeight:800 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:textMuted, fontSize:11 }}>Stock mínimo: {q.stockMinimoCajas} cajas</p></div><button onClick={() => openEditQuality(q)} style={{ width:34,height:34,borderRadius:0,border:`1px solid ${borderColor2}`,background:bgCard2,cursor:"pointer",color:textSecondary }}><Pencil size={14}/></button></div><div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>{[["Cajas",b.cajas],["Bandejas",b.bandejas],["Sueltos",b.unidades]].map(([l,v])=><div key={l} style={{ background:bgCard2,borderRadius:0,padding:"10px 8px",textAlign:"center" }}><p style={{ margin:0,color:textMuted,fontSize:10 }}>{l}</p><p style={{ margin:"4px 0 0",color:b.negativo?"#E63946":textPrimary,fontWeight:800,fontSize:18 }}>{v}</p></div>)}</div>{b.negativo && <p style={{margin:"-8px 0 12px",color:"#E63946",fontSize:11,fontWeight:700}}>⚠️ Stock negativo: se vendió más de lo disponible.</p>}<div style={{ borderTop:`1px solid ${borderColor}`, paddingTop:12, marginBottom:12 }}><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Costo caja: <strong style={{color:textPrimary}}>{fmt(q.costoCaja)}</strong></p><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Venta caja: <strong style={{color:D?"#2EC4B6":"#2EC4B6"}}>{fmt(q.precioCaja)}</strong></p><p style={{ margin:0, color:textSecondary,fontSize:12 }}>Venta bandeja: <strong style={{color:D?"#2EC4B6":"#2EC4B6"}}>{fmt(q.precioBandeja)}</strong></p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><button onClick={()=>openQuickAction("venta",q)} className="btn-primary" style={{padding:"10px",borderRadius:0,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><ShoppingCart size={14}/> Vender</button><button onClick={()=>openQuickAction("entrada",q)} style={{padding:"10px",borderRadius:0,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/> Entrada</button></div><button onClick={() => { setTab("lotes"); setLoteFiltro(q.id); }} style={{ width:"100%", padding:"9px", borderRadius:0, border:`1px solid ${borderColor2}`, background:"transparent", color:textMuted, cursor:"pointer", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Ver detalle <ChevronRight size={13}/></button></div>})}</div>}
+    {tab === "inventario" && <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:14 }}>{inventory.map(q => { const b=eggBreakdown(stockDe(q)); return <div key={q.id} style={{...card, borderRadius:0}} className="card-hover"><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}><div><p style={{ margin:0, color:textPrimary, fontSize:17, fontWeight:800 }}>{q.nombre}</p><p style={{ margin:"3px 0 0", color:textMuted, fontSize:11 }}>Stock mínimo: {q.stockMinimoCajas} cajas</p></div><button onClick={() => openEditQuality(q)} style={{ width:34,height:34,borderRadius:0,border:`1px solid ${borderColor2}`,background:bgCard2,cursor:"pointer",color:textSecondary }}><Pencil size={14}/></button></div><div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>{[["Cajas",b.cajas],["Bandejas",b.bandejas],["Sueltos",b.unidades]].map(([l,v])=><div key={l} style={{ background:bgCard2,borderRadius:0,padding:"10px 8px",textAlign:"center" }}><p style={{ margin:0,color:textMuted,fontSize:10 }}>{l}</p><p style={{ margin:"4px 0 0",color:b.negativo?"#E63946":textPrimary,fontWeight:800,fontSize:18 }}>{v}</p></div>)}</div>{b.negativo && <p style={{margin:"-8px 0 12px",color:"#E63946",fontSize:11,fontWeight:700}}>⚠️ Stock negativo: se vendió más de lo disponible.</p>}<div style={{ borderTop:`1px solid ${borderColor}`, paddingTop:12, marginBottom:12 }}><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Costo caja: <strong style={{color:textPrimary}}>{fmt(q.costoCaja)}</strong></p><p style={{ margin:"0 0 5px", color:textSecondary,fontSize:12 }}>Venta caja: <strong style={{color:D?"#2EC4B6":"#2EC4B6"}}>{fmt(q.precioCaja)}</strong></p><p style={{ margin:0, color:textSecondary,fontSize:12 }}>Venta bandeja: <strong style={{color:D?"#2EC4B6":"#2EC4B6"}}>{fmt(q.precioBandeja)}</strong></p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><button onClick={()=>openQuickAction("venta",q)} className="btn-primary" style={{padding:"10px",borderRadius:0,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><ShoppingCart size={14}/> Vender</button><button onClick={()=>openQuickAction("entrada",q)} style={{padding:"10px",borderRadius:0,border:`1.5px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/> Entrada</button></div><button onClick={()=>openStockEdit(q)} style={{width:"100%",padding:"9px",borderRadius:0,border:`1px solid ${borderColor2}`,background:"transparent",color:textSecondary,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:8}}><Pencil size={13}/> Editar cantidad real</button><button onClick={() => { setTab("lotes"); setLoteFiltro(q.id); }} style={{ width:"100%", padding:"9px", borderRadius:0, border:`1px solid ${borderColor2}`, background:"transparent", color:textMuted, cursor:"pointer", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>Ver detalle <ChevronRight size={13}/></button></div>})}</div>}
 
     {tab === "lotes" && <div style={{display:"grid",gap:14}}>
       {loteFiltro && <div style={{display:"flex",alignItems:"center",gap:8}}><span className="badge" style={{background:D?"rgba(46,196,182,.16)":"rgba(46,196,182,0.12)",color:D?"#2EC4B6":"#2EC4B6"}}>Filtrando por: {inventory.find(q=>q.id===loteFiltro)?.nombre || loteFiltro}</span><button onClick={()=>setLoteFiltro(null)} style={{background:"none",border:"none",color:textMuted,cursor:"pointer",fontSize:12,fontWeight:700}}>Quitar filtro</button></div>}
@@ -1233,6 +1299,35 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
         <button onClick={()=>{setResetText("");setResetOk(false);setShowReset(true);}} style={{padding:"10px 16px",borderRadius:0,border:`1.5px solid ${D?"#E63946":"#E63946"}`,background:"transparent",color:D?"#E63946":"#E63946",cursor:"pointer",fontSize:13,fontWeight:700}}>Restablecer inventario de huevos</button>
       </div>
     </>}
+
+    {showStockEdit && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,backdropFilter:"blur(5px)"}}>
+      <div className="mobile-modal" style={{...card,width:420,maxHeight:"90vh",overflowY:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <div><h3 style={{margin:0,color:textPrimary,fontSize:18}}>Editar stock real</h3><p style={{margin:"4px 0 0",color:textMuted,fontSize:12}}>{showStockEdit.nombre} · escribe lo que hay físicamente ahora</p></div>
+          <button onClick={()=>setShowStockEdit(null)} style={{border:"none",background:bgCard2,color:textMuted,width:32,height:32,borderRadius:0,cursor:"pointer"}}><X size={15}/></button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginTop:16}}>
+          {[["Cajas","cajas"],["Bandejas","bandejas"],["Sueltos","unidades"]].map(([label,key])=>
+            <label key={key} style={{fontSize:12,color:textSecondary,fontWeight:700}}>{label}
+              <input type="number" min="0" inputMode="numeric" value={stockEditForm[key]}
+                onFocus={e=>e.target.select()}
+                onChange={e=>setStockEditForm(f=>({...f,[key]:e.target.value.replace(/[^0-9]/g,"")}))}
+                style={{...inp,marginTop:6,textAlign:"center",fontSize:17,fontWeight:800}}/>
+            </label>
+          )}
+        </div>
+        <div style={{marginTop:14,padding:12,borderRadius:0,background:bgCard2,color:textSecondary,fontSize:12,display:"grid",gap:4}}>
+          <div>Total ingresado: <strong style={{color:textPrimary}}>{stockEditTarget.toLocaleString("es-CL")} huevos</strong></div>
+          <div>Stock actual del sistema: <strong style={{color:textPrimary}}>{stockEditCurrent.toLocaleString("es-CL")} huevos</strong></div>
+          <div>Ajuste que se va a registrar: <strong style={{color: stockEditDiff===0 ? textPrimary : stockEditDiff>0 ? (D?"#2EC4B6":"#2EC4B6") : (D?"#E63946":"#E63946")}}>{stockEditDiff>0?"+":""}{stockEditDiff.toLocaleString("es-CL")} huevos</strong></div>
+        </div>
+        {stockEditError && <p style={{margin:"10px 0 0",color:D?"#E63946":"#E63946",fontSize:12,fontWeight:700}}>{stockEditError}</p>}
+        <div style={{display:"flex",gap:10,marginTop:18}}>
+          <button onClick={()=>setShowStockEdit(null)} style={{flex:1,padding:11,borderRadius:0,border:`1px solid ${borderColor2}`,background:bgCard2,color:textSecondary,cursor:"pointer",fontWeight:700}}>Cancelar</button>
+          <button onClick={applyStockEdit} disabled={guardandoStockEdit || stockEditTarget<0} className="btn-primary" style={{flex:1,padding:11,borderRadius:0,opacity:(guardandoStockEdit||stockEditTarget<0)?.6:1,cursor:(guardandoStockEdit||stockEditTarget<0)?"not-allowed":"pointer"}}>{guardandoStockEdit?"Guardando...":"Guardar"}</button>
+        </div>
+      </div>
+    </div>}
 
     {showMovement && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,backdropFilter:"blur(5px)"}}><div className="mobile-modal" style={{...card,width:520,maxHeight:"90vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><div><h3 style={{margin:0,color:textPrimary,fontSize:18}}>Registrar movimiento de huevos</h3><p style={{margin:"4px 0 0",color:textMuted,fontSize:12}}>Las cantidades se convierten automáticamente</p></div><button onClick={()=>setShowMovement(false)} style={{border:"none",background:bgCard2,color:textMuted,width:32,height:32,borderRadius:0,cursor:"pointer"}}><X size={15}/></button></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><label style={{fontSize:12,color:textSecondary,fontWeight:700}}>Tipo<select value={form.tipo} onChange={e=>{
   const tipo=e.target.value;
