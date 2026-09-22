@@ -1960,7 +1960,7 @@ export default function App() {
     sincronizarCajaServidor();
 
     // Refresca la caja en todos los dispositivos sin necesitar recargar.
-    const intervalo = window.setInterval(() => sincronizarCajaServidor(), 10000);
+    const intervalo = window.setInterval(() => sincronizarCajaServidor(), 3000);
     const alVolver = () => sincronizarCajaServidor();
     const alCambiarVisibilidad = () => {
       if (document.visibilityState === "visible") sincronizarCajaServidor();
@@ -2173,7 +2173,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarVentasYBoletas();
-    const timer = window.setInterval(() => sincronizarVentasYBoletas(), 8000);
+    const timer = window.setInterval(() => sincronizarVentasYBoletas(), 3000);
     const refrescar = () => sincronizarVentasYBoletas();
     const visible = () => { if (document.visibilityState === "visible") refrescar(); };
     window.addEventListener("focus", refrescar);
@@ -2210,7 +2210,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarGastosReporte();
-    const timer = window.setInterval(() => sincronizarGastosReporte(), 8000);
+    const timer = window.setInterval(() => sincronizarGastosReporte(), 3000);
     const refrescar = () => sincronizarGastosReporte();
     const visible = () => { if (document.visibilityState === "visible") refrescar(); };
     window.addEventListener("focus", refrescar);
@@ -2263,7 +2263,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarProductosYCategorias();
-    const timer = window.setInterval(sincronizarProductosYCategorias, 10000);
+    const timer = window.setInterval(sincronizarProductosYCategorias, 4000);
     const refresh = () => sincronizarProductosYCategorias();
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
     window.addEventListener("focus", refresh);
@@ -4673,7 +4673,8 @@ export default function App() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                     {reportePeriodo === "dia" && (
                       <input type="date" value={reporteFecha} onChange={e => setReporteFecha(e.target.value)}
-                        style={{ padding: "7px 10px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 12, fontFamily: "inherit" }} />
+                        onClick={e => { try { e.target.showPicker && e.target.showPicker(); } catch (err) {} }}
+                        style={{ padding: "7px 10px", borderRadius:0, border: `1.5px solid ${borderColor2}`, background: bgCard2, color: textPrimary, fontSize: 12, fontFamily: "inherit", cursor: "pointer" }} />
                     )}
                     {["dia","semana","mes","todo"].map(p => (
                       <button key={p} onClick={() => setReportePeriodo(p)}
@@ -5268,7 +5269,7 @@ export default function App() {
 
                   <div style={{ marginBottom: 14, padding: 12, borderRadius:0, border: `1px solid ${borderColor2}`, background: bgCard2 }}>
                     <label style={{ display:"block", fontSize:12, fontWeight:800, color:textSecondary, marginBottom:7 }}>Fecha de la venta</label>
-                    <input type="date" value={fechaVentaPersonalizada || todayLocalISO()} max={todayLocalISO()} onChange={e => setFechaVentaPersonalizada(e.target.value === todayLocalISO() ? "" : e.target.value)} style={inp} />
+                    <input type="date" value={fechaVentaPersonalizada || todayLocalISO()} max={todayLocalISO()} onChange={e => setFechaVentaPersonalizada(e.target.value === todayLocalISO() ? "" : e.target.value)} onClick={e => { try { e.target.showPicker && e.target.showPicker(); } catch (err) {} }} style={{ ...inp, cursor: "pointer" }} />
                     {fechaVentaPersonalizada && (
                       <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "#FF9F1C", fontWeight: 700 }}>
                         ⚠ Se registrará como venta atrasada de esa fecha, no de hoy.{" "}
@@ -5685,7 +5686,7 @@ export default function App() {
                 <div className="receipts-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: textPrimary }}>Todos los Recibos</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <input type="date" value={filtroFechaRecibos} max={todayLocalISO()} onChange={e => setFiltroFechaRecibos(e.target.value)} style={{ ...inp, width: "auto", padding: "7px 10px", fontSize: 12.5 }} />
+                    <input type="date" value={filtroFechaRecibos} max={todayLocalISO()} onChange={e => setFiltroFechaRecibos(e.target.value)} onClick={e => { try { e.target.showPicker && e.target.showPicker(); } catch (err) {} }} style={{ ...inp, width: "auto", padding: "7px 10px", fontSize: 12.5, cursor: "pointer" }} />
                     {filtroFechaRecibos && <button onClick={() => setFiltroFechaRecibos("")} style={{ border: "none", background: "none", color: "#E63946", fontWeight: 800, fontSize: 12, cursor: "pointer", padding: "6px 4px" }}>Ver todos</button>}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -7037,11 +7038,11 @@ export default function App() {
                 <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Vigente desde</label>
-                    <input type="date" value={form.promoFechaInicio || ""} onChange={e => setForm(f => ({ ...f, promoFechaInicio: e.target.value }))} style={inp} />
+                    <input type="date" value={form.promoFechaInicio || ""} onChange={e => setForm(f => ({ ...f, promoFechaInicio: e.target.value }))} onClick={e => { try { e.target.showPicker && e.target.showPicker(); } catch (err) {} }} style={{ ...inp, cursor: "pointer" }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: D ? "#B5A791" : "#8C8678", display: "block", marginBottom: 4 }}>Vigente hasta</label>
-                    <input type="date" value={form.promoFechaFin || ""} min={form.promoFechaInicio || undefined} onChange={e => setForm(f => ({ ...f, promoFechaFin: e.target.value }))} style={inp} />
+                    <input type="date" value={form.promoFechaFin || ""} min={form.promoFechaInicio || undefined} onChange={e => setForm(f => ({ ...f, promoFechaFin: e.target.value }))} onClick={e => { try { e.target.showPicker && e.target.showPicker(); } catch (err) {} }} style={{ ...inp, cursor: "pointer" }} />
                   </div>
                 </div>
                 <p style={{ margin: "8px 0 0", fontSize: 10, color: textMuted }}>
