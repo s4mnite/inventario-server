@@ -2921,23 +2921,45 @@ export default function App() {
   useEffect(() => {
     if (saleFlowType !== "free" || !currentUser || activeNav !== "Ventas") return;
     let cancelled = false;
-    setFreeEggLoading(true);
-    fetchConTimeout(`${API}/api/huevos`, {
-      headers: {
-        "x-usuario": currentUser?.usuario || "",
-        "x-clave": currentUser?._clave || "",
-      },
-    }, 30000)
-      .then(async res => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "No se pudo cargar el inventario de huevos.");
-        if (!cancelled) {
-          setFreeEggInventory(Array.isArray(data.inventory) ? data.inventory : []);
-          setFreeEggMovimientos(Array.isArray(data.movements) ? data.movements : []);
-        }
-      })
-      .catch(err => { if (!cancelled) setVentaError(err.message); })
-      .finally(() => { if (!cancelled) setFreeEggLoading(false); });
+
+    // BUG FIX: este fetch tenía un timeout de 30s puesto a mano, más corto
+    // que los 40s que el resto de la app usa por defecto (fetchConTimeout)
+    // para cubrir el "despertar" típico de Render (30-50s). Con 30s, esta
+    // pantalla en particular seguía mostrando "servidor está despertando"
+    // y obligaba a recargar la página a mano una y otra vez. Ahora usa 45s
+    // y, si aun así falla por timeout, reintenta una vez sola automáticamente
+    // en vez de dejarle todo el reintento al usuario.
+    const cargarInventarioHuevos = (esReintento = false) => {
+      setFreeEggLoading(true);
+      fetchConTimeout(`${API}/api/huevos`, {
+        headers: {
+          "x-usuario": currentUser?.usuario || "",
+          "x-clave": currentUser?._clave || "",
+        },
+      }, 45000)
+        .then(async res => {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "No se pudo cargar el inventario de huevos.");
+          if (!cancelled) {
+            setFreeEggInventory(Array.isArray(data.inventory) ? data.inventory : []);
+            setFreeEggMovimientos(Array.isArray(data.movements) ? data.movements : []);
+            setVentaError("");
+          }
+        })
+        .catch(err => {
+          if (cancelled) return;
+          if (!esReintento) {
+            // Primer intento fallido: probablemente el servidor recién está
+            // despertando. Reintentamos una vez, sin molestar al usuario.
+            cargarInventarioHuevos(true);
+            return;
+          }
+          setVentaError(err.message);
+        })
+        .finally(() => { if (!cancelled) setFreeEggLoading(false); });
+    };
+
+    cargarInventarioHuevos();
     return () => { cancelled = true; };
   }, [saleFlowType, activeNav, currentUser?.usuario, currentUser?._clave]);
 
