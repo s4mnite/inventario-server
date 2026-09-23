@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 require("dotenv").config();
 
 // ─── Resend (envío de correos) ────────────────────────────────────────────────
@@ -38,8 +39,21 @@ process.on("uncaughtException", (e) => console.error("❌ uncaughtException:", e
 process.on("unhandledRejection", (e) => console.error("❌ unhandledRejection:", e));
 
 const app = express();
-app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave"] }));
+app.use(compression());
+app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
+
+// Evita que el navegador, un proxy o el CDN de Render guarden en caché las
+// respuestas de la API. Sin esto, dos dispositivos pueden ver stock distinto
+// porque uno está mostrando una respuesta GET vieja guardada en caché.
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+  }
+  next();
+});
 
 // ─── MongoDB ──────────────────────────────────────────────────────────────────
 const { MongoClient, ObjectId } = require("mongodb");
@@ -59,6 +73,18 @@ async function conectarDB() {
     console.log("✅ MongoDB conectado");
     client.on("close", () => console.error("⚠️  Conexión a MongoDB cerrada"));
     client.on("serverHeartbeatFailed", () => console.error("⚠️  Heartbeat de MongoDB falló"));
+    // Índices: sin esto, cada consulta escanea la colección entera en vez de
+    // ir directo al documento. Se crean una sola vez al arrancar; si ya
+    // existen, MongoDB simplemente no hace nada (operación segura de repetir).
+    try {
+      await db.collection("huevos").createIndex({ key: 1 }, { unique: true });
+      await db.collection("boletas").createIndex({ numero: -1 });
+      await db.collection("ventas").createIndex({ empresa: 1, timestamp: -1 });
+      await db.collection("productos").createIndex({ empresa: 1 });
+      console.log("✅ Índices verificados");
+    } catch (e) {
+      console.error("⚠️  No se pudieron crear los índices:", e.message);
+    }
   } catch (e) {
     console.error("❌ Error MongoDB:", e.message);
   }
@@ -79,6 +105,20 @@ const authAdmin = (req, res, next) => {
   const user = usuarios.find(u => u.usuario === adminUser && u.clave === adminClave && (u.rol === "gerente" || u.rol === "programador"));
   if (!user) return res.status(401).json({ error: "No autorizado" });
   req.adminUser = user;
+  next();
+};
+
+// Middleware genérico: exige que la petición venga de un usuario válido
+// (cualquier rol, no bloqueado). Protege datos del negocio (productos,
+// categorías, caja, ventas, boletas) que antes no tenían NINGÚN control de
+// acceso — cualquiera con la URL del backend podía leer, modificar o borrar
+// todo sin loguearse.
+const authUsuario = (req, res, next) => {
+  const usuario = String(req.headers["x-usuario"] || "").trim();
+  const clave = String(req.headers["x-clave"] || "");
+  const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+  if (!user) return res.status(401).json({ error: "No autorizado" });
+  req.usuarioActual = user;
   next();
 };
 
@@ -217,7 +257,7 @@ app.post("/api/users", authAdmin, (req, res) => {
 });
 
 // ─── PRODUCTOS (MongoDB) ──────────────────────────────────────────────────────
-app.get("/api/productos", async (req, res) => {
+app.get("/api/productos", authUsuario, async (req, res) => {
   try {
     if (!db) return res.json([]);
     const productos = await db.collection("productos").find().toArray();
@@ -225,7 +265,7 @@ app.get("/api/productos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/productos", async (req, res) => {
+app.post("/api/productos", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const producto = { ...req.body, creadoEn: new Date() };
@@ -234,7 +274,7 @@ app.post("/api/productos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/productos/:id", async (req, res) => {
+app.put("/api/productos/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { _id, id, ...data } = req.body;
@@ -243,7 +283,7 @@ app.put("/api/productos/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/productos/:id", async (req, res) => {
+app.delete("/api/productos/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("productos").deleteOne({ _id: new ObjectId(req.params.id) });
@@ -252,7 +292,7 @@ app.delete("/api/productos/:id", async (req, res) => {
 });
 
 // ─── CATEGORÍAS (MongoDB) ─────────────────────────────────────────────────────
-app.get("/api/categorias", async (req, res) => {
+app.get("/api/categorias", authUsuario, async (req, res) => {
   try {
     if (!db) return res.json([]);
     const cats = await db.collection("categorias").find().toArray();
@@ -260,7 +300,7 @@ app.get("/api/categorias", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/categorias", async (req, res) => {
+app.post("/api/categorias", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { nombre, icono } = req.body;
@@ -271,7 +311,7 @@ app.post("/api/categorias", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/categorias/:id", async (req, res) => {
+app.put("/api/categorias/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("categorias").updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body });
@@ -279,7 +319,7 @@ app.put("/api/categorias/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/categorias/:id", async (req, res) => {
+app.delete("/api/categorias/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     await db.collection("categorias").deleteOne({ _id: new ObjectId(req.params.id) });
@@ -287,17 +327,275 @@ app.delete("/api/categorias/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+const escapeRegex = value => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const empresaQuery = empresa => ({ $regex: `^${escapeRegex(String(empresa || "").trim())}$`, $options: "i" });
+const cajaAbiertaEstadoQuery = {
+  cierre: { $in: [null, ""] },
+  $or: [
+    { estado: "abierta" },
+    { abierta: true },
+    { estado: { $exists: false } },
+  ],
+};
+const cajaAbiertaPorEmpresaQuery = empresa => ({
+  empresa: empresaQuery(empresa),
+  ...cajaAbiertaEstadoQuery,
+});
+
+const DEFAULT_EMPRESA = String(process.env.DEFAULT_EMPRESA || "Rey del Huevo").trim();
+const obtenerEmpresa = value => String(value || DEFAULT_EMPRESA).trim();
+
+// La identidad del módulo Huevos debe ser idéntica en inventario, ventas y
+// eliminación de ventas. Para usuarios sin empresa (como admin), la clave
+// estable es el nombre de usuario; esto coincide con /api/huevos.
+const obtenerUsuarioPeticion = req => {
+  const usuario = String(req.headers["x-usuario"] || "").trim();
+  const clave = String(req.headers["x-clave"] || "");
+  return usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked) || null;
+};
+const obtenerClaveHuevos = user => String((user?.empresa && String(user.empresa).trim()) || user?.usuario || "").trim();
+
+// ─── CAJA Y CLIENTES DE FACTURACIÓN ─────────────────────────────────────────
+app.get("/api/caja/actual", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const empresa = obtenerEmpresa(req.query.empresa);
+    const id = String(req.query.id || "").trim();
+    if (!empresa && !id) return res.status(400).json({ error: "Falta identificar el negocio o la caja" });
+
+    let caja = null;
+    if (id && ObjectId.isValid(id)) {
+      caja = await db.collection("cajas").findOne({
+        _id: new ObjectId(id),
+        ...cajaAbiertaEstadoQuery,
+      });
+    }
+    if (!caja && empresa) {
+      caja = await db.collection("cajas").findOne(
+        cajaAbiertaPorEmpresaQuery(empresa),
+        { sort: { apertura: -1, creadoEn: -1 } }
+      );
+    }
+
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.json(caja ? { ...caja, id: caja._id.toString() } : null);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get("/api/caja/historial", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const empresa = obtenerEmpresa(req.query.empresa);
+    if (!empresa) return res.status(400).json({ error: "Falta identificar el negocio" });
+    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+    const cajas = await db.collection("cajas")
+      .find({ empresa: empresaQuery(empresa), estado: "cerrada" })
+      .sort({ cierre: -1, apertura: -1 })
+      .limit(limit)
+      .toArray();
+    res.set("Cache-Control", "no-store");
+    res.json(cajas.map(c => ({ ...c, id: c._id.toString() })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/caja/abrir", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const empresa = obtenerEmpresa(req.body.empresa);
+    if (!empresa) return res.status(400).json({ error: "Falta identificar el negocio" });
+    const existe = await db.collection("cajas").findOne(cajaAbiertaPorEmpresaQuery(empresa));
+    if (existe) return res.status(409).json({ error: "Ya existe una caja abierta para este negocio" });
+    const doc = { ...req.body, empresa, estado: "abierta", apertura: req.body.apertura || new Date().toISOString(), creadoEn: new Date() };
+    delete doc.id;
+    const r = await db.collection("cajas").insertOne(doc);
+    res.json({ caja: { ...doc, id: r.insertedId.toString() } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/caja/cerrar", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const empresa = obtenerEmpresa(req.body?.empresa);
+    if (!empresa) return res.status(400).json({ error: "Falta identificar el negocio" });
+
+    let caja = null;
+    const id = String(req.body?.id || "").trim();
+    if (id && ObjectId.isValid(id)) {
+      caja = await db.collection("cajas").findOne({
+        _id: new ObjectId(id),
+        ...cajaAbiertaEstadoQuery,
+      });
+    }
+    if (!caja) {
+      caja = await db.collection("cajas").findOne(
+        cajaAbiertaPorEmpresaQuery(empresa),
+        { sort: { apertura: -1, creadoEn: -1 } }
+      );
+    }
+
+    const cambios = {
+      cierre: req.body?.cierre || new Date().toISOString(),
+      montoCierre: Number(req.body?.montoCierre || 0),
+      cerradaPor: req.body?.cerradaPor || "Usuario",
+      notas: req.body?.notas || "",
+      ventasTurno: Number(req.body?.ventasTurno || 0),
+      totalTurno: Number(req.body?.totalTurno || 0),
+      efectivoTurno: Number(req.body?.efectivoTurno || 0),
+      efectivoEsperado: Number(req.body?.efectivoEsperado || 0),
+      diferencia: Number(req.body?.diferencia || 0),
+      empresa: caja?.empresa || empresa,
+      estado: "cerrada",
+      abierta: false,
+      actualizadoEn: new Date(),
+    };
+
+    let cerrada = null;
+    let migradaDesdeRespaldo = false;
+
+    if (caja) {
+      // Cerramos primero la caja exacta que seleccionó la app.
+      // Usamos updateOne para ser compatibles con distintas versiones del driver MongoDB.
+      const result = await db.collection("cajas").updateOne(
+        { _id: caja._id, ...cajaAbiertaEstadoQuery },
+        { $set: cambios }
+      );
+      if (!result.matchedCount) {
+        return res.status(409).json({ error: "La caja ya estaba cerrada o cambió en otro dispositivo" });
+      }
+      cerrada = await db.collection("cajas").findOne({ _id: caja._id });
+
+      // Algunas versiones anteriores podían dejar más de una caja abierta para el
+      // mismo negocio. Si queda una duplicada, /api/caja/actual la vuelve a mostrar
+      // y la interfaz parece no haber cerrado. Las cerramos también, conservando
+      // todos sus documentos e historial; no se elimina ninguna caja.
+      await db.collection("cajas").updateMany(
+        {
+          _id: { $ne: caja._id },
+          empresa: empresaQuery(empresa),
+          ...cajaAbiertaEstadoQuery,
+        },
+        {
+          $set: {
+            ...cambios,
+            notas: req.body?.notas
+              ? `${req.body.notas} | Caja duplicada cerrada automáticamente`
+              : "Caja duplicada cerrada automáticamente",
+          },
+        }
+      );
+    } else {
+      // Compatibilidad con cajas antiguas que solo quedaron en localStorage.
+      // Se conserva la apertura y se crea directamente el registro cerrado en MongoDB.
+      const apertura = req.body?.apertura;
+      if (!apertura) return res.status(404).json({ error: "No se encontró una caja abierta para este negocio" });
+
+      const legacyDoc = {
+        empresa,
+        apertura,
+        montoApertura: Number(req.body?.montoApertura || 0),
+        abiertaPor: req.body?.abiertaPor || "Usuario",
+        creadoEn: new Date(apertura),
+        ...cambios,
+        migradaDesdeRespaldo: true,
+      };
+      const insert = await db.collection("cajas").insertOne(legacyDoc);
+      cerrada = { ...legacyDoc, _id: insert.insertedId };
+      migradaDesdeRespaldo = true;
+    }
+
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.json({
+      caja: { ...cerrada, id: cerrada._id.toString() },
+      migradaDesdeRespaldo,
+      mensaje: migradaDesdeRespaldo
+        ? "Caja antigua cerrada y respaldada en MongoDB sin borrar sus datos"
+        : "Caja cerrada correctamente",
+    });
+  } catch (e) {
+    console.error("Error cerrando caja:", e);
+    res.status(500).json({ error: e.message || "No se pudo cerrar la caja" });
+  }
+});
+
+// Arma un filtro { $gte, $lte } para Mongo a partir de fechas ISO opcionales
+// (?desde=, ?hasta=). Si ninguna viene, devuelve null (sin filtro de fecha).
+function filtroPorFecha(desde, hasta) {
+  const rango = {};
+  if (desde) {
+    const d = new Date(desde);
+    if (!isNaN(d)) rango.$gte = d;
+  }
+  if (hasta) {
+    const h = new Date(hasta);
+    if (!isNaN(h)) rango.$lte = h;
+  }
+  return Object.keys(rango).length ? rango : null;
+}
+
 // ─── VENTAS (MongoDB) ─────────────────────────────────────────────────────────
-app.get("/api/ventas", async (req, res) => {
+// Tope de seguridad: sin esto, cada llamada trae TODA la historia de ventas
+// del negocio a memoria y la serializa completa. Con pocos registros no se
+// nota, pero después de meses de uso esto crece sin límite y puede tumbar
+// la instancia por memoria (sobre todo si el dashboard llama a este endpoint
+// varias veces en paralelo al cargar). Acepta además ?desde= y ?hasta=
+// (fechas ISO) para que el frontend pueda pedir un rango en vez de todo.
+app.get("/api/ventas", authUsuario, async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   try {
     if (!db) return res.json([]);
-    const filtro = req.query.empresa ? { empresa: req.query.empresa } : {};
-    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).toArray();
+    const empresa = obtenerEmpresa(req.query.empresa);
+    const filtro = empresa ? { empresa: empresaQuery(empresa) } : {};
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtro.timestamp = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray();
     res.json(ventas.map(v => ({ ...v, id: v._id.toString() })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/ventas", async (req, res) => {
+// Endpoint de solo lectura (no borra nada): agrupa ventas con el mismo total,
+// mismo método de pago y misma cantidad de items, guardadas a pocos minutos
+// una de otra — el patrón típico de cuando el celular reintentaba una venta
+// porque el servidor tardaba en responder y no se veía ningún aviso de éxito.
+app.get("/api/ventas/duplicados", authUsuario, async (req, res) => {
+  try {
+    if (!db) return res.json({ grupos: [] });
+    const empresa = obtenerEmpresa(req.query.empresa);
+    const filtro = empresa ? { empresa: empresaQuery(empresa) } : {};
+    const ventanaMinutos = Number(req.query.minutos || 10);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    // Se trae por fecha descendente (las más recientes) y se limita ahí; si
+    // se ordenara ascendente antes de limitar, el tope se quedaría con las
+    // ventas más ANTIGUAS en vez de las recientes, que son las que interesan.
+    const ventas = (await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray()).reverse();
+    const firmaDe = v => JSON.stringify({
+      total: Number(v.total || 0),
+      pago: v.pago || "",
+      nItems: (v.items || []).length,
+    });
+    const grupos = [];
+    let actual = null;
+    for (const v of ventas) {
+      const firma = firmaDe(v);
+      const t = new Date(v.timestamp || v.fecha || v.creadoEn || 0).getTime();
+      if (actual && actual.firma === firma && (t - actual.ultimoTs) <= ventanaMinutos * 60 * 1000) {
+        actual.miembros.push(v);
+        actual.ultimoTs = t;
+      } else {
+        if (actual && actual.miembros.length > 1) grupos.push(actual.miembros);
+        actual = { firma, ultimoTs: t, miembros: [v] };
+      }
+    }
+    if (actual && actual.miembros.length > 1) grupos.push(actual.miembros);
+    const gruposFormateados = grupos.map(g => ({
+      total: Number(g[0].total || 0),
+      pago: g[0].pago || "",
+      cantidad: g.length,
+      ventas: g.map(v => ({ id: v._id.toString(), timestamp: v.timestamp || v.fecha || v.creadoEn, cliente: v.cliente || null })),
+    }));
+    res.json({ grupos: gruposFormateados, totalVentasRevisadas: ventas.length, gruposEncontrados: gruposFormateados.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/ventas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
 
@@ -307,6 +605,74 @@ app.post("/api/ventas", async (req, res) => {
     // guardarse bien. Ahora se separan y se guardan en su colección correcta.
     const { venta, boleta } = req.body;
     if (!venta) return res.status(400).json({ error: "Falta el objeto 'venta'" });
+    const empresaVenta = obtenerEmpresa(venta.empresa);
+    const cajaIdVenta = String(venta.cajaId || "").trim();
+    let cajaAbierta = null;
+
+    // Primero se valida la caja exacta que la app tiene abierta. Esto evita que
+    // una sesión antigua sin `empresa` haga parecer que la caja está cerrada.
+    if (cajaIdVenta && ObjectId.isValid(cajaIdVenta)) {
+      cajaAbierta = await db.collection("cajas").findOne({
+        _id: new ObjectId(cajaIdVenta),
+        ...cajaAbiertaEstadoQuery,
+      });
+    }
+    if (!cajaAbierta) {
+      cajaAbierta = await db.collection("cajas").findOne(
+        cajaAbiertaPorEmpresaQuery(empresaVenta),
+        { sort: { apertura: -1, creadoEn: -1 } }
+      );
+    }
+    if (!cajaAbierta) return res.status(409).json({ error: "Debes abrir caja antes de registrar una venta" });
+
+    // Si esta venta ya se guardó antes con la misma clave de idempotencia
+    // (el celular reintentó porque el pedido anterior se cortó por timeout,
+    // aunque en realidad sí se había guardado), devolvemos la venta y boleta
+    // ya existentes en vez de crear una copia duplicada.
+    const idempotencyKey = String(venta.idempotencyKey || "").trim();
+    if (idempotencyKey) {
+      const ventaExistente = await db.collection("ventas").findOne({ idempotencyKey, empresa: obtenerEmpresa(cajaAbierta.empresa || empresaVenta) });
+      if (ventaExistente) {
+        const boletaExistente = await db.collection("boletas").findOne({ ventaId: ventaExistente._id.toString() });
+        return res.json({
+          venta: { ...ventaExistente, id: ventaExistente._id.toString() },
+          boleta: boletaExistente ? { ...boletaExistente, id: boletaExistente._id.toString() } : null,
+          eggInventory: null,
+          reintentoDetectado: true,
+        });
+      }
+    }
+
+    venta.empresa = cajaAbierta.empresa || empresaVenta;
+    venta.cajaId = cajaAbierta._id.toString();
+    if (venta.requiereFactura) {
+      const c = venta.cliente || {};
+      if (!c.rut || !(c.razonSocial || c.nombre) || !c.giro || !c.direccion || !c.comuna) {
+        return res.status(400).json({ error: "Faltan datos obligatorios del cliente para factura" });
+      }
+    }
+
+    const eggItems = Array.isArray(venta.eggItems)
+      ? venta.eggItems.filter(item => item && item.tipoItem === "huevo")
+      : (Array.isArray(venta.items) ? venta.items.filter(item => item && item.tipoItem === "huevo") : []);
+    const empresaConfirmada = obtenerEmpresa(cajaAbierta.empresa || empresaVenta);
+    const usuarioVenta = obtenerUsuarioPeticion(req);
+    if (!usuarioVenta) return res.status(401).json({ error: "Credenciales inválidas" });
+    const eggKey = obtenerClaveHuevos(usuarioVenta);
+    let eggDoc = null;
+    let eggInventoryActual = null;
+    if (eggItems.length) {
+      eggDoc = await db.collection("huevos").findOne({ key: eggKey });
+      eggInventoryActual = limpiarInventarioHuevos(eggDoc?.inventory || inventarioHuevosInicial);
+      for (const item of eggItems) {
+        const quality = eggInventoryActual.find(q => String(q.id) === String(item.calidadId));
+        const units = Number(item.huevos || 0);
+        if (!quality) return res.status(400).json({ error: `Categoría de huevos no encontrada: ${item.calidad || item.calidadId}` });
+        if (units <= 0) return res.status(400).json({ error: `Cantidad inválida para ${quality.nombre}` });
+        // El stock no bloquea la venta: si no alcanza, el inventario de huevos
+        // queda en negativo (se regulariza con una entrada posterior).
+      }
+    }
 
     const ventaDoc = { ...venta, creadoEn: new Date() };
     delete ventaDoc.id; // el id real lo define Mongo
@@ -315,7 +681,30 @@ app.post("/api/ventas", async (req, res) => {
 
     let boletaGuardada = null;
     if (boleta) {
-      const boletaDoc = { ...boleta, ventaId: ventaGuardada.id, creadoEn: new Date() };
+      // El número de boleta lo asigna el servidor de forma atómica (nunca el
+      // navegador), porque calcularlo en el frontend como "máximo actual + 1"
+      // puede chocar si dos ventas se registran casi al mismo tiempo desde
+      // dispositivos distintos (dos boletas con el mismo número).
+      const contadorExistente = await db.collection("contadores").findOne({ _id: "numeroBoleta" });
+      if (!contadorExistente) {
+        // Primera vez que corre este contador: arranca desde el número más
+        // alto que ya exista, para no repetir boletas viejas.
+        const ultimaBoleta = await db.collection("boletas").find({}).sort({ numero: -1 }).limit(1).toArray();
+        const valorInicial = Number(ultimaBoleta[0]?.numero || 0);
+        try {
+          await db.collection("contadores").insertOne({ _id: "numeroBoleta", valor: valorInicial });
+        } catch (e) {
+          // Otra petición ganó la carrera y ya lo creó justo antes; no pasa nada.
+          if (e.code !== 11000) throw e;
+        }
+      }
+      const contador = await db.collection("contadores").findOneAndUpdate(
+        { _id: "numeroBoleta" },
+        { $inc: { valor: 1 } },
+        { upsert: true, returnDocument: "after" }
+      );
+      const numeroAsignado = contador?.value?.valor ?? contador?.valor;
+      const boletaDoc = { ...boleta, numero: numeroAsignado, ventaId: ventaGuardada.id, creadoEn: new Date() };
       delete boletaDoc.id;
       const boletaResult = await db.collection("boletas").insertOne(boletaDoc);
       boletaGuardada = { ...boletaDoc, id: boletaResult.insertedId.toString() };
@@ -324,7 +713,7 @@ app.post("/api/ventas", async (req, res) => {
     // Descontar el stock real de productos (no huevos, esos tienen su propio
     // flujo en /api/huevos) directamente aquí, para que quede atómico con el
     // guardado de la venta y no dependa de que el navegador lo haga solo.
-    const items = Array.isArray(venta.items) ? venta.items : [];
+    const items = (Array.isArray(venta.items) ? venta.items : []).filter(item => item?.tipoItem !== "huevo");
     let stockActualizados = 0;
     for (const item of items) {
       if (!item.productoId) {
@@ -347,7 +736,89 @@ app.post("/api/ventas", async (req, res) => {
         console.error(`❌ Venta ${ventaGuardada.id}: error al descontar stock de "${item.productoId}" ("${item.nombre || "?"}"): ${e.message}`);
       }
     }
-    console.log(`🛒 Venta ${ventaGuardada.id} guardada — stock descontado en ${stockActualizados}/${items.length} ítems.`);
+    let eggInventory = null;
+    if (eggItems.length) {
+      const now = new Date();
+      // Si la venta se registró con una fecha atrasada (fechaVentaPersonalizada
+      // en el frontend), venta.timestamp ya refleja esa fecha elegida — el
+      // movimiento de huevos vinculado a esta venta debe quedar con la MISMA
+      // fecha, no con la fecha de hoy. Antes esto siempre usaba `now`, así que
+      // una venta de huevos ingresada con fecha atrasada aparecía en el
+      // módulo Huevos (lotes/movimientos/reportes) con la fecha de hoy en vez
+      // de la fecha real de la venta.
+      const ventaInstant = Number(venta.timestamp) > 0 ? new Date(Number(venta.timestamp)) : now;
+      const chileDate = fechaEnChile(ventaInstant);
+
+      // BUG FIX: antes se calculaba el inventario y los movimientos completos
+      // en JS a partir de `eggInventoryActual`/`eggDoc.movements` — una copia
+      // leída AL PRINCIPIO de este request — y se escribían con un solo
+      // $set que reemplazaba el array entero. Si en el medio (mientras se
+      // guardaba la venta, la boleta, el stock de productos, etc.) llegaba
+      // otra venta con huevos, o un movimiento desde el módulo Huevos, esa
+      // otra escritura quedaba pisada por esta (o al revés): se perdían
+      // movimientos y el stock de huevos quedaba mal. Ahora se actualiza de
+      // forma atómica igual que /api/huevos/movimientos: $inc por categoría
+      // para el stock y $push para los movimientos, así dos ventas casi
+      // simultáneas nunca se pisan entre sí.
+      const unidadesPorCalidad = {};
+      eggItems.forEach(item => {
+        const id = String(item.calidadId);
+        unidadesPorCalidad[id] = (unidadesPorCalidad[id] || 0) + Number(item.huevos || 0);
+      });
+      await ensureHuevosDoc(eggKey);
+      for (const [calidadId, unidades] of Object.entries(unidadesPorCalidad)) {
+        if (!unidades) continue;
+        await asegurarCategoriaHuevos(eggKey, calidadId, eggInventoryActual.find(q => String(q.id) === calidadId)?.nombre);
+        await db.collection("huevos").updateOne(
+          { key: eggKey },
+          {
+            $inc: { "inventory.$[q].stockHuevos": -unidades },
+            $set: { usuario: usuarioVenta.usuario, empresa: usuarioVenta.empresa || empresaConfirmada, actualizadoEn: new Date() },
+          },
+          { arrayFilters: [{ "q.id": calidadId }] }
+        );
+      }
+      const eggMovements = eggItems.map((item, index) => {
+        const ingreso = Number(item.subtotal || 0);
+        const costo = (Number(item.huevos || 0) / 180) * Number(item.costoCaja || 0);
+        return {
+          id: Number(`${Date.now()}${index}`),
+          fechaIngreso: chileDate,
+          fecha: ventaInstant.toISOString(),
+          tipo: "venta",
+          calidadId: item.calidadId,
+          calidad: item.calidad,
+          formato: item.formato,
+          cantidadFormatos: Number(item.cantidadFormatos || item.cantidad || 0),
+          cajas: item.formato === "caja" ? Number(item.cantidadFormatos || item.cantidad || 0) : 0,
+          bandejas: item.formato === "bandeja" ? Number(item.cantidadFormatos || item.cantidad || 0) : 0,
+          unidades: Number(item.huevos || 0),
+          huevos: Number(item.huevos || 0),
+          motivo: "Venta libre",
+          observaciones: `Venta libre vinculada a boleta ${boletaGuardada?.numero || ""}`,
+          usuario: venta.usuario || req.headers["x-usuario"] || "Usuario",
+          ingreso,
+          costo,
+          ganancia: ingreso - costo,
+          precioCaja: Number(item.precioCaja || 0),
+          precioBandeja: Number(item.precioBandeja || 0),
+          precioUnidad: Number(item.huevos || 0) > 0 ? ingreso / Number(item.huevos || 0) : 0,
+          descuento: 0,
+          metodoPago: venta.pago || "Efectivo",
+          ventaId: ventaGuardada.id,
+          boletaNumero: boletaGuardada?.numero || "",
+          guardadoEn: now.toISOString(),
+        };
+      });
+      const eggDocFinal = await db.collection("huevos").findOneAndUpdate(
+        { key: eggKey },
+        { $push: { movements: { $each: eggMovements, $position: 0, $slice: 5000 } } },
+        { returnDocument: "after" }
+      );
+      eggInventory = eggDocFinal?.inventory || null;
+    }
+
+    console.log(`🛒 Venta ${ventaGuardada.id} guardada — stock descontado en ${stockActualizados}/${items.length} productos y ${eggItems.length} categorías de huevos.`);
 
     // Marca la venta como "stock ya aplicado" para que la reconciliación
     // retroactiva (POST /api/productos/reconciliar-stock) nunca vuelva a
@@ -369,26 +840,26 @@ app.post("/api/ventas", async (req, res) => {
       boletaGuardada.stockAplicado = stockAplicado;
     }
 
-    res.json({ venta: ventaGuardada, boleta: boletaGuardada, stockActualizados, itemsTotal: items.length });
+    res.json({ venta: ventaGuardada, boleta: boletaGuardada, stockActualizados, itemsTotal: items.length, eggInventory });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/ventas/:id", async (req, res) => {
+app.delete("/api/ventas/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
 
     // Requiere sesión válida (cualquier usuario logueado, no solo admin) —
     // igual que el resto de las acciones de venta.
-    const usuario = req.headers["x-usuario"];
-    const clave = req.headers["x-clave"];
-    const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+    const user = obtenerUsuarioPeticion(req);
     if (!user) return res.status(401).json({ error: "Credenciales inválidas" });
+    const usuario = user.usuario;
 
     const venta = await db.collection("ventas").findOne({ _id: new ObjectId(req.params.id) });
     if (!venta) return res.status(404).json({ error: "Venta no encontrada" });
 
     // Devolver el stock de cada producto de la venta al inventario.
-    const items = Array.isArray(venta.items) ? venta.items : [];
+    const todosLosItems = Array.isArray(venta.items) ? venta.items : [];
+    const items = todosLosItems.filter(item => item?.tipoItem !== "huevo");
     let stockRevertidos = 0;
     for (const item of items) {
       if (!item.productoId) {
@@ -412,12 +883,46 @@ app.delete("/api/ventas/:id", async (req, res) => {
       }
     }
 
+    // Si la venta incluía huevos, también se revierte el inventario central de
+    // huevos y se elimina su movimiento vinculado. Esto evita que PC, web y
+    // Android queden mostrando datos distintos después de borrar una venta.
+    const eggItems = Array.isArray(venta.eggItems) && venta.eggItems.length
+      ? venta.eggItems.filter(item => item?.tipoItem === "huevo")
+      : todosLosItems.filter(item => item?.tipoItem === "huevo");
+    let huevosRevertidos = 0;
+    if (eggItems.length) {
+      const eggKey = obtenerClaveHuevos(user);
+      // Preferimos el documento del usuario. Para ventas antiguas con una clave
+      // distinta, buscamos el movimiento vinculado por ventaId sin tocar otros documentos.
+      const eggDoc = await db.collection("huevos").findOne({
+        $or: [
+          { key: eggKey },
+          { "movements.ventaId": String(req.params.id) },
+        ],
+      });
+      if (eggDoc) {
+        const inventario = limpiarInventarioHuevos(eggDoc.inventory || inventarioHuevosInicial).map(q => {
+          const devolver = eggItems
+            .filter(item => String(item.calidadId) === String(q.id))
+            .reduce((sum, item) => sum + Number(item.huevos || 0), 0);
+          huevosRevertidos += devolver;
+          return devolver ? { ...q, stockHuevos: Number(q.stockHuevos || 0) + devolver } : q;
+        });
+        const movimientos = (Array.isArray(eggDoc.movements) ? eggDoc.movements : [])
+          .filter(m => String(m.ventaId || "") !== String(req.params.id));
+        await db.collection("huevos").updateOne(
+          { _id: eggDoc._id },
+          { $set: { inventory: inventario, movements: movimientos, actualizadoEn: new Date() } }
+        );
+      }
+    }
+
     await db.collection("ventas").deleteOne({ _id: new ObjectId(req.params.id) });
     // Borra también el recibo asociado, para que no quede huérfano.
     await db.collection("boletas").deleteOne({ ventaId: req.params.id });
 
-    console.log(`🗑️  Venta ${req.params.id} eliminada por "${usuario}" — stock devuelto en ${stockRevertidos}/${items.length} ítems`);
-    res.json({ ok: true, itemsRevertidos: items.length, stockRevertidos });
+    console.log(`🗑️  Venta ${req.params.id} eliminada por "${usuario}" — stock devuelto en ${stockRevertidos}/${items.length} ítems; huevos devueltos: ${huevosRevertidos}`);
+    res.json({ ok: true, itemsRevertidos: items.length, stockRevertidos, huevosRevertidos });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -500,17 +1005,76 @@ app.post("/api/productos/reconciliar-stock", authAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── REVERTIR RECONCILIACIÓN (corrige el descuento duplicado) ────────────────
+// Bug histórico: la reconciliación de arriba se corrió una vez ANTES de que
+// /api/ventas marcara stockAplicado al crear la venta. Como resultado, boletas
+// que YA tenían su stock bien descontado al momento de la venta fueron
+// tratadas como "pendientes" y se les restó el stock una segunda vez.
+// Esta ruta busca las boletas que fueron tocadas por esa reconciliación
+// (tienen stockReconciliadoEn) y les devuelve exactamente las unidades que se
+// les restó de más. Marca cada boleta con stockRevertido=true para que esta
+// ruta también sea segura de correr más de una vez.
+// Uso: POST /api/productos/revertir-reconciliacion  body opcional: { "empresa": "..." }
+app.post("/api/productos/revertir-reconciliacion", authAdmin, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const filtro = { stockReconciliadoEn: { $exists: true }, stockRevertido: { $ne: true } };
+    if (req.body?.empresa) filtro.empresa = req.body.empresa;
+    const boletasATocar = await db.collection("boletas").find(filtro).toArray();
+
+    const resumenPorProducto = {}; // productoId -> { nombre, unidadesDevueltas }
+    const noAplicados = [];
+    let boletasProcesadas = 0;
+
+    for (const boleta of boletasATocar) {
+      const items = Array.isArray(boleta.items) ? boleta.items : [];
+      for (const item of items) {
+        if (!item.productoId) continue;
+        const unidades = Number(item.cantidad || 0) * Number(item.unidadesPorManga || 1);
+        if (unidades <= 0) continue;
+        try {
+          const r = await db.collection("productos").updateOne(
+            { _id: new ObjectId(item.productoId) },
+            { $inc: { stock: unidades } }
+          );
+          if (r.matchedCount === 0) {
+            noAplicados.push({ boletaNumero: boleta.numero, nombre: item.nombre || "?", productoId: item.productoId, motivo: "producto no encontrado (¿fue eliminado?)" });
+            continue;
+          }
+          const key = item.productoId;
+          if (!resumenPorProducto[key]) resumenPorProducto[key] = { nombre: item.nombre || "?", unidadesDevueltas: 0 };
+          resumenPorProducto[key].unidadesDevueltas += unidades;
+        } catch (e) {
+          noAplicados.push({ boletaNumero: boleta.numero, nombre: item.nombre || "?", productoId: item.productoId, motivo: e.message });
+        }
+      }
+      await db.collection("boletas").updateOne(
+        { _id: boleta._id },
+        { $set: { stockRevertido: true, stockRevertidoEn: new Date() } }
+      );
+      boletasProcesadas++;
+    }
+
+    console.log(`↩️  Reversión de reconciliación: ${boletasProcesadas} boletas procesadas, ${noAplicados.length} ítems sin poder devolver.`);
+    res.json({ ok: true, boletasProcesadas, resumenPorProducto, noAplicados });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── BOLETAS (MongoDB) ────────────────────────────────────────────────────────
-app.get("/api/boletas", async (req, res) => {
+app.get("/api/boletas", authUsuario, async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   try {
     if (!db) return res.json([]);
     const filtro = req.query.empresa ? { empresa: req.query.empresa } : {};
-    const boletas = await db.collection("boletas").find(filtro).sort({ timestamp: -1 }).toArray();
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtro.timestamp = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    const boletas = await db.collection("boletas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray();
     res.json(boletas.map(b => ({ ...b, id: b._id.toString() })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/boletas", async (req, res) => {
+app.post("/api/boletas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const boleta = { ...req.body, creadoEn: new Date() };
@@ -519,7 +1083,7 @@ app.post("/api/boletas", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/boletas/:id", async (req, res) => {
+app.delete("/api/boletas/:id", authUsuario, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
     const { ObjectId } = require("mongodb");
@@ -541,14 +1105,242 @@ app.delete("/api/boletas", authAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── HUEVOS (MongoDB, sincronizados entre dispositivos) ───────────────────────
-const authHuevos = (req, res, next) => {
+
+// ─── GASTOS Y COMPRAS DEL LOCAL (MongoDB) ────────────────────────────────────
+// Usa la misma autenticación de usuario que Huevos. La empresa del usuario
+// separa los gastos para evitar mezclar datos entre negocios.
+const authGastos = (req, res, next) => {
   const usuario = req.headers["x-usuario"];
   const clave = req.headers["x-clave"];
   const user = usuarios.find(u => u.usuario === usuario && u.clave === clave && !u.blocked);
+  if (!user) return res.status(401).json({ error: "Credenciales inválidas para gastos" });
+  req.gastoUser = user;
+  req.gastoEmpresa = (user.empresa && String(user.empresa).trim()) || user.usuario;
+  next();
+};
+
+// Fecha de un instante dado, en zona horaria de Chile (America/Santiago),
+// como "YYYY-MM-DD". Recibe cualquier valor aceptado por `new Date(...)`
+// (por defecto, el momento actual).
+const fechaEnChile = (fecha = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date(fecha)).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+// Fecha de HOY en zona horaria de Chile. El servidor corre en un host cuyo
+// reloj está en UTC, así que usar new Date().toISOString().slice(0,10) desde
+// media tarde en adelante (hora de Chile) guardaba la fecha del día
+// SIGUIENTE. Se usa en cualquier lugar del backend donde haga falta "la
+// fecha de hoy" por defecto.
+const fechaHoyChile = () => fechaEnChile(new Date());
+
+const normalizarGasto = (body = {}) => ({
+  comercio: String(body.comercio || "").trim(),
+  fecha: String(body.fecha || fechaHoyChile()).slice(0, 10),
+  total: Math.max(0, Number(body.total || 0)),
+  iva: Math.max(0, Number(body.iva || 0)),
+  categoria: String(body.categoria || "otros"),
+  metodoPago: String(body.metodoPago || "Efectivo"),
+  numeroDocumento: String(body.numeroDocumento || ""),
+  notas: String(body.notas || ""),
+  imagenUrl: String(body.imagenUrl || ""),
+  textoOCR: String(body.textoOCR || ""),
+  itemsInventario: Array.isArray(body.itemsInventario) ? body.itemsInventario : [],
+});
+
+app.get("/api/gastos", authGastos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const filtroGastos = { empresa: req.gastoEmpresa };
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtroGastos.fecha = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    const gastos = await db.collection("gastos")
+      .find(filtroGastos)
+      .sort({ fecha: -1, creadoEn: -1 })
+      .limit(limit)
+      .toArray();
+    res.json(gastos.map(g => ({ ...g, id: g._id.toString() })));
+  } catch (e) {
+    console.error("❌ GET /api/gastos:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/gastos", authGastos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const datos = normalizarGasto(req.body);
+    if (!datos.comercio) return res.status(400).json({ error: "Falta comercio o descripción" });
+    if (datos.total <= 0) return res.status(400).json({ error: "El total debe ser mayor que cero" });
+
+    const itemsLimpios = [];
+    for (const raw of datos.itemsInventario) {
+      const productoId = String(raw.productoId || "");
+      const cantidad = Math.max(0, Number(raw.cantidad || 0));
+      const costoUnitario = Math.max(0, Number(raw.costoUnitario || 0));
+      // Si viene explícitamente en false, el ítem se registra en el gasto
+      // (nombre, cantidad, costo) pero no toca el stock ni el costo promedio
+      // del producto. Por defecto (undefined/true) sí actualiza el stock,
+      // igual que el comportamiento original.
+      const actualizarStock = raw.actualizarStock !== false;
+      if (!productoId || cantidad <= 0) continue;
+      let oid;
+      try { oid = new ObjectId(productoId); } catch { continue; }
+
+      const producto = await db.collection("productos").findOne({ _id: oid });
+      if (!producto) continue;
+
+      if (actualizarStock) {
+        // Promedio ponderado: conserva el costo del stock anterior y suma la compra.
+        const stockAnterior = Math.max(0, Number(producto.stock || 0));
+        const costoAnterior = Math.max(0, Number(producto.costo || 0));
+        const stockNuevo = stockAnterior + cantidad;
+        const costoNuevo = stockNuevo > 0
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          : costoUnitario;
+        await db.collection("productos").updateOne(
+          { _id: oid },
+          { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
+        );
+      }
+      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario, actualizarStock });
+    }
+
+    const doc = {
+      ...datos,
+      itemsInventario: itemsLimpios,
+      usuario: req.gastoUser.usuario,
+      empresa: req.gastoEmpresa,
+      creadoEn: new Date(),
+      actualizadoEn: new Date(),
+    };
+    const result = await db.collection("gastos").insertOne(doc);
+    const productos = await db.collection("productos")
+      .find(req.gastoUser.empresa ? { empresa: req.gastoUser.empresa } : {})
+      .toArray();
+    res.status(201).json({
+      gasto: { ...doc, id: result.insertedId.toString() },
+      productos: productos.map(x => ({ ...x, id: x._id.toString() })),
+    });
+  } catch (e) {
+    console.error("❌ POST /api/gastos:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/gastos/:id", authGastos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    let oid;
+    try { oid = new ObjectId(req.params.id); }
+    catch { return res.status(400).json({ error: "ID de gasto inválido" }); }
+
+    const gastoActual = await db.collection("gastos").findOne({ _id: oid, empresa: req.gastoEmpresa });
+    if (!gastoActual) return res.status(404).json({ error: "Gasto no encontrado" });
+
+    const datos = normalizarGasto(req.body);
+    if (!datos.comercio) return res.status(400).json({ error: "Falta comercio o descripción" });
+    if (datos.total <= 0) return res.status(400).json({ error: "El total debe ser mayor que cero" });
+
+    // 1) Revertir del inventario la compra original de este gasto (antes de aplicar la edición).
+    //    Se recalcula el stock y el costo promedio como si esa compra nunca se hubiera hecho.
+    for (const anterior of (gastoActual.itemsInventario || [])) {
+      const productoId = String(anterior.productoId || "");
+      const cantidadVieja = Math.max(0, Number(anterior.cantidad || 0));
+      const costoViejo = Math.max(0, Number(anterior.costoUnitario || 0));
+      // Si ese ítem no había actualizado stock al crearse, tampoco hay nada
+      // que revertir ahora.
+      if (anterior.actualizarStock === false) continue;
+      if (!productoId || cantidadVieja <= 0) continue;
+      let poid;
+      try { poid = new ObjectId(productoId); } catch { continue; }
+
+      const producto = await db.collection("productos").findOne({ _id: poid });
+      if (!producto) continue; // el producto pudo haber sido eliminado; no hay nada que revertir
+      const stockActual = Math.max(0, Number(producto.stock || 0));
+      const costoActualProd = Math.max(0, Number(producto.costo || 0));
+      const stockRevertido = Math.max(0, stockActual - cantidadVieja);
+      const valorTotalActual = stockActual * costoActualProd;
+      const valorRevertido = Math.max(0, valorTotalActual - (cantidadVieja * costoViejo));
+      const costoRevertido = stockRevertido > 0 ? valorRevertido / stockRevertido : 0;
+      await db.collection("productos").updateOne(
+        { _id: poid },
+        { $set: { stock: stockRevertido, costo: costoRevertido, actualizadoEn: new Date() } }
+      );
+    }
+
+    // 2) Aplicar las nuevas cantidades editadas (mismo cálculo de promedio ponderado que al crear).
+    const itemsLimpios = [];
+    for (const raw of datos.itemsInventario) {
+      const productoId = String(raw.productoId || "");
+      const cantidad = Math.max(0, Number(raw.cantidad || 0));
+      const costoUnitario = Math.max(0, Number(raw.costoUnitario || 0));
+      const actualizarStock = raw.actualizarStock !== false;
+      if (!productoId || cantidad <= 0) continue;
+      let poid;
+      try { poid = new ObjectId(productoId); } catch { continue; }
+
+      const producto = await db.collection("productos").findOne({ _id: poid });
+      if (!producto) continue;
+
+      if (actualizarStock) {
+        const stockAnterior = Math.max(0, Number(producto.stock || 0));
+        const costoAnterior = Math.max(0, Number(producto.costo || 0));
+        const stockNuevo = stockAnterior + cantidad;
+        const costoNuevo = stockNuevo > 0
+          ? ((stockAnterior * costoAnterior) + (cantidad * costoUnitario)) / stockNuevo
+          : costoUnitario;
+        await db.collection("productos").updateOne(
+          { _id: poid },
+          { $set: { stock: stockNuevo, costo: costoNuevo, actualizadoEn: new Date() } }
+        );
+      }
+      itemsLimpios.push({ productoId, nombre: producto.nombre || "", cantidad, costoUnitario, actualizarStock });
+    }
+
+    // 3) Actualizar el mismo registro de gasto (mismo _id, no se crea uno nuevo).
+    await db.collection("gastos").updateOne(
+      { _id: oid },
+      { $set: { ...datos, itemsInventario: itemsLimpios, actualizadoEn: new Date() } }
+    );
+
+    const gastoActualizado = await db.collection("gastos").findOne({ _id: oid });
+    const productos = await db.collection("productos")
+      .find(req.gastoUser.empresa ? { empresa: req.gastoUser.empresa } : {})
+      .toArray();
+    res.json({
+      gasto: { ...gastoActualizado, id: gastoActualizado._id.toString() },
+      productos: productos.map(x => ({ ...x, id: x._id.toString() })),
+    });
+  } catch (e) {
+    console.error("❌ PUT /api/gastos/:id:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/gastos/:id", authGastos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    let oid;
+    try { oid = new ObjectId(req.params.id); }
+    catch { return res.status(400).json({ error: "ID de gasto inválido" }); }
+    const result = await db.collection("gastos").deleteOne({ _id: oid, empresa: req.gastoEmpresa });
+    if (!result.deletedCount) return res.status(404).json({ error: "Gasto no encontrado" });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("❌ DELETE /api/gastos:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── HUEVOS (MongoDB, sincronizados entre dispositivos) ───────────────────────
+const authHuevos = (req, res, next) => {
+  const user = obtenerUsuarioPeticion(req);
   if (!user) return res.status(401).json({ error: "Credenciales inválidas para huevos" });
   req.eggUser = user;
-  req.eggKey = (user.empresa && String(user.empresa).trim()) || user.usuario;
+  req.eggKey = obtenerClaveHuevos(user);
   next();
 };
 
@@ -566,7 +1358,9 @@ const limpiarInventarioHuevos = (inventory) => {
     ...q,
     id: String(q.id || ""),
     nombre: String(q.nombre || "Sin nombre"),
-    stockHuevos: Math.max(0, Number(q.stockHuevos || 0)),
+    // El stock de huevos SÍ puede ser negativo (venta sin stock suficiente),
+    // a diferencia de costos y precios, que siempre deben ser >= 0.
+    stockHuevos: Number(q.stockHuevos || 0),
     costoCaja: Math.max(0, Number(q.costoCaja || 0)),
     precioCaja: Math.max(0, Number(q.precioCaja || 0)),
     precioBandeja: Math.max(0, Number(q.precioBandeja || 0)),
@@ -585,9 +1379,116 @@ app.get("/api/huevos", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint de solo lectura para diagnosticar problemas de stock: devuelve el
+// historial crudo de movimientos de UNA calidad (por nombre), ordenado
+// cronológicamente, para poder rastrear a mano dónde se desarma la cuenta.
+app.get("/api/huevos/movimientos-crudos", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const calidad = String(req.query.calidad || "").trim().toLowerCase();
+    if (!calidad) return res.status(400).json({ error: "Falta el parámetro calidad" });
+    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
+    const movements = (doc?.movements || [])
+      .filter(m => String(m.calidad || "").trim().toLowerCase() === calidad)
+      .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+      .map(m => ({
+        id: m.id, tipo: m.tipo, huevos: m.huevos, fecha: m.fecha, fechaIngreso: m.fechaIngreso,
+        loteOrigenId: m.loteOrigenId, loteDestinoId: m.loteDestinoId, ingreso: m.ingreso,
+        valorUnitarioCompra: m.valorUnitarioCompra, totalCompra: m.totalCompra, calidadId: m.calidadId,
+      }));
+    res.json({ calidad, cantidadMovimientos: movements.length, movimientos: movements });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Endpoint temporal de diagnóstico de rendimiento — cuenta movimientos y mide
+// el tiempo real de la consulta a Mongo, sin mandar los datos completos.
+// Se puede borrar una vez resuelto el problema de carga lenta de Huevos.
+app.get("/api/huevos/diagnostico", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const t0 = Date.now();
+    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
+    const msConsulta = Date.now() - t0;
+    const movements = doc?.movements || [];
+    const pesoAprox = Buffer.byteLength(JSON.stringify(movements));
+    res.json({
+      cantidadMovimientos: movements.length,
+      cantidadCategorias: (doc?.inventory || []).length,
+      pesoMovimientosKB: Math.round(pesoAprox / 1024),
+      msConsultaMongo: msConsulta,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Se asegura de que exista el documento de huevos para esta empresa/usuario
+// ANTES de intentar una actualización atómica con arrayFilters — si el
+// documento (o el array inventory) no existe todavía, un arrayFilter no
+// tiene sobre qué hacer match. $setOnInsert es un no-op si el documento ya
+// existe, así que llamar esto en cada request es seguro y barato.
+const ensureHuevosDoc = async (key) => {
+  await db.collection("huevos").updateOne(
+    { key },
+    { $setOnInsert: { key, inventory: inventarioHuevosInicial, movements: [], creadoEn: new Date() } },
+    { upsert: true }
+  );
+};
+
+// Si la categoría (calidadId) referenciada en un delta no existe todavía
+// dentro del array inventory (categoría nueva/custom), la agrega antes de
+// intentar el $set/$inc con arrayFilters. La condición "inventory.id": {$ne}
+// evita duplicados aunque dos requests casi simultáneas la disparen a la vez.
+const asegurarCategoriaHuevos = async (key, calidadId, nombre) => {
+  if (!calidadId) return;
+  await db.collection("huevos").updateOne(
+    { key, "inventory.id": { $ne: calidadId } },
+    { $push: { inventory: {
+      id: calidadId, nombre: nombre || calidadId, stockHuevos: 0,
+      costoCaja: 0, precioCaja: 0, precioBandeja: 0, precioVentaUnitario: 0,
+      stockMinimoCajas: 5,
+    } } }
+  );
+};
+
+// Actualiza SOLO el elemento del array inventory que corresponde a una
+// categoría (arrayFilters + $inc/$set), en vez de reescribir el array
+// completo. Esto es lo que hace que dos guardadas de categorías distintas
+// (o de la misma) ya no puedan pisarse entre sí.
+const aplicarDeltaInventario = (update, delta) => {
+  if (!delta || !delta.calidadId) return null;
+  if (Number(delta.stockDelta || 0) !== 0) {
+    update.$inc = { "inventory.$[q].stockHuevos": Number(delta.stockDelta) };
+  }
+  const camposAbsolutos = {};
+  ["costoCaja", "precioVentaUnitario", "precioCaja", "precioBandeja", "stockMinimoCajas", "incrementoPct",
+   "precioEfectivoUnitario", "precioEfectivoCaja", "precioEfectivoBandeja"].forEach(f => {
+    if (delta[f] !== undefined) camposAbsolutos[`inventory.$[q].${f}`] = Number(delta[f]);
+  });
+  if (delta.precioEfectivoActivo !== undefined) camposAbsolutos["inventory.$[q].precioEfectivoActivo"] = Boolean(delta.precioEfectivoActivo);
+  if (Object.keys(camposAbsolutos).length) update.$set = { ...(update.$set || {}), ...camposAbsolutos };
+  return [{ "q.id": delta.calidadId }];
+};
+
 app.put("/api/huevos/inventario", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const delta = req.body?.inventoryDelta || (req.body?.calidadId ? req.body : null);
+
+    if (delta && delta.calidadId) {
+      // Camino atómico: solo toca la categoría indicada.
+      await ensureHuevosDoc(req.eggKey);
+      await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+      const update = { $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() } };
+      const arrayFilters = aplicarDeltaInventario(update, delta);
+      const doc = await db.collection("huevos").findOneAndUpdate(
+        { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
+      );
+      return res.json({ ok: true, inventory: doc.inventory });
+    }
+
+    // Camino legado: reescribe el array completo. Se deja solo para los
+    // flujos que de verdad necesitan tocar TODAS las categorías a la vez
+    // (reset del módulo, migración inicial desde localStorage, o agregar
+    // categorías por defecto que falten) — no para ediciones normales.
     const inventory = limpiarInventarioHuevos(req.body?.inventory);
     await db.collection("huevos").updateOne(
       { key: req.eggKey },
@@ -598,27 +1499,62 @@ app.put("/api/huevos/inventario", authHuevos, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint de recuperación: fija stockHuevos a un valor EXACTO (no lo suma
+// ni lo resta), para corregir manualmente el inventario tras un incidente.
+// A diferencia de un ajuste normal, llamarlo varias veces con los mismos
+// datos no duplica nada — el resultado final es siempre el mismo valor.
+app.post("/api/huevos/fijar-stock", authHuevos, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const { calidadId, stockHuevos } = req.body || {};
+    if (!calidadId || typeof stockHuevos !== "number") return res.status(400).json({ error: "Faltan calidadId o stockHuevos (número)" });
+    const result = await db.collection("huevos").updateOne(
+      { key: req.eggKey },
+      { $set: { "inventory.$[q].stockHuevos": stockHuevos } },
+      { arrayFilters: [{ "q.id": calidadId }] }
+    );
+    res.json({ ok: true, calidadId, stockHuevos, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/huevos/movimientos", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
-    const inventory = limpiarInventarioHuevos(req.body?.inventory);
     // Acepta un solo movimiento (compatibilidad) o varios en una sola escritura
     // atómica — necesario para "entrada + transferencia automática de lote".
     const incoming = Array.isArray(req.body?.movements)
       ? req.body.movements
       : (req.body?.movement ? [req.body.movement] : []);
-    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
-    let movements = Array.isArray(doc?.movements) ? doc.movements : [];
-    if (incoming.length) {
-      const stamped = incoming.map(m => ({ ...m, guardadoEn: new Date().toISOString() }));
-      movements = [...stamped, ...movements].slice(0, 5000);
+    const stamped = incoming.map(m => ({ ...m, guardadoEn: new Date().toISOString() }));
+    const delta = req.body?.inventoryDelta || null;
+
+    await ensureHuevosDoc(req.eggKey);
+    if (delta && delta.calidadId) await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+
+    // ATÓMICO: los movimientos se agregan con $push (nunca se reescribe el
+    // array completo, así que dos guardadas casi simultáneas no pueden
+    // pisarse — cada una hace su propio $push sobre lo que haya en ese
+    // instante en MongoDB, no sobre una copia leída antes en JS).
+    const update = {
+      $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
+    };
+    if (stamped.length) {
+      update.$push = { movements: { $each: stamped, $position: 0, $slice: 5000 } };
     }
-    await db.collection("huevos").updateOne(
-      { key: req.eggKey },
-      { $set: { inventory, movements, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() }, $setOnInsert: { creadoEn: new Date() } },
-      { upsert: true }
+
+    let arrayFilters;
+    if (delta && delta.calidadId) {
+      arrayFilters = aplicarDeltaInventario(update, delta);
+    } else if (Array.isArray(req.body?.inventory)) {
+      // Compatibilidad con clientes viejos que todavía manden el array
+      // completo: se respeta, pero ya no es el camino recomendado.
+      update.$set.inventory = limpiarInventarioHuevos(req.body.inventory);
+    }
+
+    const doc = await db.collection("huevos").findOneAndUpdate(
+      { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
     );
-    res.json({ ok: true, inventory, movements });
+    res.json({ ok: true, inventory: doc.inventory, movements: doc.movements });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -642,16 +1578,32 @@ app.post("/api/huevos/reset", authHuevos, async (req, res) => {
 app.delete("/api/huevos/movimientos/:id", authHuevos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
-    const inventory = limpiarInventarioHuevos(req.body?.inventory);
-    const doc = await db.collection("huevos").findOne({ key: req.eggKey });
-    let movements = Array.isArray(doc?.movements) ? doc.movements : [];
-    movements = movements.filter(m => String(m.id) !== String(req.params.id));
-    await db.collection("huevos").updateOne(
-      { key: req.eggKey },
-      { $set: { inventory, movements, usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() } },
-      { upsert: true }
+    const delta = req.body?.inventoryDelta || null;
+
+    await ensureHuevosDoc(req.eggKey);
+    if (delta && delta.calidadId) await asegurarCategoriaHuevos(req.eggKey, delta.calidadId, delta.nombre);
+
+    // ATÓMICO: $pull saca el movimiento del array y $inc revierte el stock
+    // en la misma escritura — no hace falta leer el documento antes.
+    // El id puede haberse guardado como Number (Date.now()) o String según
+    // el cliente que lo creó, así que se aceptan ambas formas al comparar.
+    const idNum = Number(req.params.id);
+    const update = {
+      $pull: { movements: { $or: [{ id: req.params.id }, ...(Number.isFinite(idNum) ? [{ id: idNum }] : [])] } },
+      $set: { usuario: req.eggUser.usuario, empresa: req.eggUser.empresa || "", actualizadoEn: new Date() },
+    };
+    let arrayFilters;
+    if (delta && delta.calidadId) {
+      arrayFilters = aplicarDeltaInventario(update, delta);
+    } else if (Array.isArray(req.body?.inventory)) {
+      // Compatibilidad con clientes viejos.
+      update.$set.inventory = limpiarInventarioHuevos(req.body.inventory);
+    }
+
+    const doc = await db.collection("huevos").findOneAndUpdate(
+      { key: req.eggKey }, update, { arrayFilters, returnDocument: "after" }
     );
-    res.json({ ok: true, inventory, movements });
+    res.json({ ok: true, inventory: doc.inventory, movements: doc.movements });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -708,6 +1660,25 @@ try {
     } catch (e) {
       console.error("❌ Error Cloudinary:", e.message);
       res.status(500).json({ error: "Error al subir imagen a Cloudinary" });
+    }
+  });
+
+
+
+  app.post("/api/gastos/upload-boleta", authGastos, upload.single("imagen"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No se recibió imagen" });
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: `inventario-boletas/${req.gastoEmpresa}`, resource_type: "image" },
+          (error, result) => error ? reject(error) : resolve(result)
+        );
+        stream.end(req.file.buffer);
+      });
+      res.json({ url: result.secure_url });
+    } catch (e) {
+      console.error("❌ Error subiendo boleta:", e.message);
+      res.status(500).json({ error: "Error al subir la boleta" });
     }
   });
 
