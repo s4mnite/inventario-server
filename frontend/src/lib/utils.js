@@ -33,7 +33,14 @@ export const setAuthCredentials = (usuario, clave) => {
   _authCreds = { usuario: String(usuario || ""), clave: String(clave || "") };
 };
 
-export const fetchConTimeout = (url, options = {}, ms = 12000) => {
+// BUG FIX: 12s era más corto que el tiempo real que tarda Render en
+// "despertar" el backend después de estar inactivo (puede tomar 30-50s).
+// Con 12s, cualquier guardado hecho justo cuando el servidor estaba dormido
+// se abortaba solo, aunque el servidor sí hubiera respondido segundos
+// después — esto se veía como "error rojo" repetido en ventas aunque el
+// usuario ya lo hubiera "arreglado" antes. Se sube a 40s para cubrir el
+// despertar típico de Render sin dejar la app colgada para siempre.
+export const fetchConTimeout = (url, options = {}, ms = 40000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms);
   const esBackend = typeof url === "string" && url.startsWith(API);
@@ -41,7 +48,20 @@ export const fetchConTimeout = (url, options = {}, ms = 12000) => {
   const headers = (esBackend && !headersYaTienenAuth)
     ? { ...(options.headers || {}), "x-usuario": _authCreds.usuario, "x-clave": _authCreds.clave }
     : options.headers;
-  return fetch(url, { ...options, headers, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+  return fetch(url, { ...options, headers, signal: controller.signal })
+    .catch(e => {
+      // BUG FIX: cuando el AbortController cancelaba la petición, el error
+      // que llegaba a pantalla era el mensaje técnico crudo del navegador
+      // ("The user aborted a request" / "signal is aborted without reason"),
+      // que no le dice nada al usuario y hacía parecer un fallo aleatorio.
+      // Ahora se traduce a un mensaje claro que explica la causa real
+      // (el servidor gratuito de Render tarda en despertar) y qué hacer.
+      if (e && e.name === "AbortError") {
+        throw new Error("El servidor está despertando (esto pasa cuando la app no se usó por un rato). Espera unos segundos y vuelve a intentar.");
+      }
+      throw e;
+    })
+    .finally(() => clearTimeout(timeoutId));
 };
 
 

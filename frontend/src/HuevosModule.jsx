@@ -581,8 +581,14 @@ export default function EggModule({ D, card, inp, textPrimary, textSecondary, te
       precioEfectivoActivo: Boolean(editForm.precioEfectivoActivo),
       stockMinimoCajas: Math.max(0, Number(editForm.stockMinimoCajas || 0)),
     };
+    // BUG FIX: antes esto usaba `fetch` normal, sin límite de tiempo. Si el
+    // backend (Render) estaba dormido, la petición se quedaba colgada sin
+    // avisar nada — por eso "Guardar configuración" parecía no hacer nada.
+    // Ahora usa fetchConTimeout, igual que el resto de la app, así el
+    // usuario ve un error claro (o el guardado exitoso) en vez de quedar
+    // esperando indefinidamente.
     try {
-      const res = await fetch(`${API}/api/huevos/inventario`, {
+      const res = await fetchConTimeout(`${API}/api/huevos/inventario`, {
         method: "PUT", headers: eggHeaders, body: JSON.stringify({ inventoryDelta }),
       });
       const data = await res.json();
