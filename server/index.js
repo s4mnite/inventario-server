@@ -43,6 +43,16 @@ app.use(compression());
 app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
+// Monitor de memoria: RSS cada minuto + última ruta atendida (logs de Render)
+let ultimaRuta = "-";
+app.use((req, res, next) => { ultimaRuta = `${req.method} ${req.path}`; next(); });
+setInterval(() => {
+  const m = process.memoryUsage();
+  const mb = (n) => Math.round(n / 1048576);
+  const linea = `🧠 rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}MB ext=${mb(m.external)}MB ultima=${ultimaRuta}`;
+  if (mb(m.rss) > 350) console.warn("⚠️ " + linea); else console.log(linea);
+}, 60000).unref();
+
 // Evita que el navegador, un proxy o el CDN de Render guarden en caché las
 // respuestas de la API. Sin esto, dos dispositivos pueden ver stock distinto
 // porque uno está mostrando una respuesta GET vieja guardada en caché.
@@ -64,6 +74,7 @@ async function conectarDB() {
   if (!MONGO_URI) { console.log("⚠️  Sin MONGODB_URI, usando memoria"); return; }
   try {
     const client = new MongoClient(MONGO_URI, {
+      maxPoolSize: 10, // por defecto 100; cada conexión consume RAM
       serverSelectionTimeoutMS: 8000, // si Mongo no responde en 8s, falla en vez de colgar la request
       socketTimeoutMS: 20000,
       connectTimeoutMS: 8000,
@@ -662,7 +673,7 @@ app.post("/api/ventas", authUsuario, async (req, res) => {
     let eggDoc = null;
     let eggInventoryActual = null;
     if (eggItems.length) {
-      eggDoc = await db.collection("huevos").findOne({ key: eggKey });
+      eggDoc = await db.collection("huevos").findOne({ key: eggKey }, { projection: { inventory: 1 } });
       eggInventoryActual = limpiarInventarioHuevos(eggDoc?.inventory || inventarioHuevosInicial);
       for (const item of eggItems) {
         const quality = eggInventoryActual.find(q => String(q.id) === String(item.calidadId));
@@ -813,7 +824,7 @@ app.post("/api/ventas", authUsuario, async (req, res) => {
       const eggDocFinal = await db.collection("huevos").findOneAndUpdate(
         { key: eggKey },
         { $push: { movements: { $each: eggMovements, $position: 0, $slice: 5000 } } },
-        { returnDocument: "after" }
+        { returnDocument: "after", projection: { inventory: 1 } }
       );
       eggInventory = eggDocFinal?.inventory || null;
     }
@@ -1644,7 +1655,11 @@ try {
   });
 
   // Usar memoria en vez de disco — el archivo va directo a Cloudinary
-  const upload = multer({ storage: multer.memoryStorage() });
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+  });
 
   app.post("/api/productos/upload-imagen", upload.single("imagen"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No se recibió imagen" });
