@@ -515,14 +515,38 @@ app.post("/api/caja/cerrar", authUsuario, async (req, res) => {
   }
 });
 
+// Arma un filtro { $gte, $lte } para Mongo a partir de fechas ISO opcionales
+// (?desde=, ?hasta=). Si ninguna viene, devuelve null (sin filtro de fecha).
+function filtroPorFecha(desde, hasta) {
+  const rango = {};
+  if (desde) {
+    const d = new Date(desde);
+    if (!isNaN(d)) rango.$gte = d;
+  }
+  if (hasta) {
+    const h = new Date(hasta);
+    if (!isNaN(h)) rango.$lte = h;
+  }
+  return Object.keys(rango).length ? rango : null;
+}
+
 // ─── VENTAS (MongoDB) ─────────────────────────────────────────────────────────
+// Tope de seguridad: sin esto, cada llamada trae TODA la historia de ventas
+// del negocio a memoria y la serializa completa. Con pocos registros no se
+// nota, pero después de meses de uso esto crece sin límite y puede tumbar
+// la instancia por memoria (sobre todo si el dashboard llama a este endpoint
+// varias veces en paralelo al cargar). Acepta además ?desde= y ?hasta=
+// (fechas ISO) para que el frontend pueda pedir un rango en vez de todo.
 app.get("/api/ventas", authUsuario, async (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   try {
     if (!db) return res.json([]);
     const empresa = obtenerEmpresa(req.query.empresa);
     const filtro = empresa ? { empresa: empresaQuery(empresa) } : {};
-    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).toArray();
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtro.timestamp = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray();
     res.json(ventas.map(v => ({ ...v, id: v._id.toString() })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -537,7 +561,11 @@ app.get("/api/ventas/duplicados", authUsuario, async (req, res) => {
     const empresa = obtenerEmpresa(req.query.empresa);
     const filtro = empresa ? { empresa: empresaQuery(empresa) } : {};
     const ventanaMinutos = Number(req.query.minutos || 10);
-    const ventas = await db.collection("ventas").find(filtro).sort({ timestamp: 1 }).toArray();
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    // Se trae por fecha descendente (las más recientes) y se limita ahí; si
+    // se ordenara ascendente antes de limitar, el tope se quedaría con las
+    // ventas más ANTIGUAS en vez de las recientes, que son las que interesan.
+    const ventas = (await db.collection("ventas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray()).reverse();
     const firmaDe = v => JSON.stringify({
       total: Number(v.total || 0),
       pago: v.pago || "",
@@ -1038,7 +1066,10 @@ app.get("/api/boletas", authUsuario, async (req, res) => {
   try {
     if (!db) return res.json([]);
     const filtro = req.query.empresa ? { empresa: req.query.empresa } : {};
-    const boletas = await db.collection("boletas").find(filtro).sort({ timestamp: -1 }).toArray();
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtro.timestamp = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
+    const boletas = await db.collection("boletas").find(filtro).sort({ timestamp: -1 }).limit(limit).toArray();
     res.json(boletas.map(b => ({ ...b, id: b._id.toString() })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1121,9 +1152,14 @@ const normalizarGasto = (body = {}) => ({
 app.get("/api/gastos", authGastos, async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Sin base de datos" });
+    const filtroGastos = { empresa: req.gastoEmpresa };
+    const rango = filtroPorFecha(req.query.desde, req.query.hasta);
+    if (rango) filtroGastos.fecha = rango;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 3000, 1), 5000);
     const gastos = await db.collection("gastos")
-      .find({ empresa: req.gastoEmpresa })
+      .find(filtroGastos)
       .sort({ fecha: -1, creadoEn: -1 })
+      .limit(limit)
       .toArray();
     res.json(gastos.map(g => ({ ...g, id: g._id.toString() })));
   } catch (e) {
