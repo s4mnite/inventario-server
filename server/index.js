@@ -43,6 +43,18 @@ app.use(compression());
 app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
+// Evita que el navegador, un proxy o el CDN de Render guarden en caché las
+// respuestas de la API. Sin esto, dos dispositivos pueden ver stock distinto
+// porque uno está mostrando una respuesta GET vieja guardada en caché.
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+  }
+  next();
+});
+
 // ─── MongoDB ──────────────────────────────────────────────────────────────────
 const { MongoClient, ObjectId } = require("mongodb");
 const MONGO_URI = process.env.MONGODB_URI;
