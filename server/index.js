@@ -43,6 +43,69 @@ app.use(compression());
 app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"], allowedHeaders: ["Content-Type","x-admin-user","x-admin-clave","x-usuario","x-clave","Cache-Control","Pragma"] }));
 app.use(express.json());
 
+// ─── Caché de lecturas (GET) ──────────────────────────────────────────────────
+// La app consulta ventas, boletas, gastos, productos, huevos y caja cada 3-5 s
+// desde cada dispositivo. Cada consulta leía y serializaba miles de documentos
+// (el de huevos pesa ~1.4 MB) en un servidor con muy poca CPU, y eso lo dejaba
+// sin capacidad para guardar ventas. Aquí la respuesta se guarda ya
+// serializada y comprimida, y se vuelve a usar mientras no haya escrituras.
+// Cualquier POST/PUT/PATCH/DELETE a /api la invalida al empezar y al terminar,
+// así que ningún dispositivo ve datos viejos después de un cambio.
+const zlibCache = require("zlib");
+const CACHE_GET = new Map();
+const CACHE_TTL_MS = 30000;
+const CACHE_MAX_ENTRADAS = 60;
+const CACHE_MAX_BYTES = 40 * 1024 * 1024;
+let cacheBytes = 0;
+const RUTAS_CACHEABLES = /^\/api\/(productos|categorias|ventas|boletas|gastos|huevos|caja\/actual|caja\/historial)\/?$/;
+const limpiarCacheGet = () => { CACHE_GET.clear(); cacheBytes = 0; };
+const enviarDesdeCache = (res, e) => {
+  res.status(200);
+  res.set("Content-Type", "application/json; charset=utf-8");
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.set("X-Cache", "HIT");
+  const acepta = /\bgzip\b/.test(String(res.req.headers["accept-encoding"] || ""));
+  if (acepta && e.gz) {
+    res.set("Content-Encoding", "gzip");
+    res.set("Vary", "Accept-Encoding");
+    res.set("Content-Length", String(e.gz.length));
+    return res.end(e.gz);
+  }
+  res.set("Content-Length", String(e.body.length));
+  return res.end(e.body);
+};
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api/")) return next();
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+    limpiarCacheGet();
+    res.on("finish", limpiarCacheGet);
+    return next();
+  }
+  if (req.method !== "GET" || !RUTAS_CACHEABLES.test(req.path)) return next();
+  const urlNorm = req.originalUrl.replace(/([?&])_=\d+&?/, "$1").replace(/[?&]$/, "");
+  const key = `${req.headers["x-usuario"] || ""}|${req.headers["x-clave"] || ""}|${urlNorm}`;
+  const hit = CACHE_GET.get(key);
+  if (hit && Date.now() - hit.t < CACHE_TTL_MS) return enviarDesdeCache(res, hit);
+  const jsonOriginal = res.json.bind(res);
+  res.json = (obj) => {
+    if (res.statusCode !== 200 || !db) return jsonOriginal(obj);
+    let body;
+    try { body = Buffer.from(JSON.stringify(obj)); } catch (e) { return jsonOriginal(obj); }
+    if (body.length <= 8 * 1024 * 1024) {
+      if (CACHE_GET.size >= CACHE_MAX_ENTRADAS || cacheBytes > CACHE_MAX_BYTES) limpiarCacheGet();
+      const entrada = { t: Date.now(), body, gz: null };
+      CACHE_GET.set(key, entrada);
+      cacheBytes += body.length;
+      zlibCache.gzip(body, (err, gz) => { if (!err && CACHE_GET.get(key) === entrada) { entrada.gz = gz; cacheBytes += gz.length; } });
+    }
+    res.set("Content-Type", "application/json; charset=utf-8");
+    res.set("X-Cache", "MISS");
+    return res.end(body);
+  };
+  next();
+});
+
+
 // Monitor de memoria: RSS cada minuto + última ruta atendida (logs de Render)
 let ultimaRuta = "-";
 app.use((req, res, next) => { ultimaRuta = `${req.method} ${req.path}`; next(); });

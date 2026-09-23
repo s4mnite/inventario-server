@@ -1960,7 +1960,7 @@ export default function App() {
     sincronizarCajaServidor();
 
     // Refresca la caja en todos los dispositivos sin necesitar recargar.
-    const intervalo = window.setInterval(() => sincronizarCajaServidor(), 3000);
+    const intervalo = window.setInterval(() => sincronizarCajaServidor(), 10000);
     const alVolver = () => sincronizarCajaServidor();
     const alCambiarVisibilidad = () => {
       if (document.visibilityState === "visible") sincronizarCajaServidor();
@@ -2173,7 +2173,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarVentasYBoletas();
-    const timer = window.setInterval(() => sincronizarVentasYBoletas(), 3000);
+    const timer = window.setInterval(() => sincronizarVentasYBoletas(), 15000);
     const refrescar = () => sincronizarVentasYBoletas();
     const visible = () => { if (document.visibilityState === "visible") refrescar(); };
     window.addEventListener("focus", refrescar);
@@ -2210,7 +2210,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarGastosReporte();
-    const timer = window.setInterval(() => sincronizarGastosReporte(), 3000);
+    const timer = window.setInterval(() => sincronizarGastosReporte(), 30000);
     const refrescar = () => sincronizarGastosReporte();
     const visible = () => { if (document.visibilityState === "visible") refrescar(); };
     window.addEventListener("focus", refrescar);
@@ -2263,7 +2263,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     sincronizarProductosYCategorias();
-    const timer = window.setInterval(sincronizarProductosYCategorias, 4000);
+    const timer = window.setInterval(sincronizarProductosYCategorias, 30000);
     const refresh = () => sincronizarProductosYCategorias();
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
     window.addEventListener("focus", refresh);
@@ -3325,7 +3325,7 @@ export default function App() {
           },
           body: JSON.stringify({ venta: { ...venta, empresa: empresaActiva }, boleta: { ...boleta, empresa: empresaActiva } }),
           signal: controller.signal,
-        });
+        }, 120000);
       } finally {
         window.clearTimeout(timeoutId);
       }
