@@ -2930,6 +2930,7 @@ export default function App() {
     // y, si aun así falla por timeout, reintenta una vez sola automáticamente
     // en vez de dejarle todo el reintento al usuario.
     const cargarInventarioHuevos = (esReintento = false) => {
+      let reintentando = false; // el 1er intento no debe apagar "cargando" si hay reintento en curso
       setFreeEggLoading(true);
       fetchConTimeout(`${API}/api/huevos`, {
         headers: {
@@ -2951,12 +2952,13 @@ export default function App() {
           if (!esReintento) {
             // Primer intento fallido: probablemente el servidor recién está
             // despertando. Reintentamos una vez, sin molestar al usuario.
+            reintentando = true;
             cargarInventarioHuevos(true);
             return;
           }
           setVentaError(err.message);
         })
-        .finally(() => { if (!cancelled) setFreeEggLoading(false); });
+        .finally(() => { if (!cancelled && !reintentando) setFreeEggLoading(false); });
     };
 
     cargarInventarioHuevos();
