@@ -3406,6 +3406,7 @@ export default function App() {
       ];
 
       boletaGuardRef.current++;
+      ventaIdempotencyRef.current = null;
       setVentas(updatedVentas);
       saveSales(updatedVentas);
       setBoletas(updatedBoletas);

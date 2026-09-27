@@ -1,0 +1,60 @@
+--- a/index.js	2026-09-23 18:03:48.986619000 +0000
++++ b/index.js	2026-09-23 18:04:49.578294584 +0000
+@@ -55,6 +55,18 @@
+   next();
+ });
+ 
++// ─── Monitor de memoria ───────────────────────────────────────────────────────
++// Deja en los logs de Render el RSS cada minuto y la última ruta atendida,
++// para identificar qué endpoint dispara el consumo.
++let ultimaRuta = "-";
++app.use((req, res, next) => { ultimaRuta = `${req.method} ${req.path}`; next(); });
++setInterval(() => {
++  const m = process.memoryUsage();
++  const mb = (n) => Math.round(n / 1048576);
++  const linea = `🧠 rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}MB ext=${mb(m.external)}MB ultima=${ultimaRuta}`;
++  if (mb(m.rss) > 350) console.warn("⚠️ " + linea); else console.log(linea);
++}, 60000).unref();
++
+ // ─── MongoDB ──────────────────────────────────────────────────────────────────
+ const { MongoClient, ObjectId } = require("mongodb");
+ const MONGO_URI = process.env.MONGODB_URI;
+@@ -67,6 +79,7 @@
+       serverSelectionTimeoutMS: 8000, // si Mongo no responde en 8s, falla en vez de colgar la request
+       socketTimeoutMS: 20000,
+       connectTimeoutMS: 8000,
++      maxPoolSize: 10, // por defecto son 100; cada conexión abierta consume RAM
+     });
+     await client.connect();
+     db = client.db("inventario");
+@@ -662,7 +675,7 @@
+     let eggDoc = null;
+     let eggInventoryActual = null;
+     if (eggItems.length) {
+-      eggDoc = await db.collection("huevos").findOne({ key: eggKey });
++      eggDoc = await db.collection("huevos").findOne({ key: eggKey }, { projection: { inventory: 1 } });
+       eggInventoryActual = limpiarInventarioHuevos(eggDoc?.inventory || inventarioHuevosInicial);
+       for (const item of eggItems) {
+         const quality = eggInventoryActual.find(q => String(q.id) === String(item.calidadId));
+@@ -813,7 +826,7 @@
+       const eggDocFinal = await db.collection("huevos").findOneAndUpdate(
+         { key: eggKey },
+         { $push: { movements: { $each: eggMovements, $position: 0, $slice: 5000 } } },
+-        { returnDocument: "after" }
++        { returnDocument: "after", projection: { inventory: 1 } }
+       );
+       eggInventory = eggDocFinal?.inventory || null;
+     }
+@@ -1644,7 +1657,11 @@
+   });
+ 
+   // Usar memoria en vez de disco — el archivo va directo a Cloudinary
+-  const upload = multer({ storage: multer.memoryStorage() });
++  const upload = multer({
++    storage: multer.memoryStorage(),
++    limits: { fileSize: 8 * 1024 * 1024, files: 1 }, // 8 MB máx en RAM por archivo
++    fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
++  });
+ 
+   app.post("/api/productos/upload-imagen", upload.single("imagen"), async (req, res) => {
+     if (!req.file) return res.status(400).json({ error: "No se recibió imagen" });
