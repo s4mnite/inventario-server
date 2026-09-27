@@ -2152,7 +2152,6 @@ export default function App() {
 
   const sincronizarVentasYBoletas = useCallback(async ({ silencioso = true } = {}) => {
     if (!currentUser) return false;
-    const guardAlEmpezar = boletaGuardRef.current;
     const empresa = empresaActiva;
     const suffix = empresa ? `?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}` : `?empresa=&_=${Date.now()}`;
     const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
@@ -2164,19 +2163,31 @@ export default function App() {
       const [ventasData, boletasData] = await Promise.all([rv.json(), rb.json()]);
       if (!rv.ok) throw new Error(ventasData?.error || "No se pudieron sincronizar las ventas.");
       if (!rb.ok) throw new Error(boletasData?.error || "No se pudieron sincronizar las boletas.");
-      // Si se guardó una venta nueva MIENTRAS esta petición estaba en vuelo,
-      // esta respuesta ya quedó vieja (partió antes de que esa venta
-      // existiera) — se descarta en vez de pisar el estado con datos
-      // desactualizados. El próximo sync (15s) ya va a traer todo al día.
-      if (boletaGuardRef.current !== guardAlEmpezar) return true;
       const ventasServidor = (Array.isArray(ventasData) ? ventasData.map(v => ({ ...v, id: v.id || v._id })) : [])
         .filter(v => !ventasEliminadasRef.current.has(String(v.id)));
       const boletasServidor = (Array.isArray(boletasData) ? boletasData.map(b => ({ ...b, id: b.id || b._id })) : [])
         .filter(b => !ventasEliminadasRef.current.has(String(b.ventaId)));
-      setVentas(ventasServidor);
-      setBoletas(boletasServidor);
-      saveSales(ventasServidor);
-      saveBoletas(boletasServidor);
+      // BUG FIX: antes esto reemplazaba TODA la lista local por lo que
+      // devolviera el servidor en ese momento puntual (setVentas(ventasServidor)
+      // directo). Si por cualquier motivo esa consulta puntual no traía de
+      // vuelta una venta/boleta que sí se había guardado bien segundos antes
+      // (filtro por empresa desincronizado, timing con Render, lo que sea),
+      // la reemplazaba igual y esa venta "desaparecía sola" de la pantalla
+      // aunque siguiera perfectamente guardada en Mongo. Ahora se FUSIONA por
+      // id en vez de reemplazar: todo lo que el servidor trae se actualiza,
+      // pero nada que ya esté confirmado localmente (con id real del
+      // servidor) se quita — la única forma de que algo salga de la lista es
+      // borrarlo a mano (eso sigue funcionando vía ventasEliminadasRef).
+      const fusionarPorId = (servidor, localPrevio) => {
+        const mapa = new Map(servidor.map(x => [String(x.id), x]));
+        localPrevio.forEach(x => {
+          const id = String(x.id || "");
+          if (id && !mapa.has(id) && !ventasEliminadasRef.current.has(id)) mapa.set(id, x);
+        });
+        return Array.from(mapa.values()).sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      };
+      setVentas(prev => { const f = fusionarPorId(ventasServidor, prev); saveSales(f); return f; });
+      setBoletas(prev => { const f = fusionarPorId(boletasServidor, prev); saveBoletas(f); return f; });
       return true;
     } catch (e) {
       if (!silencioso) setVentaError(e?.message || "No se pudieron sincronizar ventas y boletas.");
