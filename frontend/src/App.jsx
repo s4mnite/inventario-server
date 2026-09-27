@@ -2153,7 +2153,16 @@ export default function App() {
   const sincronizarVentasYBoletas = useCallback(async ({ silencioso = true } = {}) => {
     if (!currentUser) return false;
     const empresa = empresaActiva;
-    const suffix = empresa ? `?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}` : `?empresa=&_=${Date.now()}`;
+    // BUG FIX: esta consulta filtraba por `?empresa=<empresaActiva>` en el
+    // servidor. Ese filtro fue el origen real de que ventas/boletas
+    // desaparecieran "solas" sin ningún error: si el string `empresa`
+    // guardado en el documento no calzaba EXACTO con `empresaActiva` del
+    // momento (mayúscula, espacio, una caja vieja con otro valor, etc.), el
+    // documento quedaba invisible para SIEMPRE en cualquier sync futuro, no
+    // solo una vez — por eso sobrevivía a los parches anteriores. Como es un
+    // solo negocio, se saca el filtro acá: se trae todo y ya está, sin
+    // depender de que ese texto coincida.
+    const suffix = `?_=${Date.now()}`;
     const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
     try {
       const [rv, rb] = await Promise.all([
@@ -2346,7 +2355,10 @@ export default function App() {
     }).catch(() => {});
 
     // Cargar ventas desde backend (sincronizado entre dispositivos)
-    fetchConTimeout(API + "/api/ventas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    // BUG FIX: mismo motivo que en sincronizarVentasYBoletas — filtrar por
+    // `empresa` acá podía dejar afuera, en la carga inicial, ventas/boletas
+    // guardadas con un `empresa` que no calzara exacto. Se saca el filtro.
+    fetchConTimeout(API + "/api/ventas", {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
@@ -2371,7 +2383,7 @@ export default function App() {
       });
 
     // Cargar boletas desde backend
-    fetchConTimeout(API + "/api/boletas" + (empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""), {
+    fetchConTimeout(API + "/api/boletas", {
       headers: {
         "x-usuario": currentUser.usuario,
         "x-clave": currentUser._clave || "",
