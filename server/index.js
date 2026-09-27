@@ -778,7 +778,18 @@ app.post("/api/ventas", authUsuario, async (req, res) => {
         { upsert: true, returnDocument: "after" }
       );
       const numeroAsignado = contador?.value?.valor ?? contador?.valor;
-      const boletaDoc = { ...boleta, numero: numeroAsignado, ventaId: ventaGuardada.id, creadoEn: new Date() };
+      // BUG FIX: antes la boleta se guardaba con el `empresa` que mandó el
+      // navegador tal cual (boleta.empresa), sin forzarlo a coincidir con
+      // `venta.empresa` (que sí se recalculó arriba en base a la caja
+      // realmente abierta). Si por cualquier motivo esos dos strings no
+      // calzaban exacto (caja vieja, mayúsculas, espacio, etc.), la boleta
+      // quedaba guardada en Mongo bajo un `empresa` distinto al de la venta.
+      // La venta se veía bien, pero la boleta desaparecía sin error visible
+      // en cualquier sincronización posterior de Recibos, que siempre pide
+      // `/api/boletas?empresa=<empresaActiva>` — quedaba huérfana, filtrada
+      // fuera de ese query aunque estuviera guardada en la base. Ahora se
+      // fuerza el mismo `empresa` ya validado que quedó en la venta.
+      const boletaDoc = { ...boleta, empresa: venta.empresa, numero: numeroAsignado, ventaId: ventaGuardada.id, creadoEn: new Date() };
       delete boletaDoc.id;
       const boletaResult = await db.collection("boletas").insertOne(boletaDoc);
       boletaGuardada = { ...boletaDoc, id: boletaResult.insertedId.toString() };
