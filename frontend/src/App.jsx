@@ -1768,6 +1768,18 @@ export default function App() {
   // éxito, o al vaciar el carrito, para que la próxima venta tenga su propia
   // clave nueva.
   const ventaIdempotencyRef = useRef(null);
+  // BUG FIX: la resincronización de fondo (cada 15s) pedía /api/ventas y
+  // /api/boletas y pisaba el estado local con setVentas/setBoletas SIEMPRE,
+  // sin importar si ya había pasado más tiempo del que tardó esa petición en
+  // responder. Con el backend de Render a veces lento en despertar, podía
+  // pasar esto: arranca un sync de fondo -> mientras tanto el usuario
+  // termina una venta y la ve aparecer en Recibos -> el sync de fondo (que
+  // partió ANTES de esa venta) por fin responde con datos viejos -> pisa el
+  // estado y la venta recién guardada "desaparece sola", sin ningún error.
+  // Este contador se incrementa cada vez que se guarda una venta con éxito;
+  // si cambió mientras un sync estaba en vuelo, ese sync se descarta en vez
+  // de aplicarse (el siguiente sync, 15s después, ya va a traer todo bien).
+  const boletaGuardRef = useRef(0);
   const [filtroBoleta, setFiltroBoleta] = useState("Todos");
   const [reporteTab, setReporteTab] = useState("ventas"); // "ventas" | "inventario"
   const [duplicadosGrupos, setDuplicadosGrupos] = useState(null); // null = todavía no se buscó
@@ -2140,6 +2152,7 @@ export default function App() {
 
   const sincronizarVentasYBoletas = useCallback(async ({ silencioso = true } = {}) => {
     if (!currentUser) return false;
+    const guardAlEmpezar = boletaGuardRef.current;
     const empresa = empresaActiva;
     const suffix = empresa ? `?empresa=${encodeURIComponent(empresa)}&_=${Date.now()}` : `?empresa=&_=${Date.now()}`;
     const headers = { "x-usuario": currentUser.usuario, "x-clave": currentUser._clave || "" };
@@ -2151,6 +2164,11 @@ export default function App() {
       const [ventasData, boletasData] = await Promise.all([rv.json(), rb.json()]);
       if (!rv.ok) throw new Error(ventasData?.error || "No se pudieron sincronizar las ventas.");
       if (!rb.ok) throw new Error(boletasData?.error || "No se pudieron sincronizar las boletas.");
+      // Si se guardó una venta nueva MIENTRAS esta petición estaba en vuelo,
+      // esta respuesta ya quedó vieja (partió antes de que esa venta
+      // existiera) — se descarta en vez de pisar el estado con datos
+      // desactualizados. El próximo sync (15s) ya va a traer todo al día.
+      if (boletaGuardRef.current !== guardAlEmpezar) return true;
       const ventasServidor = (Array.isArray(ventasData) ? ventasData.map(v => ({ ...v, id: v.id || v._id })) : [])
         .filter(v => !ventasEliminadasRef.current.has(String(v.id)));
       const boletasServidor = (Array.isArray(boletasData) ? boletasData.map(b => ({ ...b, id: b.id || b._id })) : [])
@@ -3364,6 +3382,7 @@ export default function App() {
         ),
       ];
 
+      boletaGuardRef.current++;
       setVentas(updatedVentas);
       saveSales(updatedVentas);
       setBoletas(updatedBoletas);
